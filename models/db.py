@@ -46,7 +46,7 @@ w2py_folder = os.path.dirname(w2py_folder)
 # Root folder
 w2py_folder = os.path.dirname(w2py_folder)
 first_run = os.path.join(app_folder, ".first_run")
-if (os.isfile(first_run)):
+if (os.path.isfile(first_run)):
 	# First run file exists
 	lazy_tables = False
 	fake_migrate = True
