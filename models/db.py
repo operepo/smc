@@ -32,6 +32,27 @@ if (tmp):
         lazy_tables = False
         fake_migrate = True
         migrate = False
+
+# Check for firstrun file and force db migrate
+#Starts in the Models folder
+w2py_folder = os.path.abspath(__file__)
+#print "Running File: " + app_folder
+w2py_folder = os.path.dirname(w2py_folder)
+# app folder
+w2py_folder = os.path.dirname(w2py_folder)
+app_folder = w2py_folder
+# Applications folder
+w2py_folder = os.path.dirname(w2py_folder)
+# Root folder
+w2py_folder = os.path.dirname(w2py_folder)
+first_run = os.path.join(app_folder, ".first_run")
+if (os.isfile(first_run):
+	# First run file exists
+	lazy_tables = False
+	fake_migrate = True
+	migrate = False
+	# Remove the file so it doesn't keep running
+	os.remove(first_run)
         
 if not request.env.web2py_runtime_gae:
     ## if NOT running on Google App Engine use SQLite or other DB
