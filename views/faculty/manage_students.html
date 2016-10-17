@@ -1,0 +1,9 @@
+{{extend 'layout.html'}}
+<h1>Manage Student Accounts</h1>
+<div style="color: red;">*** Upload Media privlege allows users to upload videos or music into the media libarary. Do not give this out unless you monitor the student.</div><div><a href="{{=URL('faculty', 'UpdateLastADLogin')}}">[Refresh AD Last Login]</a> - Get last login time from the AD server for all users.</div>
+<div>
+	<a href="{{= URL('faculty', 'create_new_student') }}">Create New Student</a>
+</div>
+<div>
+	{{=user_grid}}
+</div>

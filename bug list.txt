@@ -1,0 +1,74 @@
+
+TODO 
+
+Reset schedule process on import? (to prevent stuck home drive creation?)
+
+Change password form - fails if  AD not setup?
+
+Import upload - I/O Error if no file supplied
+
+Add box to prevent removing students from current classes if it isn't listed on the import sheet
+
+Create Student
+
+Remove Student
+
+ZFS Server - Clone Tool
+
+Multi upload media tool
+
+Video/Song Play List
+
+Corrupt table errors in smc after update - delete .table files and run fake_migrate
+
+**************************
+zfs not mounting
+ - add zfs to /etc/modules
+ - /etc/defaults/zfs - ZFS_MOUNT=yes, ZFS_UNMOUNT=yes
+ - /etc/rc.local
+	- zpool export dpool
+	- zpool import dpool
+	- zfs mount -O -a
+- Add init script to do this???
+Install init-system-helpers package
+add ZFS to /etc/modules
+(REMOVE zfs-mount from /etc/insserv.conf)
+dpkg -i zfsutils*.deb
+(AUTO YES to use maintainers files (or restore to original??))
+dpkg -i zfs-initramfs*.deb
+Force reinstall of zfs stuff
+Clean out /etc/rc.local
+**************************
+
+*** Send snapshot command for wsp
+
+change_IP - commented out ceph changes, adjust so the rest doesn't blow up if ceph not active
+
+
+IP Change - node1 hosts file didn't update??
+	
+4/17/16
+- Update to current w2p version (2.14.5)
+- Change import statement in canvas (import requests)
+- Move sys.path changes to a_syspath.py in models (not working? Strange import error when moving home)
+- Updated to python 2.7.11
+- Updated to pycrypto 2.6.1
+- Moved install_pmox_repository to update folder, adjusted parameters to work w call from management console
+- Setup management console to run updates, and pmox updates
+- Setup management console to run flush redis
+
+
+
+3/30/16
+- Added ZFS config menus
+	- zfs datasets table
+	- zfs sync options table
+	- appsettings fields
+	- sync page for 
+	
+- Added paramirko ssh module
+- Added sys.path for current app modules folder so that modules would load properly
+- Adjusted ednet module to import with sys.path changes
+- Adjusted ADLastLogin refresh page so it will navigate then use back button instead of popup new tab (which didn't refresh prev page after refresh which was confusing)
+- Added pycrypto deb package to static/os and add dkpg install command to update script to install in server (required for paramiko lib)
+

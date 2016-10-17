@@ -1,0 +1,85 @@
+{{extend 'layout.html'}}
+<link rel="stylesheet" href="{{=URL('static', 'css/jquery.fileupload.css') }}">
+<!-- The jQuery UI widget factory, can be omitted if jQuery UI is already included -->
+<script src="{{=URL('static', 'js/vendor/jquery.ui.widget.js') }}"></script>
+<!-- The Iframe Transport is required for browsers without support for XHR file uploads -->
+<script src="{{=URL('static', 'js/jquery.iframe-transport.js' ) }}"></script>
+<!-- The basic File Upload plugin -->
+<script src="{{=URL('static', 'js/jquery.fileupload.js' ) }}"></script>
+
+<script>
+$(function() {
+		GetProcessQueue();
+		window.setInterval(function() {GetProcessQueue();}, 15000);
+		
+		var url = '{{= URL('media', 'upload_ajax_callback') }}';
+	
+    $('#fileupload').fileupload({
+        url: url,
+        dataType: 'json',
+		// sizeLimit: 15000000,
+		// minSizeLimit: 0,		
+		allowedExtensions: ['mov', 'avi', 'mp4', 'mpg', 'mp3', 'wav', 'ogg', 'ogv', 'webm'],
+		debug: true,
+        done: function (e, data) {
+            $.each(data.result.files, function (index, file) {
+                $('<p/>').text(file.name).appendTo('#files');
+            });
+        },
+        progressall: function (e, data) {
+            var progress = parseInt(data.loaded / data.total * 100, 10);
+            $('#progress .progress-bar').css(
+                'width',
+                progress + '%'
+            );
+        }
+    }).prop('disabled', !$.support.fileInput)
+        .parent().addClass($.support.fileInput ? undefined : 'disabled');
+		
+		
+    });
+	
+	function GetProcessQueue() {
+		web2py_component('{{=URL('media', 'process_queue.load')}}',
+                         target='process_queue_view');
+		
+	}
+</script>
+
+<h1>Upload a Media File</h1>
+<p>
+	Media files will be added to the process queue and converted to an internet and mobile friendly format. You can add Movie AND audio files here.
+</p>
+<p>
+	It may take several minutes to an hour for media files to process. Larger files will take longer. When they finish they will dissapear from the processing queue below and show up in the media library.
+</p>
+{{ =form }}
+
+<span class="btn btn-success fileinput-button">
+	<i class="glyphicon glyphicon-plus"></i>
+	<span>Select files...</span>
+	<!-- The file input field used as target for the file upload widget -->
+	<input id="fileupload" type="file" name="files[]" multiple>
+</span>
+<!-- The global progress bar -->
+<div id="progress" class="progress">
+	<div class="progress-bar progress-bar-success"></div>
+</div>
+<!-- The container for the uploaded files -->
+<div id="files" class="files"></div>
+
+<hr />
+<h4>
+	Media Conversion Process Queue
+</h4>
+<div id="process_queue" class='well'>
+	<p>
+		<b>NOTE: </b> Large media files can take a few hours to process. You can use the retry link to make the system try again if a media file gets stuck in the queue.
+	</p>
+	<div id="process_queue_view">
+		<img src="{{=URL('static', 'images/progress.gif') }}" />
+	</div>
+	<!--LOAD('media', 'process_queue.load',content=DIV(IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='float: left;'), P('Getting Process Queue')), ajax=True) -->
+</div>
+
+

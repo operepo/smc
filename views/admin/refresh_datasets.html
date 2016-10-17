@@ -1,0 +1,18 @@
+{{extend 'layout.html'}}
+<div>
+	<a style="font-size: 10px;" href="{{=URL('admin','config_zfs_settings')}}">&lt;-- Back</a>
+</div>
+
+<h1>Refresh ZFS Datasets</h1>
+
+<div>
+{{ if (succeeded==True): }}
+Datasets downloaded. Click the back button to pick your source and destination datasets.
+<pre>{{=message}}
+</pre>
+{{ else: }}
+Failed to refresh datasets. Please make sure that the ZFS Server settings are properly configured (zpool enabled, zpool server address, zpool login user, and zpool login password).
+<pre>{{=message}}
+</pre>
+{{ pass }}
+</div>

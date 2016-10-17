@@ -1,0 +1,250 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--
+
+Design by Free CSS Templates
+http://www.freecsstemplates.org
+Released for free under a Creative Commons Attribution 2.5 License
+
+Title      : Interlude
+Version    : 1.0
+Released   : 20080903
+Description: A multi-column, fixed-width design for 800x600 resolutions.
+
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   {{=response.title or request.application}}
+  </title>
+<!--[if lt IE 7]><html class="ie ie6 ie-lte9 ie-lte8 ie-lte7 no-js" lang="{{=T.accepted_language or 'en'}}"> <![endif]-->
+<!--[if IE 7]><html class="ie ie7 ie-lte9 ie-lte8 ie-lte7 no-js" lang="{{=T.accepted_language or 'en'}}"> <![endif]-->
+<!--[if IE 8]><html class="ie ie8 ie-lte9 ie-lte8 no-js" lang="{{=T.accepted_language or 'en'}}"> <![endif]-->
+<!--[if IE 9]><html class="ie9 ie-lte9 no-js" lang="{{=T.accepted_language or 'en'}}"> <![endif]-->
+<!--[if (gt IE 9)|!(IE)]><!--> <html class="no-js" lang="{{=T.accepted_language or 'en'}}"> <!--<![endif]-->
+  <!--[if !HTML5]>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge{{=not request.is_local and ',chrome=1' or ''}}">
+  <![endif]-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="shortcut icon" href="{{=URL('static','images/favicon.ico')}}" type="image/x-icon">
+  <link rel="apple-touch-icon" href="{{=URL('static','images/favicon.png')}}">
+  {{response.files.append(URL(request.application,'static','plugin_layouts/layouts/Interlude/default.css'))}}
+  {{response.files.append(URL('static','plugin_layouts/superfish.js'))}}
+     
+  {{
+  response.files.insert(0,URL('static','css/web2py.css'))
+  response.files.insert(1,URL('static','css/bootstrap.min.css'))
+  response.files.insert(2,URL('static','css/bootstrap-responsive.min.css'))
+  response.files.insert(3,URL('static','css/web2py_bootstrap.css'))
+  }}
+  {{include 'web2py_ajax.html'}}
+  <style>
+ul.web2py-menu-vertical { width: 150px; position: relative; top:1em; left:1em;  z-index:30; border:0; margin:0; padding: 0; list-style: none; text-decoration: none;}
+ul.web2py-menu-vertical li { margin:0; padding:0; border:0; width: 150px; background: black; text-align:left;}
+ul.web2py-menu-vertical li a { margin:0; padding: 1px 3px 1px 3px; border:0; width: 144px; color: white; font-size:12px;}
+div.flash { position: fixed; float: right; padding: 10px; top: 50px; right: 150px; opacity: 0.75; margin: 10px 10px 10px 10px; text-align: center; clear: both; color: #fff; font-size: 11pt; text-align: center; vertical-align: middle; cursor: pointer; background: #333333; border: 2px solid #888888; -moz-border-radius: 5px; -webkit-border-radius: 5px; z-index: 2; }
+div.error { background-color: red; color: white; padding: 3px; }
+.auth_navbar { text-align:right; z-index:20; position: absolute; top: 15px; right:30px; border:0; padding:0; color: #aaaaaa; }
+  </style>
+ </head>
+ <body>
+  <!-- start header -->
+  <div id="header">
+   <div id="logo">
+    <h1>
+     {{=response.title or request.application}}
+    </h1>
+    <p style="color: #999999;">
+        Student Management System
+    </p>
+   </div>
+   <div id="menu">
+    {{MENU(response.menu,_class='web2py-menu')}}
+    {{=MENU(response.menu, _class='web2py-menu nav',li_class='dropdown',ul_class='dropdown-menu')}}
+    <script>
+      jQuery(document).ready(function(){jQuery('ul.web2py-menu').superfish({delay:400});});
+    </script>
+   </div>
+  </div>
+  <hr />
+  <!-- end header -->
+  <!-- start page -->
+  <div id="wrapper">
+   <div id="page">
+    <!-- start content -->
+       {{try:}}{{=auth.navbar(action=URL('default','user'))}}{{except:pass}}
+    <div id="content">
+     <div class="flash">{{=response.flash or ''}}</div>
+     {{block center}}
+     {{include}}
+     {{end}}
+    </div>
+    <!-- end content -->
+    <!-- start sidebar -->
+    <div id="sidebar">
+      {{ block rightsidebar }}
+       
+      {{end}}
+    </div>
+    <!-- end sidebar -->
+    <br style="clear: both;" />
+   </div>
+  </div>
+  <!-- end page -->
+  <!-- start footer -->
+  <div id="wrapper2">
+   <div id="footer">
+    <ul>
+     <li class="first">
+      <h2>
+       Mauris vulputate dolor
+      </h2>
+      <ul>
+       <li>
+        <a href="#">
+         Nulla luctus eleifend purus
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Praesent scelerisque scelerisque erat
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Ut nonummy rutrum sem
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Pellentesque tempus quam quis nulla
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Fusce ultrices fringilla metus
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Praesent mattis condimentum nisl
+        </a>
+       </li>
+      </ul>
+     </li>
+     <li>
+      <h2>
+       Praesent scelerisque sceler
+      </h2>
+      <ul>
+       <li>
+        <a href="#">
+         Nulla luctus eleifend purus
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Praesent scelerisque scelerisque erat
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Ut nonummy rutrum sem
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Pellentesque tempus quam quis nulla
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Fusce ultrices fringilla metus
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Praesent mattis condimentum nisl
+        </a>
+       </li>
+      </ul>
+     </li>
+     <li>
+      <h2>
+       Fusce ultrices fringilla
+      </h2>
+      <ul>
+       <li>
+        <a href="#">
+         Nulla luctus eleifend purus
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Praesent scelerisque scelerisque erat
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Ut nonummy rutrum sem
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Pellentesque tempus quam quis nulla
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Fusce ultrices fringilla metus
+        </a>
+       </li>
+       <li>
+        <a href="#">
+         Praesent mattis condimentum nisl
+        </a>
+       </li>
+      </ul>
+     </li>
+    </ul>
+   </div>
+   <p id="legal">
+    &copy;2007 Interlude. All Rights Reserved.
+		&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+		Design by
+    <a href="http://www.freecsstemplates.org/">
+     Free CSS Templates
+    </a>
+    &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+		Icons by
+    <a href="http://famfamfam.com/">
+     FAMFAMFAM
+    </a>
+    .
+    <a href="http://validator.w3.org/check/referer" class="xhtml" title="This page validates as XHTML">
+     Valid
+     <abbr title="eXtensible HyperText Markup Language">
+      XHTML
+     </abbr>
+    </a>
+    &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+    <a href="http://jigsaw.w3.org/css-validator/check/referer" class="css" title="This page validates as CSS">
+     Valid
+     <abbr title="Cascading Style Sheets">
+      CSS
+     </abbr>
+    </a>
+   </p>
+  </div>
+  <!-- end footer -->
+
+
+  <script src="{{=URL('static','js/bootstrap.min.js')}}"></script>
+  <script src="{{=URL('static','js/web2py_bootstrap.js')}}"></script>
+  <!--[if lt IE 7 ]>
+      <script src="{{=URL('static','js/dd_belatedpng.js')}}"></script>
+      <script> DD_belatedPNG.fix('img, .png_bg'); //fix any <img> or .png_bg background-images </script>
+      <![endif]-->
+
+ </body>
+</html>

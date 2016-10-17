@@ -1,0 +1,12 @@
+{{extend 'layout.html'}}
+<div>
+	<a style="font-size: 10px;" href="{{=session.back }}">&lt;-- Back</a>
+</div>
+
+<h1>Change Canvas Quota - {{=current_user }}</h1>
+
+<b>Note: </b> Minimum quota in Canvas is 1 Meg.
+
+<div class="well">
+	{{= form }}
+</div>

@@ -1,0 +1,18 @@
+{{extend 'layout.html'}}
+<h1>Switch Internet Mode</h1>
+
+<h2>
+	Online mode
+</h2>
+<p>
+	Online mode is intened for facilities with internet access or when running offsite for maintenance (e.g. doing system updates). Online mode forwards DNS queries normally to Root DNS servers.
+</p>
+{{=switch_online}}
+
+<h2>
+	Offline mode
+</h2>
+<p>
+	Offline mode is intended for production use on inmate networks that have no internet. Root level DNS queries are intercepted to allow for speedy answers to DNS queries for sites that don't exist. Websites that need external resources such as style sheets or fonts may take 30+ seconds to load while waiting for a DNS timeout. This mode allows them to fail quickly.
+</p>
+{{=switch_offline}}

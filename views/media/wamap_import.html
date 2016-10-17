@@ -1,0 +1,8 @@
+{{extend 'layout.html'}}<script>$(function() {		window.setInterval(function() {GetWAMAPImportStatus();}, 3000);    });		function GetWAMAPImportStatus() {		web2py_component('{{=URL('media', 'wamap_import_status.load')}}',                         target='wamap_import_status');			}</script>
+<h1>WAMAP Video Import Tool</h1>
+<p>This tool will change the WAMAP video links from YouTube to the off-line media library. Downloading the videos from the internet is a <b>LONG PROCESS</b> and may take a few days.<br />There are two steps to this process.<ol>	<li>Download Videos ( from internet or use off-line installer )</li>	<li>Update links</li></ol></p><p>This tool will try to download the videos if the server is on-line. If the server is NOT on-line, you can use the off-line installer to copy the video files ( see http://correctionsed.com from the internet for the off-line installer, it is a 60 Gig download and you will need a 120 Gig drive to download and unpack it ).</p><p>This tool will also update the links in WAMAP once the videos are there. If you run the off-line video installer, it will run this tool to update the links. You can see the progress of this tool by watching the status below.<br /><br /><b>NOTE:</b> You do NOT need to click the "Run WAMAP Import Tool" button below if you use the off-line installer. You should see the progress changing on this page if you watch it. It doesn't hurt to run the tool again, but it will restart the process and take longer to finish.<div class="well">
+	{{=download_wamap}}
+	<p>	<div id="wamap_import_status"><img src="{{=URL('static', 'images/progress.gif') }}" />	</div>
+	</p>
+</div>
+

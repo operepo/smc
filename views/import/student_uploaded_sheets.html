@@ -1,0 +1,6 @@
+{{extend 'layout.html'}}
+
+TEST
+{{for each row in rows:}}
+<a href='{{=URL('import','student_pick_excel_prev_workbooks', vars=[excel_file=row.excel_file])}}'>{{=row.created_on}}</a><br />
+{{pass}}

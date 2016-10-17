@@ -1,0 +1,29 @@
+{{extend 'layout.html'}}
+<h1>Switch File Server Quota Mode</h1>
+<p>
+	This tool allows you to change the quota settings on your file server drive. 
+</p>
+
+<h2>
+	Disable Drive Quota
+</h2>
+<p>
+	Disable quota monitoring on the file server drive.
+</p>
+{{=switch_disabled}}
+
+<h2>
+	Enable Quota Tracking
+</h2>
+<p>
+	This mode is good for tracking space usage, but does not enforce quota space (e.g. The user can store as much as they want).
+</p>
+{{=switch_tracking}}
+
+<h2>
+	Enable Quota Enforcement
+</h2>
+<p>
+	This mode tracks usage and limits users to the space they have been assigned.
+</p>
+{{=switch_enforcing}}

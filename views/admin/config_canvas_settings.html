@@ -1,0 +1,35 @@
+{{extend 'layout.html'}}
+<div>
+	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a>
+</div>
+
+<h1>Change Canvas Settings</h1>
+
+<div>
+    <div style="float: left; width: 600px; overflow: initial;">
+        {{=form}}
+    </div>
+    <div class="well" style="float: left; width: 400px; ">
+        <h3>
+            Help
+        </h3>
+		<p>
+			Adjust cosmetic settings in your app.
+		</p>
+		<div>
+			<b>Canvas Import Enabled: </b> Turn Canvas importing on/off
+		</div>
+		<div>
+			<b>Canvas Dev Key: </b> The dev key used to access the canvas server. To get a new dev key, login as the admin canvas account, go to Settings, then scroll down to "Approved Integrations". Hit the button "New Access Token" and copy the key and paste it into this box.
+		</div>
+		<div>
+			<b>Canvas Server URL: </b> The website url for canvas. E.g. https://canvas.correctionsed.com
+		</div>
+		<div>
+			<b>Canvas Quota: </b> How much space should the student have to upload files into canvas? This is for personal files, and does not pertain to the class quota. In a secure environment, it is recommended to turn this down to 0 Meg to prevent users from trying to hide files.
+		</div>
+		<div>
+			<b>Canvas Auto Create Courses: </b> The import tool can create courses and enroll students in them if they don't exist. If you turn this off, students will only be enrolled in specified courses if they already exist and have the SIS ID that matches the course id listed in the spread sheet.
+		</div>
+	</div>
+</div>

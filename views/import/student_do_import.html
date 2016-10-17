@@ -1,0 +1,118 @@
+{{extend 'layout.html'}}
+<script>
+    var sheet_name = "{{=sheet_name}}";
+    var import_complete_count = 0;
+    var import_canvas_count = 0;
+    var import_ad_count = 0;
+    
+    $(function() {
+        ImportAD();
+        ImportCanvas();
+    });
+    
+    function ImportAD()
+    {
+        // Process the stuff in ad_import_temp from last call
+        var result = $('#ad_import_temp').html();
+        
+        if (result == '')
+        {
+            // Import the first student
+            web2py_component('{{=URL('import', 'student_do_import_ad')}}' + '?sheet_name=' + sheet_name,
+                         target='ad_import_temp');
+        }
+        else if (result.indexOf('Done!') != -1)
+        {
+            // Finished with the import
+            $('#ad_import').append('<div style="font-weight: bold; color: red;" >' + result + '</div>');
+            
+            // Change the spinning graphic to a done graphic
+            $('#ad_import_progress').fadeOut(500);
+            $('#ad_import_progress_done').fadeIn(500);
+            ImportComplete('Active Directory');
+        }
+        else
+        {
+            // Got one imported, move it to the status box and start the next one
+            $('#ad_import').append('<div>' + result + '</div>');
+            import_ad_count++;
+            
+            // Call the ajax method which will import 1 the next student
+            web2py_component('{{=URL('import', 'student_do_import_ad')}}' + '?sheet_name=' + sheet_name,
+                         target='ad_import_temp');
+        }
+        
+        ScrollToBottom('ad_import');
+    }
+    
+    function ImportCanvas()
+    {
+        // Process the stuff in canvas_import_temp from last call
+        var result = $('#canvas_import_temp').html();
+        
+        if (result == '')
+        {
+            // Import the first student
+            web2py_component('{{=URL('import', 'student_do_import_canvas')}}' + '?sheet_name=' + sheet_name,
+                         target='canvas_import_temp');
+        }
+        else if (result.indexOf('Done!') != -1)
+        {
+            // Finished with the import
+            $('#canvas_import').append('<div style="font-weight: bold; color: red;" >' + result + '</div>');
+            
+            // Change the spinning graphic to a done graphic
+            $('#canvas_import_progress').fadeOut(500);
+            $('#canvas_import_progress_done').fadeIn(500);
+            ImportComplete('Canvas');
+        }
+        else
+        {
+            // Got one imported, move it to the status box and start the next one
+            $('#canvas_import').append('<div>' + result + '</div>');
+            import_canvas_count++;
+            
+            // Call the ajax method which will import 1 the next student
+            web2py_component('{{=URL('import', 'student_do_import_canvas')}}' + '?sheet_name=' + sheet_name,
+                         target='canvas_import_temp');
+        }
+        
+        ScrollToBottom('canvas_import');
+    }
+    
+    function ImportComplete(item)
+    {
+        import_complete_count++;
+        
+        if (import_complete_count == 2)
+        {
+            $('#import_complete').append('<div>' + import_ad_count + ' Active Directory Account(s) Imported.</div>');
+            $('#import_complete').append('<div>' + import_canvas_count + ' Canvas Account(s) Imported.</div>');
+            
+            $('#import_complete').slideDown(1500);
+        }
+    }
+    
+    function ScrollToBottom(item_id)
+    {
+        $('#' + item_id).scrollTop( $('#' + item_id)[0].scrollHeight );
+    }
+    
+</script>
+<h1>Importing {{=count}} student(s) from sheet {{=sheet_name}}</h1>
+
+<div id="import_complete" class="well" style="display: none;">
+    <h3>
+        Finished Importing Students {{=IMG(_src=URL('static', 'images/thumbs-up-64.gif'), _alt='Import Complete!', _style='width:64px; height:64px;')}}
+    </h3>
+</div>
+
+<h4>Importing to Active Directory <span id="ad_import_progress">{{=IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='width:32px; height:32px;' )}}</span><span id="ad_import_progress_done" style="display: none;">{{=IMG(_src=URL('static', 'images/finished.gif'), _alt='Finished!', _style='')}}</span></h4>
+<div id="ad_import" class="well" style="height: 65px; overflow: auto;">
+</div>
+<div id="ad_import_temp" style="display:none;"></div>
+<hr />
+<h4>Importing to Canvas <span id="canvas_import_progress">{{=IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='height: 32px; width: 32px;')}}</span><span id="canvas_import_progress_done" style="display: none;">{{=IMG(_src=URL('static', 'images/finished.gif'), _alt='Finished!', _style='')}}</span></h4>
+<div id="canvas_import" class="well" style="height: 65px; overflow: auto;">
+</div>
+<div id="canvas_import_temp" style="display:none;"></div>

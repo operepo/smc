@@ -1,0 +1,4 @@
+<h4>Previous Imports</h4>
+{{for row in rows:}}
+<a href='{{=URL('import','faculty_show_excel_contents.html', vars=dict(excel_file=row.excel_file))}}'>{{=row.created_on}}</a> &nbsp;&nbsp;&nbsp; <a onclick='DeletePrevImport({{=row.id}}); return false;' href='#'><img src="{{=URL('static', 'images/delete.gif')}}" style='width: 16px; height: 16px;' /></a><br />
+{{pass}}

@@ -1,0 +1,26 @@
+{{extend 'layout.html'}}
+<div>
+	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a>
+</div>
+
+<h1>Change Application Settings</h1>
+
+<div>
+    <div style="float: left; width: 600px; overflow: initial;">
+        {{=form}}
+    </div>
+    <div class="well" style="float: left; width: 400px; ">
+        <h3>
+            Help
+        </h3>
+		<p>
+			Adjust cosmetic settings in your app.
+		</p>
+		<div>
+			<b>App Name and App Description: </b> Change the title and sub heading at the top of the page.
+		</div>
+		<div>
+			<b>App Logo: </b> Change the logo that is displayed in the upper left hand corner of the page.
+		</div>
+	</div>
+</div>

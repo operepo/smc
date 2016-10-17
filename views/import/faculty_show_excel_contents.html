@@ -1,0 +1,89 @@
+{{extend 'layout.html'}}
+
+<script>
+    function ImportComplete()
+    {
+        // Called when workbook has been copied into the queue table
+        
+        // Make the process_workbook div scroll to the bottom so the complete text is visible
+        ScrollToBottom('process_workbook_results');
+        
+        // Load the sheet picker
+        RefreshSheetPicker();
+        
+        // Hide this div since we don't need it now
+        $('#process_workbook').delay(500).slideUp(1000); // .fadeOut(2000);
+        $('#show_process_results').slideDown(500);
+    }
+    
+    function ScrollToBottom(item_id)
+    {
+        $('#' + item_id).scrollTop( $('#' + item_id)[0].scrollHeight );
+    }
+    
+    function RefreshSheetPicker()
+    {
+        // Start loading the picker
+        $('#pick_import_sheet_ajax').html('Loading...');
+        web2py_component( "{{=URL('import', 'faculty_show_excel_contents_sheet_dropdown.load')}}"
+                        , target='pick_import_sheet_ajax');
+        // use this to reload if we use a LOAD component
+        // jQuery('#pick_import_sheet_ajax').get(0).reload();
+        
+        // make this div fade in while it loads
+        $('#pick_import_sheet').fadeIn(1000);
+    }
+    
+    function SheetChanged()
+    {
+        // If the pick_sheet dropdown changes, reload the grid
+        var sheet_name = $('#pick_sheet').val();
+        $('#pick_import_grid_ajax').html('Loading...');
+        web2py_component('{{=URL('import', 'faculty_show_excel_contents_sheet_grid')}}' + '?sheet_name=' + sheet_name,
+                         target='pick_import_grid_ajax');
+    }
+    
+    function ColorDisabledRows()
+    {
+        // Find all the TDs from the table that have an unchecked box in the 9th column so we can change their background color
+        //var a = $('#pick_import_grid_ajax DIV DIV DIV TABLE TR TD:nth-child(9):contains(False)');
+        var a  = $("#pick_import_grid_ajax DIV DIV DIV TABLE TR TD:nth-child(10) input:checkbox:not(:checked)");
+        a.closest('tr').css('background-color', 'rgb(231, 212, 213)');
+    }
+    
+    function StartImport()
+    {
+        // Send us to the do_import script with the name of the sheet
+        var sheet_name = $('#pick_sheet').val();
+        var erase_current_password = $('#erase_current_password').val();
+        var erase_current_quota = $('#erase_current_quota').val();
+        
+        if (sheet_name == '')
+        {
+            // No sheet selected
+            alert('Invalid Sheet');
+            return;
+        }
+        var url = '{{=URL('import','faculty_do_import')}}' + '?sheet_name=' + sheet_name + "&erase_current_password=" + erase_current_password + "&erase_current_quota=" + erase_current_quota;
+
+        window.location = url;
+    }
+</script>
+
+<div id="show_process_results" style="display:none; font-size: 10px;">
+    <a href="#" onclick="$('#process_workbook').fadeIn(500); return false;">(Display Log)</a>
+</div>
+<div id="process_workbook" class="well" style="height: 200px;">
+   <h3>Processing Workbook...</h3>
+    <div id="process_workbook_results" style="overflow: auto; height: 130px;">
+        {{=LOAD('import','faculty_show_excel_contents_process', content=DIV(IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='float: left; height: 32px; width: 32px;'), P('Reading Spreadsheet')), ajax=True, vars=dict(excel_file=excel_file) )}}
+    </div>
+</div>
+
+<div id="pick_import_sheet" class="well" style="display: none;">
+    <div id="pick_import_sheet_ajax">
+        loading...
+    </div>
+    <div id="pick_import_grid_ajax">
+    </div>
+</div>

@@ -1,0 +1,10 @@
+{{extend 'layout.html'}}
+<div>
+	<a style="font-size: 10px;" href="{{=session.back }}">&lt;-- Back</a>
+</div>
+
+<h1>Create Faculty</h1>
+
+<div class="well">
+	To create new faculty, use the <a href="{{= URL('import', 'faculty_pick_excel') }}">import tool</a> (requires import privileges).
+</div>

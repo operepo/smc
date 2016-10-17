@@ -1,0 +1,33 @@
+{{extend 'layout.html'}}
+<div>
+	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a>
+</div>
+
+<h1>Change ZFS Server Settings</h1><div>	<a style="font-size: 12px;" href="{{=URL('admin','refresh_datasets')}}">[Refresh Datasets]</a> &lt;-- Use this to get a current list of datasets for the source/dest fields. (requires zpool enabled, zpool server address, and valid user/pass set and saved)</div>
+<div>
+    <div style="float: left; width: 600px; overflow: initial;">
+        {{=form}}
+    </div>
+    <div class="well" style="float: left; width: 400px; ">
+        <h3>
+            Help
+        </h3>
+		<p>			ZFS server settings allow you to easily clone datasets for your students. This is helpfull for making student virtual machins and quickly cloning copies. You will need a source dataset to hold what you want cloned (one sub dataset for each folder), and a destination dataset where a dataset will be created for each student, as well as a sub dataset for each cloned item. It is intended that the student can access the folder from a mapped drive in windows. This script is written to interface specifically with a FreeNas based server.		</p>		<p><b>Example:</b><br/>dpool/source_vms  (dataset)<br/>&nbsp;&nbsp;&nbsp;&nbsp;-> win8			(sub datasets)<br/>&nbsp;&nbsp;&nbsp;&nbsp;-> win7<br/>dpool/dest_vms	(This is a dataset)<br/>&nbsp;&nbsp;&nbsp;&nbsp;-> bobsmith  (dataset for each user)<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-> win8 (cloned dataset)<br/>			
+		</p>
+		<div>
+			<b>ZPool Enabled: </b> Turn on/off the the ZFS Server tools.
+		</div>		<div>			<b>ZPool Server Address: </b>  Please enter the IP of the ZFS Server. NOTE: Using the IP is more reliable. Default options for DNS lookup does not allow this server to look back into your network to resolve names.		</div>
+		<div>
+			<b>ZPool Login User: </b> Use a <b>LOCAL NOT DOMAIN</b> admin account that is on the ZFS server. This account needs priviledges to create datasets and clone datasets. The account <b>HAS</b> to be <b>LOCAL</b> or it will not work!!!
+		</div>
+		<div>
+			<b>ZPool Login Password: </b> The password for the local account described above. Password is encypted using AES encryption.
+		</div>
+		<div>
+			<b>ZPool Source Dataset: </b>  Choose the location of source datasets. This is where you will clone from. The system will grab sub datasets from this location and make them available to clone. Use the refresh link to get a current list of datasets from the server.
+		</div>		<div>			<b>ZPool Dest Dataset: </b>  Choose the location of the home drives. A dataset will be created for each user (student or faculty). A dataset will be created in the home director for each source. These will be clones of the source dataset. Use the refresh link to get a current list of datasets from the server.		</div>
+		<div>
+			<b>ZPool Sync Setting: </b> You can set the default sync setting for cloned datasets. This will affect reliablity and performance. Standard -> use log device for sync writes, direct write to spinning drives for async writes, always -> use log device for all writes, disabled -> don't log any writes (fastest but can be unsafe!).
+		</div>
+	</div>
+</div>

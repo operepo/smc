@@ -1,0 +1,11 @@
+{{extend 'layout.html'}}
+<h1>Student and Faculty Import Tools</h1>
+<p>
+    From this tool you can import students or faculty from Excel files. The tool can automatically create shell classes and enroll students into them.
+    
+</p>
+<ul>
+    <li><a href="{{=URL('import', 'student_pick_excel')}}">Student Import</a></li>
+    <li><a href="{{=URL('import', 'faculty_pick_excel')}}">Faculty Import</a></li>
+    
+</ul>

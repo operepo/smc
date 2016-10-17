@@ -1,0 +1,23 @@
+{{extend 'layout.html'}}
+<h1>Reset SMC App</h1>
+<p>
+	Use this tool to reset this app
+</p>
+<h2>
+	When would I use this?
+</h2>
+<p>
+	The most common use for this tool is to reset the server process after an update to the SMC app. This ensures that the latest changes are loaded.
+</p>
+
+<h2>
+	Can I run this now? Will it hurt anything?
+</h2>
+<p>
+	It will stop the app. The next time you or someone else views a page the app will start. This means that if you are running an import when you do this, it will stop the import. Otherwise it shouldn't even be noticable.
+</p>
+
+<p>
+	{{=reset_smc_form}}
+</p>
+<h4>	Kill Scheduler Process</h4><div class="well">	<p>		FFMPEG {{=ffmpeg_running}} running.	</p>	<p>		FFMPEG should be running if an item in the queue is marked as running. If you see that FFMPEG is <b>NOT</b> running for a long period of time but a media file in the queue is running then the scheduler may be stuck. You can use this button to reset the scheduler process. Make sure you reload this page to see the status change as it will not update itself. The scheduler process is started automatically when you view this page or upload a new media file.	</p>	{{=kill_scheduler}}	</div>

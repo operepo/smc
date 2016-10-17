@@ -1,0 +1,42 @@
+{{extend 'layout.html'}}
+
+<h1>WINRM Configuration </h1>
+
+<b>Description:</b>
+<p>
+    WINRM allows us to talk to your file server to create home directories and set permissions and quotas for each student or faculty user. It is expected that the file server will be a member of the domain.
+</p>
+
+<hr />
+<b>Setup:</b>
+
+<ol>
+	<li>On the file server, make sure you have a local admin account created that has full access to the shared folder where home directories and/or profiles are created. Make sure this account has both NTFS and Share permissions. This needs to be a LOCAL account, NOT a domain account (administrator is ok).</li>
+	<li><A href="{{=URL('static', 'winrm', 'winrm_setup.cmd') }}">Download</a> (Right Click -> Save Targe As...) and run this script ON YOUR FILE SERVER as an Administrator (e.g. "Open In Folder", then right click, "Run as Administrator").</li>
+	<li>If this is the first time you have run it, you should see a prompt confirming that you want to make changes, hit Y and enter.</li>
+	<li>When it is done, you should see a permissions box. Make sure the local admin account from step 1 in the list with full access. </li>
+	<li>Once that is done, go to the <a href="{{= URL('admin', 'config_file_settings') }}" target="_blank">File Server Configuration</a> page and enter the proper information.
+	</li>
+	<li>Use the <A href="{{= URL('admin', 'config_verify') }}" target="_blank">Verify</a> tool to make sure everything is setup correctly.</li>
+    
+    
+</ol>
+
+
+<!--
+<li>Create a local account on the file server and put it in the "Administrators" and "Domain Admins" group. A Domain account will not work with our setup. This will be your Service User.</li>
+    <li>Enable WinRM - Run the following commands on the file server in an Administrator Command Prompt:
+        <pre>
+winrm quickconfig -transport:https
+winrm set winrm/config/client/auth @{Basic="true"}
+winrm set winrm/config/service/auth @{Basic="true"}
+winrm set winrm/config/service @{AllowUnencrypted="true"}
+winrm configSDDL default         <-- Make sure the File Server Login User has rights
+</pre>
+    </li>
+winrm quickconfig -transport:https
+winrm set winrm/config/client/auth @{Basic="true"}
+winrm set winrm/config/service/auth @{Basic="true"}
+winrm set winrm/config/service @{AllowUnencrypted="true"}
+winrm configSDDL default         <- Make sure the AD Service User has rights
+-->

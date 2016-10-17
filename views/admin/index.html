@@ -1,0 +1,14 @@
+{{extend 'layout.html'}}
+<h1>Admin Tools</h1>
+
+<p>
+	Configure the application to suit your needs.
+</p>
+
+<ul>
+	<li><a href="{{=URL('admin', 'changepassword') }}">Change Password</a></li>
+	<li><a href="{{=URL('admin', 'config') }}">Configure App</a></li>
+	<!--li><a href="{{=URL('admin', 'users') }}">Manage Users</a></li-->
+	<li><a href="{{=URL('admin', 'switchmode') }}">Switch Online/Offline Mode</a></li>
+	<li><a href="{{=URL('admin', 'switchquota') }}">Switch Quota Drive Settings</a></li>
+</ul>

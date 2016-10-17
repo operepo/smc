@@ -1,0 +1,22 @@
+{{extend 'layout.html'}}
+
+<div>
+	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a>
+</div>
+
+<h1>Verify that your settings are correct</h1>
+
+
+<div class="well">
+	<h2>
+		Settings Verification.
+	</h2>
+	
+	<p>
+	{{=LOAD('admin', 'verify_settings.load',content=DIV(IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='float: left;'), P('Verify Settings...')), ajax=True)}}
+	</p>
+	
+	<p><br/><br/><br/><br/><br/><br/>
+		<A href="{{= URL('admin', 'config_verify_auto') }}">Auto Create</a> - If you see failures regarding missing Faculty or Student groups or OUs, you can use the auto create function to put them in for you.
+	</p>
+</div>

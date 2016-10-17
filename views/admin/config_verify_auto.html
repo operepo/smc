@@ -1,0 +1,19 @@
+{{extend 'layout.html'}}
+
+<div>
+	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a>
+</div>
+
+<h1>Verify that your settings are correct</h1>
+
+
+<div class="well">
+	<h2>
+		Settings Verification.
+	</h2>
+	
+	<p>
+	{{=LOAD('admin', 'verify_settings.load', vars={'auto': 'true'}, content=DIV(IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='float: left;'), P('Verify Settings...')), ajax=True ) }}
+	</p>
+	
+</div>

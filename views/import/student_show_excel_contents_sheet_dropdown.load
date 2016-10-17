@@ -1,0 +1,37 @@
+<script>
+    var advanced_settings_toggle = false;
+    function ToggleAdvancedSettings()
+    {
+        //alert('hi');
+        if (advanced_settings_toggle)
+        {
+            $('#advanced_options').fadeOut(500);
+            advanced_settings_toggle = false;
+        } else {
+            $('#advanced_options').fadeIn(500);
+            advanced_settings_toggle = true;
+        }
+    }
+</script>
+<table borders=0>
+    <tr>
+        <td>{{=dropdown}}</td>
+        <td>{{=go_button}}</td>
+        <td bgcolor="#dddddd">
+            <a href='#' onclick='ToggleAdvancedSettings(); return false;'>(Advanced Settings)</a>
+            <div id='advanced_options' style='display:none;'>
+                <p>
+                    <font color='red' size='2'>
+                    <b>WARNING:</b> <br >These options will reset changed values (e.g. if you changed your password, this will reset it to the default)
+                    </font>
+                </p>
+            <p>
+                Override Current Password {{=erase_current_password}}
+            </p>
+            <p>
+                Override Current Quouta {{=erase_current_quota}}
+            </p>
+            </div>
+        </td>
+    </tr>
+</table>

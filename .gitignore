@@ -1,0 +1,11 @@
+
+*.pyc
+.DS_Store
+._.DS_Store
+progress.log
+
+databases/
+cache/
+errors/
+private/
+static/media/
