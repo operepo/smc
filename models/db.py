@@ -53,7 +53,7 @@ first_run = os.path.join(app_folder, ".first_run")
 if (os.path.isfile(first_run)):
     # First run file exists
     lazy_tables = False
-    fake_migrate = True
+    fake_migrate = False
     migrate = True
     migrate_enabled = True
     # Remove the file so it doesn't keep running
