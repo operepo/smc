@@ -14,24 +14,28 @@ lazy_tables = True
 fake_migrate_all = False
 fake_migrate = False
 migrate = True
+migrate_enabled = False
 
 tmp = request.vars.lazy_tables
 if (tmp):
     if (tmp.lower() == "false"):
         lazy_tables = False
+        migrate_enabled = True
 
 tmp = request.vars.fake_migrate
 if (tmp):
     if(tmp.lower() == "true"):
         fake_migrate = True
         migrate = False
+        migrate_enabled = True
 
 tmp = request.vars.fix
 if (tmp):
     if (tmp.lower() == "true"):
         lazy_tables = False
         fake_migrate = True
-        migrate = False
+        migrate = True
+        migrate_enabled = True
 
 # Check for firstrun file and force db migrate
 #Starts in the Models folder
@@ -47,17 +51,18 @@ w2py_folder = os.path.dirname(w2py_folder)
 w2py_folder = os.path.dirname(w2py_folder)
 first_run = os.path.join(app_folder, ".first_run")
 if (os.path.isfile(first_run)):
-	# First run file exists
-	lazy_tables = False
-	fake_migrate = True
-	migrate = False
-	# Remove the file so it doesn't keep running
-	os.remove(first_run)
+    # First run file exists
+    lazy_tables = False
+    fake_migrate = True
+    migrate = True
+    migrate_enabled = True
+    # Remove the file so it doesn't keep running
+    os.remove(first_run)
         
 if not request.env.web2py_runtime_gae:
     ## if NOT running on Google App Engine use SQLite or other DB
     #db = DAL('sqlite://storage.sqlite',pool_size=1,check_reserved=['all'], lazy_tables=lazy_tables, fake_migrate_all=fake_migrate ) # lazy_tables=True   , fake_migrate_all=True
-    db = DAL('sqlite://storage.sqlite',pool_size=1,check_reserved=['all'], lazy_tables=lazy_tables, fake_migrate=fake_migrate, fake_migrate_all=fake_migrate_all, migrate=migrate ) # fake_migrate_all=True
+    db = DAL('sqlite://storage.sqlite',pool_size=1,check_reserved=['all'], migrate_enabled=migrate_enabled, lazy_tables=lazy_tables, fake_migrate=fake_migrate, fake_migrate_all=fake_migrate_all, migrate=migrate ) # fake_migrate_all=True
     db.executesql('PRAGMA journal_mode=WAL')
     
     db_scheduler = DAL('sqlite://storage_scheduler.sqlite', pool_size=1, check_reserved=['all'])
