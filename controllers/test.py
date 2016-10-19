@@ -9,11 +9,15 @@ from ednet.faculty import Faculty
 from ednet.util import Util
 
 from pytube import YouTube
-
+import os
 
 import ldap
 
 import sys
+
+def test():
+    a = os.environ["IT_PW"]
+    return locals()
 
 def index():
     

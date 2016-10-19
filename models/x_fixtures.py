@@ -1,5 +1,6 @@
 # coding: utf8
-
+import os
+from ednet.ad import AD
 
 ## Make sure that these entries are present in the database
 # Groups
@@ -33,3 +34,17 @@ if (new_admin):
     admin_id = row["id"]
     auth.add_membership(group_id=admin_group_id, user_id=admin_id)
 new_admin = False
+
+#  Make sure the admin password is setup if we are in a docker container (presence of IT_PW environment variable)
+startup = cache.ram('startup', lambda: True, time_expire=60*60*24*365)
+if (startup == True):
+    # Set password
+    from gluon.main import save_password
+    pw = os.environ["IT_PW"]
+    pw = pw.strip()
+    if (pw != ""):
+        save_password(pw,80)
+        save_password(pw,443)
+    
+    # Set the cache with the new value
+    cache.ram('startup', lambda: False, 0)

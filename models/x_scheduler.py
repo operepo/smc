@@ -9,6 +9,8 @@ import urllib
 from pytube import YouTube
 
 from ednet.ad import AD
+from ednet import Faculty
+from ednet import Student
 
 # Task Scheduler Code
 
@@ -574,15 +576,77 @@ def download_wamap_qimages():
     db_wamap.close()
     return ret
 
+
+def refresh_all_ad_logins():
+    # Go to the AD server and refresh all student and staff AD login times
+    ret = ""
+    
+    # Update the last login value for all users (students and faculty)
+    if (AD.ConnectAD() != True):
+        ret = "[AD Disabled]"
+        return ret
+    
+    # Grab list of students
+    rows = db(db.student_info).select(db.student_info.user_id)
+    for row in rows:
+        #ret += "UID: " + row.user_id
+        ll = Student.GetLastADLoginTime(row.user_id)
+        #if (ll == None):
+        #    ret += "None"
+        #else:
+        #    ret += str(ll)
+        db(db.student_info.user_id==row.user_id).update(ad_last_login=ll)
+        pass
+        db.commit()
+    
+    # Grab a list of faculty
+    rows = db(db.faculty_info).select(db.faculty_info.user_id)
+    for row in rows:
+        #ret += "UID: " + row.user_id
+        ll = Faculty.GetLastADLoginTime(row.user_id)
+        #if (ll == None):
+        #    ret += "None"
+        #else:
+        #    ret += str(ll)
+        db(db.faculty_info.user_id==row.user_id).update(ad_last_login=ll)
+        pass
+        db.commit()
+    
+    rows=None
+    ad_errors = AD.GetErrorString()
+    ret = "Done."
+    
+    return ret
+
 # Enable the scheduler
 from gluon.scheduler import Scheduler
 
-scheduler = Scheduler(db_scheduler, max_empty_runs=20, heartbeat=1,
-                      group_names=['process_videos', 'create_home_directory', 'wamap_delete', 'wamap_videos'],
+scheduler = Scheduler(db_scheduler, max_empty_runs=100, heartbeat=1,
+                      group_names=['process_videos', 'create_home_directory', 'wamap_delete', 'wamap_videos', 'misc'],
                       tasks=dict(process_media_file=process_media_file,
                                  process_wamap_video_links=process_wamap_video_links,
                                  create_home_directory=create_home_directory,
                                  remove_old_wamap_video_files=remove_old_wamap_video_files,
                                  download_wamap_qimages=download_wamap_qimages,
+                                 refresh_all_ad_logins=refresh_all_ad_logins,
                                  ))
 current.scheduler = scheduler
+
+
+# Make sure to run the ad login refresh every hour or so
+refresh_ad_login = cache.ram('refresh_ad_login', lambda: True, 60*60)
+if (refresh_ad_login == True):
+    # Update the last login value for all users (students and faculty)
+    if (AD.ConnectAD() != True):
+        # Not enabled, skip
+        pass
+    else:
+        # Schedule the process
+        result = scheduler.queue_task('refresh_all_ad_logins', timeout=1200, immediate=True, sync_output=5, group_name="misc")
+        pass
+    
+    cache.ram('refresh_ad_login', lambda: False, 0)
+    
+    # Make sure to start the scheduler process
+    cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_misc_scheduler.py') + " > /dev/null 2>&1 &"
+    p = subprocess.Popen(cmd, shell=True, close_fds=True)
