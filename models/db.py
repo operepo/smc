@@ -58,7 +58,7 @@ if (os.path.isfile(first_run)):
     migrate_enabled = True
     # Remove the file so it doesn't keep running
     os.remove(first_run)
-        
+#test
 if not request.env.web2py_runtime_gae:
     ## if NOT running on Google App Engine use SQLite or other DB
     #db = DAL('sqlite://storage.sqlite',pool_size=1,check_reserved=['all'], lazy_tables=lazy_tables, fake_migrate_all=fake_migrate ) # lazy_tables=True   , fake_migrate_all=True
@@ -189,4 +189,3 @@ current.smc_log = ""
 # Track module changes
 from gluon.custom_import import track_changes
 #track_changes(True)
-

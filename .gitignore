@@ -1,9 +1,9 @@
-
+*.bak
 *.pyc
 .DS_Store
 ._.DS_Store
 progress.log
-
+sessions/
 databases/
 cache/
 errors/
