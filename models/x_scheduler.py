@@ -17,6 +17,15 @@ from ednet import Student
 def process_media_file(media_id):
     ret = ""
     
+    # Find ffmpeg binary
+    ffmpeg = "/usr/bin/ffmpeg"
+    if (os.path.isfile(ffmpeg) != True):
+        ffmpeg = "/usr/local/bin/ffmpeg "
+    if (os.path.isfile(ffmpeg) != True):
+        ret = "ERROR - NO FFMPEG APP FOUND! " + ffmpeg
+        print ret
+        return ret
+    
     # Grab the media file
     #media_file = None
     media_file = db(db.media_file_import_queue.id==media_id).select().first()
@@ -82,10 +91,10 @@ def process_media_file(media_id):
     output_poster = target_file + ".poster.png"
     output_thumb = target_file + ".thumb.png"
     
-    #print "Output files: "
-    #print output_webm
-    #print output_ogv
-    #print output_mp4
+    print "Output files: "
+    print output_webm
+    print output_ogv
+    print output_mp4
     
     webm_ret = ""
     ogv_ret = ""
@@ -96,13 +105,13 @@ def process_media_file(media_id):
     # Run ffmpeg to process file
     
     # Do webm - NOTE No webm support in ffmpeg right now - # TODO unknown encoder libvpx
-    #cmd = "/usr/local/bin/ffmpeg -i '" + input_file + "' -vcodec libvpx -qscale 6 -acodec libvorbis -ab 128k -vf scale='480:-1' '" + output_webm + "'"
+    #cmd = ffmpeg + " -i '" + input_file + "' -vcodec libvpx -qscale 6 -acodec libvorbis -ab 128k -vf scale='480:-1' '" + output_webm + "'"
     #p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     #webm_ret = p.communicate()[0]
     
     # Do OGV
-    #cmd = "/usr/local/bin/ffmpeg -y -i '" + input_file + "' -vcodec libtheora -qscale 6 -acodec libvorbis -ab 192k -vf scale='640:-1' '" + output_ogv + "'"
-    cmd = "/usr/local/bin/ffmpeg -y -i '" + input_file + "' -vcodec libtheora -qscale:v 5 -acodec libvorbis -ab 128k '" + output_ogv + "'"
+    #cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale 6 -acodec libvorbis -ab 192k -vf scale='640:-1' '" + output_ogv + "'"
+    cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale:v 5 -acodec libvorbis -ab 128k '" + output_ogv + "'"
     #print "Creating OGV..."  + " [" + str(time.time()) + "]"
     print "!clear!10%"
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
@@ -110,15 +119,15 @@ def process_media_file(media_id):
     
     
     # Do MP4
-    #cmd = "/usr/local/bin/ffmpeg -y -i '" + input_file + "' -vcodec libx264 -preset slow -profile main -crf 20 -acodec libfaac -ab 192k -vf scale='720:-1' '" + output_mp4 + "'"
-    cmd = "/usr/local/bin/ffmpeg -y -i '" + input_file + "' -vcodec libx264 -preset slow -movflags faststart -profile main -crf 20 -acodec libfaac -ab 128k '" + output_mp4 + "'"
+    #cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -profile main -crf 20 -acodec libfaac -ab 192k -vf scale='720:-1' '" + output_mp4 + "'"
+    cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -movflags faststart -profile:v main -crf 20 -acodec aac -ab 128k '" + output_mp4 + "'"
     #print "Creating MP4..."  + " [" + str(time.time()) + "]"
     print "!clear!30%"
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     mp4_ret = p.communicate()[0]
     
     # Do MP4 with mobile quality
-    cmd = "/usr/local/bin/ffmpeg -y -i '" + input_file + "' -vcodec libx264 -preset slow -movflags faststart -profile main -crf 20 -acodec libfaac -ab 128k -vf scale='2*trunc(oh*a/2):480' '" + output_mobile_mp4 + "'"
+    cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -movflags faststart -profile main -crf 20 -acodec aac -ab 128k -vf scale='2*trunc(oh*a/2):480' '" + output_mobile_mp4 + "'"
     #print "Creating mobile MP4..."  + " [" + str(time.time()) + "]"
     print "!clear!70%"
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
@@ -126,14 +135,14 @@ def process_media_file(media_id):
     
     
     # Generate poster image
-    cmd = "/usr/local/bin/ffmpeg -y -ss 5 -i '" + input_file + "' -vf  'thumbnail,scale=640:-1' -frames:v 1 '" + output_poster + "'"
+    cmd = ffmpeg + " -y -ss 5 -i '" + input_file + "' -vf  'thumbnail,scale=640:-1' -frames:v 1 '" + output_poster + "'"
     #print "Creating poster image..." + " [" + str(time.time()) + "]"
     print "!clear!85%"
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     poster_ret = p.communicate()[0]
     
     # Generate thumbnail image
-    cmd = "/usr/local/bin/ffmpeg -y -ss 5 -i '" + input_file + "' -vf  'thumbnail,scale=128:-1' -frames:v 1 '" + output_thumb + "'"
+    cmd = ffmpeg + " -y -ss 5 -i '" + input_file + "' -vf  'thumbnail,scale=128:-1' -frames:v 1 '" + output_thumb + "'"
     #print "Creating thumbnail image..."  + " [" + str(time.time()) + "]"
     print "!clear!95%"
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
@@ -144,7 +153,7 @@ def process_media_file(media_id):
     # ffmpeg -i [your video] [encoding options as specified above] [your output video with appropriate extension - eg output.mp4, output.ogv or output.webm]
     
     # Make webm file - 480p
-    #cmd = "/usr/local/bin/ffmpeg -i 'input_file.avi' -codec:v libvpx -quality good -cpu-used 0 -movflags faststart -b:v 600k -maxrate 600k -bufsize 1200k -qmin 10 -qmax 42 -vf scale=-1:480 -threads 4 -codec:a vorbis -b:a 128k output_file.webm"
+    #cmd = ffmpeg + " -i 'input_file.avi' -codec:v libvpx -quality good -cpu-used 0 -movflags faststart -b:v 600k -maxrate 600k -bufsize 1200k -qmin 10 -qmax 42 -vf scale=-1:480 -threads 4 -codec:a vorbis -b:a 128k output_file.webm"
     # -vcodec libvpx -qscale 6 -acodec libvorbis -ab 128k
     
     
@@ -153,7 +162,7 @@ def process_media_file(media_id):
     # -vcodec libtheora -qscale 6 -acodec libvorbis -ab 128k
     
     # Make mp4 file - 480p
-    #cmd = "/usr/local/bin/ffmpeg -i inputfile.avi -codec:v libx264 -profile:v main -preset slow -movflags faststart -b:v 400k -maxrate 400k -bufsize 800k -vf scale=-1:480 -threads 0 -codec:a libfdk_aac -b:a 128k output.mp4"  #codec:a libfdk_aac  codec:a mp3
+    #cmd = ffmpeg + " -i inputfile.avi -codec:v libx264 -profile:v main -preset slow -movflags faststart -b:v 400k -maxrate 400k -bufsize 800k -vf scale=-1:480 -threads 0 -codec:a libfdk_aac -b:a 128k output.mp4"  #codec:a libfdk_aac  codec:a mp3
     #-vcodec libx264 -preset slow -profile main -crf 20 -acodec libfaac -ab 128k
     
     
@@ -636,6 +645,7 @@ current.scheduler = scheduler
 # Make sure to run the ad login refresh every hour or so
 refresh_ad_login = cache.ram('refresh_ad_login', lambda: True, 60*60)
 if (refresh_ad_login == True):
+    cache.ram('refresh_ad_login', lambda: False, 0)
     # Update the last login value for all users (students and faculty)
     if (AD.ConnectAD() != True):
         # Not enabled, skip
@@ -644,8 +654,6 @@ if (refresh_ad_login == True):
         # Schedule the process
         result = scheduler.queue_task('refresh_all_ad_logins', timeout=1200, immediate=True, sync_output=5, group_name="misc")
         pass
-    
-    cache.ram('refresh_ad_login', lambda: False, 0)
     
     # Make sure to start the scheduler process
     cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_misc_scheduler.py') + " > /dev/null 2>&1 &"
