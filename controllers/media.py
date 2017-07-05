@@ -227,9 +227,9 @@ def process_queue():
     query = (db.media_file_import_queue)
     fields = [db.media_file_import_queue.title, db.media_file_import_queue.status, db.media_file_import_queue.modified_on,  db.media_file_import_queue.id, db.media_file_import_queue.media_guid]
     links = [
-            (dict( header=T('Title'), body=lambda row: A(row.title, _href=(URL('media', 'player', extension=False) + "/" + row.media_guid) , _target='blank'  ) ) ), 
+            (dict(header=T('Title'), body=lambda row: A(row.title, _href=(URL('media', 'player', extension=False) + "/" + row.media_guid) , _target='blank'  ) ) ),
             (dict(header=T('Status'),body=lambda row: DIV( getTaskStatus(row.id), BR(), A('Re-Queue', _href=URL('media', 'reset_queued_item', args=[row.id], user_signature=True)) ) ) ),
-            (dict( header=T('Queued On'), body=lambda row: row.modified_on  ) ),
+            (dict(header=T('Queued On'), body=lambda row: row.modified_on  ) ),
             (dict(header=T('Progress'), body=lambda row: getTaskProgress(row.id) ) ),
             ]
     
@@ -430,7 +430,7 @@ def find_wamap_videos():
         # See if this item is in the database
         p = os.path.join(wamap_folder, link)
         try:
-            json_data=open(p).read()
+            json_data = open(p).read()
             dat = loads(json_data)
             v = db(db.wamap_videos.source_url==dat["yt_url"]).select().first()
             if (v == None):

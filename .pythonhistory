@@ -1,0 +1,10 @@
+db = current.db
+db
+key = "canvas_secret"
+val = "123"
+items = {key: val}
+items
+db(db.my_app_settings).select()
+db(db.my_app_settings).update(**items)
+db.commit()
+quit()

@@ -40,11 +40,11 @@ if (new_admin):
 new_admin = False
 
 #  Make sure the admin password is setup if we are in a docker container (presence of IT_PW environment variable)
-startup = cache.ram('startup', lambda: True, time_expire=60*60*24*365)
+startup = cache.ram('startup', lambda: True, time_expire=600)
 if (startup == True):
     # Set password
     from gluon.main import save_password
-    pw = os.environ["IT_PW"]
+    pw = str(os.environ["IT_PW"]) + ""
     pw = pw.strip()
     if (pw != ""):
         # Set pw for w2p admin login (parameters_??.py file)

@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+# Track module changes - reload on change
+from gluon.custom_import import track_changes
+track_changes(True)
+
 #########################################################################
 ## This scaffolding model makes your app work on Google App Engine too
 ## File is released under public domain and you can use without limitations
@@ -8,7 +12,6 @@
 ## if SSL/HTTPS is properly configured and you want all HTTP requests to
 ## be redirected to HTTPS, uncomment the line below:
 request.requires_https()
-
 
 lazy_tables = True
 fake_migrate_all = False
@@ -31,16 +34,29 @@ if (tmp):
 
 tmp = request.vars.fix
 if (tmp):
-    if (tmp.lower() == "true"):
-        lazy_tables = False
-        fake_migrate = True
-        migrate = True
-        migrate_enabled = True
+    if tmp.lower() == "true":
+        cache.ram("initial_run", lambda: True, time_expire=600)
+        #lazy_tables = False
+        #fake_migrate = True
+        #migrate = True
+        #migrate_enabled = True
 
-# Check for firstrun file and force db migrate
-#Starts in the Models folder
+# On initial run since startup (runs every time app starts, set migrate=true&lazy_tables=false
+initial_run = cache.ram("initial_run", lambda: True, time_expire=600)
+if initial_run is True:
+    # Force db migrate on first run
+    lazy_tables = False
+    migrate = True
+    migrate_enabled = True
+    fake_migrate = False
+    fake_migrate_all = False
+    # Reset the initial run value
+    cache.ram("initial_run", lambda: False, time_expire=0)
+
+
+# Starts in the Models folder
 w2py_folder = os.path.abspath(__file__)
-#print "Running File: " + app_folder
+# print "Running File: " + app_folder
 w2py_folder = os.path.dirname(w2py_folder)
 # app folder
 w2py_folder = os.path.dirname(w2py_folder)
@@ -49,37 +65,32 @@ app_folder = w2py_folder
 w2py_folder = os.path.dirname(w2py_folder)
 # Root folder
 w2py_folder = os.path.dirname(w2py_folder)
-first_run = os.path.join(app_folder, ".first_run")
-if (os.path.isfile(first_run)):
-    # First run file exists
-    lazy_tables = False
-    fake_migrate = False
-    migrate = True
-    migrate_enabled = True
-    # Remove the file so it doesn't keep running
-    os.remove(first_run)
+
 
 if not request.env.web2py_runtime_gae:
-    ## if NOT running on Google App Engine use SQLite or other DB
-    #db = DAL('sqlite://storage.sqlite',pool_size=1,check_reserved=['all'], lazy_tables=lazy_tables, fake_migrate_all=fake_migrate ) # lazy_tables=True   , fake_migrate_all=True
-    db = DAL('sqlite://storage.sqlite',pool_size=1,check_reserved=['all'], migrate_enabled=migrate_enabled, lazy_tables=lazy_tables, fake_migrate=fake_migrate, fake_migrate_all=fake_migrate_all, migrate=migrate ) # fake_migrate_all=True
+    # if NOT running on Google App Engine use SQLite or other DB
+    # db = DAL('sqlite://storage.sqlite',pool_size=1,check_reserved=['all'], lazy_tables=lazy_tables, fake_migrate_all=fake_migrate ) # lazy_tables=True   , fake_migrate_all=True
+    db = DAL('sqlite://storage.sqlite', pool_size=1, check_reserved=['all'], migrate_enabled=migrate_enabled,
+             lazy_tables=lazy_tables, fake_migrate=fake_migrate, fake_migrate_all=fake_migrate_all,
+             migrate=migrate )  # fake_migrate_all=True
     db.executesql('PRAGMA journal_mode=WAL')
     
     db_scheduler = DAL('sqlite://storage_scheduler.sqlite', pool_size=1, check_reserved=['all'])
     db_scheduler.executesql('PRAGMA journal_mode=WAL')
+
 else:
-    ## connect to Google BigTable (optional 'google:datastore://namespace')
+    # connect to Google BigTable (optional 'google:datastore://namespace')
     db = DAL('google:datastore')
-    ## store sessions and tickets there
+    # store sessions and tickets there
     session.connect(request, response, db=db)
-    ## or store session in Memcache, Redis, etc.
-    ## from gluon.contrib.memdb import MEMDB
-    ## from google.appengine.api.memcache import Client
-    ## session.connect(request, response, db = MEMDB(Client()))
+    # or store session in Memcache, Redis, etc.
+    # from gluon.contrib.memdb import MEMDB
+    # from google.appengine.api.memcache import Client
+    # session.connect(request, response, db = MEMDB(Client()))
 
 ## by default give a view/generic.extension to all actions from localhost
 ## none otherwise. a pattern can be 'controller/function.extension'
-response.generic_patterns = ['*'] if request.is_local else []
+response.generic_patterns = ['*'] if request.is_local else ['*.json']
 ## (optional) optimize handling of static files
 # response.optimize_css = 'concat,minify,inline'
 # response.optimize_js = 'concat,minify,inline'
@@ -111,7 +122,7 @@ mail.settings.sender = 'admin@correctionsed.com'
 mail.settings.login = 'username:password'
 
 ## configure auth policy
-#auth.settings.actions_disabled = ['register', 'request_reset_password']
+# auth.settings.actions_disabled = ['register', 'request_reset_password']
 auth.settings.actions_disabled=['register','change_password','request_reset_password','retrieve_username','profile']
 # you don't have to remember me
 auth.settings.remember_me_form = False
@@ -124,8 +135,15 @@ auth.settings.reset_password_requires_verification = True
 
 ## if you need to use OpenID, Facebook, MySpace, Twitter, Linkedin, etc.
 ## register with janrain.com, write your domain:api_key in private/janrain.key
-from gluon.contrib.login_methods.rpx_account import use_janrain
-use_janrain(auth, filename='private/janrain.key')
+#from gluon.contrib.login_methods.rpx_account import use_janrain
+#use_janrain(auth, filename='private/janrain.key')
+
+
+# Add basic auth
+#from gluon.contrib.login_methods.basic_auth import basic_auth
+#auth.settings.login_methods.append(
+#    basic_auth('OPE - SMC'))
+
 
 # ldap authentication and not save password on web2py
 #from gluon.contrib.login_methods.ldap_auth import ldap_auth
@@ -185,7 +203,3 @@ from gluon import current
 current.db = db
 current.auth = auth
 current.smc_log = ""
-
-# Track module changes
-from gluon.custom_import import track_changes
-#track_changes(True)

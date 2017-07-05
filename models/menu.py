@@ -53,6 +53,8 @@ response.menu = [
 				(T('Student Settings'), False, URL('admin', 'config_student_settings')),
 				(T('Canvas Settings'), False, URL('admin', 'config_canvas_settings')),
                 (T('ZFS Settings'), False, URL('admin', 'config_zfs_settings')),
+				(T('Verify Settings'), False, URL('admin', 'config_verify')),
+				(T('Verify Settings (auto create)'), False, URL('admin', 'config_verify_auto')),
 			 ]),
             #(T('Manage Users'), False, URL('admin', 'users')),
 			(T('Switch Mode'), False, URL('admin', 'switchmode')),

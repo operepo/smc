@@ -256,8 +256,9 @@ db.define_table("my_app_settings",
                 Field("ad_faculty_login_script_path", default=""),
                 Field("ad_faculty_home_directory_quota", "bigint", default="0", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
                 Field("canvas_import_enabled", "boolean", default="False"),
-                Field("canvas_dev_key", default="afa2r0sdusj564jt4s3j536yjhbsufjhkwhaaz"),
-                Field("canvas_server_url", default="https://canvas.correctionsed.com"),
+                Field("canvas_access_token", 'string', default=""),
+                Field("canvas_secret", 'string', default="<ENV>"),
+                Field("canvas_server_url", default="https://canvas.ed"),
                 Field("canvas_student_quota", "bigint", default="1048576", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
                 Field("canvas_faculty_quota", "bigint", default="1048576", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
                 Field("canvas_auto_create_courses", 'boolean', default=True),
@@ -296,14 +297,15 @@ db.define_table("student_info",
                 Field("student_ad_quota", "bigint", default="0", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
                 Field("student_canvas_quota", "bigint", default="1048576", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
                 auth.signature,
-                Field("ad_last_login", type="datetime", default=None)
+                Field("ad_last_login", type="datetime", default=None),
+                Field("canvas_auth_token", default="")
                 )
 
-## Enable encryption
+# Enable encryption
 db.student_info.student_password.filter_in = lambda value : w2p_encrypt(value)
 db.student_info.student_password.filter_out = lambda value : w2p_decrypt(value)
 
-## Indexes
+# Indexes
 db.executesql('CREATE INDEX IF NOT EXISTS account_id_idx ON student_info (account_id);')
 db.executesql('CREATE INDEX IF NOT EXISTS user_id_idx ON student_info (user_id);')
 
@@ -343,7 +345,7 @@ db.define_table("student_canvas_import_status",
                 )
 
 db.define_table("student_excel_uploads",
-                Field("excel_file",'upload', autodelete=True),
+                Field("excel_file", 'upload', autodelete=True),
                 auth.signature
                 )
 
@@ -372,7 +374,8 @@ db.define_table("faculty_info",
                 Field("faculty_ad_quota", "bigint", default="0", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
                 Field("faculty_canvas_quota", "bigint", default="1048576", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
                 auth.signature,
-                Field("ad_last_login", type="datetime", default=None)
+                Field("ad_last_login", type="datetime", default=None),
+                Field("canvas_auth_token", default="")
                 )
 
 ## Enable encryption

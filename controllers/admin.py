@@ -179,14 +179,39 @@ def config_student_settings():
         response.flash = "Error! " + str(form.errors)
     return dict(form=form)
 
+
 @auth.requires_membership("Administrators")
 def config_canvas_settings():
     ensure_settings()
-    
+    msg = ""
+
+    auto_config_form = SQLFORM.factory(submit_button="OPE Auto Configure", _name="auto_config").process(formname="auto_config")
+
+    if (auto_config_form.accepted):
+        # Try to auto config
+        access_token, msg1 = Canvas.EnsureAdminAccessToken()
+        if access_token != "":
+            # Pull the canvas URL from the environment
+            canvas_url = ""
+            try:
+                canvas_url = str(os.environ["CANVAS_SERVER"]).strip() + ""
+            except KeyError as ex:
+                # not set!!
+                canvas_url = ""
+            if canvas_url != "":
+                AppSettings.SetValue('canvas_server_url', canvas_url)
+            # Make sure to turn enable the canvas integration if it worked
+            AppSettings.SetValue("canvas_import_enabled", True)
+            response.flash = "Canvas integration auto configured and enabled"
+        else:
+            resposne.flash = "Unable to auto configure canvas integration!"
+
     rows = db().select(db.my_app_settings.ALL)
-    form = SQLFORM(db.my_app_settings, rows[0], showid=False,
-                   fields=["canvas_import_enabled", "canvas_dev_key", "canvas_server_url", "canvas_student_quota", "canvas_faculty_quota", "canvas_auto_create_courses" ]).process()
-    
+    form = SQLFORM(db.my_app_settings, rows[0], showid=False, _name="canvas_config",
+                   fields=["canvas_import_enabled", "canvas_access_token", "canvas_secret", "canvas_server_url",
+                           "canvas_student_quota", "canvas_faculty_quota",
+                           "canvas_auto_create_courses" ]).process(formname="canvas_config")
+
     if (form.accepted):
         # Saved
         response.flash = "Settings Saved!"
@@ -194,7 +219,8 @@ def config_canvas_settings():
         pass
     elif (form.errors):
         response.flash = "Error! " + str(form.errors)
-    return dict(form=form)
+    return dict(form=form, auto_config_form=auto_config_form, msg=msg)
+
 
 @auth.requires_membership("Administrators")
 def switchmode():
@@ -255,7 +281,7 @@ def verify_settings():
     ret += "<h4>Active Directory Settings</h4><div style='font-size: 10px;'>"
     r = AD.VerifyADSettings(auto_create)
     ret += AD.GetErrorString()
-    if (r != True):
+    if r is not True:
         ret += "<div style='font-weight: bold; color: red;'>Active Directory Error</div>"
     else:
         ret += "<div style='font-weight: bold; color: green;'>Tests Passed</div>"
@@ -264,7 +290,7 @@ def verify_settings():
     ret += "<h4>Canvas Settings</h4><div style='font-size: 10px;'>"
     r = Canvas.VerifyCanvasSettings()
     ret += Canvas.GetErrorString()
-    if (r != True):
+    if r is not True:
         ret += "<div style='font-weight: bold; color: red;'>Canvas Error</div>"
     else:
         ret += "<div style='font-weight: bold; color: green;'>Tests Passed</div>"
@@ -272,13 +298,16 @@ def verify_settings():
 
     return ret
 
+
 @auth.requires_membership("Administrators")
 def config_verify():
     return dict()
 
+
 @auth.requires_membership("Administrators")
 def config_verify_auto():
     return dict()
+
 
 @auth.requires_membership("Administrators")
 def changepassword():
@@ -290,12 +319,12 @@ def changepassword():
         error_message="Password fields don't match")),
     submit_button="Change Password").process()
     
-    if (form.accepted):
+    if form.accepted:
         confirm_pw = request.vars.get('confirm_new_password')
         pw = request.vars.get('new_password', '')
-        #admin_user = db(db.auth_user.username=='admin').select().first()
-        if (pw != "" and confirm_pw == pw):
-            rows = db(db.auth_user.username=='admin').select()
+        # admin_user = db(db.auth_user.username=='admin').select().first()
+        if pw != "" and confirm_pw == pw:
+            rows = db(db.auth_user.username == 'admin').select()
             for row in rows:
                 id = row['id']
                 # Set Web2py password
@@ -303,9 +332,10 @@ def changepassword():
             response.flash = "Password Changed."
         else:
             response.flash = "Password not changed."
-    elif (form.errors):
+    elif form.errors:
         response.flash = "Unable to set new password"
     return dict(form=form)
+
 
 @auth.requires_membership("Administrators")
 def reset_smc():
@@ -314,26 +344,34 @@ def reset_smc():
     kill_scheduler = SQLFORM.factory(submit_button="Kill Scheduler Process", _name="kill_scheduler").process(formname="kill_scheduler")
     
     ffmpeg_running=isFFMPEGRunning()
-    if (ffmpeg_running == "is NOT"):
+    if ffmpeg_running == "is NOT":
         ffmpeg_running = SPAN("is NOT", _style="color: red; font-weight: bold;")
     else:
         ffmpeg_running = SPAN("IS", _style="color: green; font-weight: bold;")
-    
-    
-    if (reset_smc_form.accepted):
+
+    if reset_smc_form.accepted:
+        # Kill in VM
         cmd = "/usr/bin/nohup /bin/sleep 1; /usr/bin/killall -15 index.fcgi > /dev/null 2>&1 &"
         p = subprocess.Popen(cmd, shell=True, close_fds=True)
         ret = ""
-        #p = subprocess.Popen("/bin/sleep 1 &; /usr/bin/killall -15 index.fcgi;", shell=True)
-        #ret = p.wait()
+        # p = subprocess.Popen("/bin/sleep 1 &; /usr/bin/killall -15 index.fcgi;", shell=True)
+        # ret = p.wait()
+
+        # Kill in docker (touch the wsgi file)
+        # Find the web2py folder - Starts in the Controllers folder
+        f = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        wsgi_file = os.path.join(f, "wsgihandler.py")
+        os.system("touch " + wsgi_file)
+
         response.flash = "SMC App Reset" + str(ret)
     
-    if (kill_scheduler.accepted):
+    if kill_scheduler.accepted:
         #kill_process_videos_schedule_process()
         kill_all_workers()
         response.flash = "Scheduler process killed" # + str(ret)
     
     return dict(reset_smc_form=reset_smc_form, ffmpeg_running=ffmpeg_running, kill_scheduler=kill_scheduler)
+
 
 def kill_all_workers():
     #  ps ax |grep "web2py.py -K smc" | grep -v "grep" | awk '{print $1}' | xargs kill -9 $1
@@ -343,9 +381,10 @@ def kill_all_workers():
     p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     ret = p.wait()
-    #ret = p.communicate()[0]
+    # ret = p.communicate()[0]
     return ret
-    
+
+
 def kill_process_videos_schedule_process():
     # Kill the worker process
     app_name = request.application
@@ -353,8 +392,9 @@ def kill_process_videos_schedule_process():
     p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     ret = p.wait()
-    #ret = p.communicate()[0]
+    # ret = p.communicate()[0]
     return ret
+
 
 def isFFMPEGRunning():
     ret = "is NOT"
@@ -362,6 +402,6 @@ def isFFMPEGRunning():
     p1 = subprocess.Popen(cmd1, stdout=subprocess.PIPE, shell=True)
     out = p1.communicate()[0]
     
-    if ('ffmpeg -y' in out):
+    if 'ffmpeg -y' in out:
         ret = "IS"
     return ret

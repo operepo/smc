@@ -9,9 +9,12 @@ class AppSettings:
 
     @staticmethod
     def SetValue(key, value):
-        pass
-    
-    
+        db = current.db # Grab current db object
+
+        items = {key: value}
+        db(db.my_app_settings).update(**items)
+        db.commit()
+
     @staticmethod
     def GetValue(key, default):
         db = current.db # Grab the current db object
