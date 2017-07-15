@@ -16,7 +16,12 @@ x_app_enc_key = 'ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O'
     ## db.t_test.f_field.filter_in = lambda value : w2p_encrypt(value)
     ## db.t_test.f_field.filter_out = lambda value : w2p_decrypt(value)
 
-import gluon.contrib.aes as AES
+# Deal with change to web2py - moved AES to pyaes folder
+try:
+    import gluon.contrib.aes as AES
+except ImportError:
+    import gluon.contrib.pyaes as AES
+
 import threading
 import os
 import base64

@@ -26,7 +26,12 @@ import uuid
 import hashlib
 from Crypto.Hash import SHA, HMAC
 
-import gluon.contrib.aes as AES
+# Deal with change to web2py - moved AES to pyaes folder
+try:
+    import gluon.contrib.aes as AES
+except ImportError:
+    import gluon.contrib.pyaes as AES
+
 import threading
 import base64
 
