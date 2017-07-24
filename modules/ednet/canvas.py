@@ -257,7 +257,7 @@ class Canvas:
         sql = "DELETE FROM access_tokens WHERE purpose='OPEAdminIntegration'"
         db_canvas.executesql(sql)
         hm_token = HMAC.new(canvas_secret, access_token, SHA).hexdigest()
-        sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + "', 'OPEAdminIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "');"
+        sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint, created_at, updated_at ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + "', 'OPEAdminIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now());"
         db_canvas.executesql(sql)
         db_canvas.commit()
         # msg += "   RAN SQL: " + sql

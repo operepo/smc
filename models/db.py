@@ -4,6 +4,9 @@
 from gluon.custom_import import track_changes
 track_changes(True)
 
+if request.global_settings.web2py_version < "2.14.1":
+    raise HTTP(500, "Requires web2py 2.13.3 or newer")
+
 #########################################################################
 ## This scaffolding model makes your app work on Google App Engine too
 ## File is released under public domain and you can use without limitations
@@ -12,6 +15,17 @@ track_changes(True)
 ## if SSL/HTTPS is properly configured and you want all HTTP requests to
 ## be redirected to HTTPS, uncomment the line below:
 request.requires_https()
+
+# -------------------------------------------------------------------------
+# app configuration made easy. Look inside private/appconfig.ini
+# -------------------------------------------------------------------------
+from gluon.contrib.appconfig import AppConfig
+
+# -------------------------------------------------------------------------
+# once in production, remove reload=True to gain full speed
+# -------------------------------------------------------------------------
+myconf = AppConfig(reload=True)
+
 
 lazy_tables = True
 fake_migrate_all = False
@@ -29,7 +43,7 @@ tmp = request.vars.fake_migrate
 if (tmp):
     if(tmp.lower() == "true"):
         fake_migrate = True
-        migrate = False
+        migrate = True
         migrate_enabled = True
 
 tmp = request.vars.fix
@@ -38,8 +52,8 @@ if (tmp):
         cache.ram("initial_run", lambda: True, time_expire=600)
         #lazy_tables = False
         #fake_migrate = True
-        #migrate = True
-        #migrate_enabled = True
+        migrate = True
+        migrate_enabled = True
 
 # On initial run since startup (runs every time app starts, set migrate=true&lazy_tables=false
 initial_run = cache.ram("initial_run", lambda: True, time_expire=600)
@@ -70,7 +84,12 @@ w2py_folder = os.path.dirname(w2py_folder)
 if not request.env.web2py_runtime_gae:
     # if NOT running on Google App Engine use SQLite or other DB
     # db = DAL('sqlite://storage.sqlite',pool_size=1,check_reserved=['all'], lazy_tables=lazy_tables, fake_migrate_all=fake_migrate ) # lazy_tables=True   , fake_migrate_all=True
-    db = DAL('sqlite://storage.sqlite', pool_size=1, check_reserved=['all'], migrate_enabled=migrate_enabled,
+    #db = DAL(myconf.get('db.uri'),
+    #         pool_size=myconf.get('db.pool_size'),
+    #         migrate_enabled=myconf.get('db.migrate'),
+    #         check_reserved=['all'])
+    
+    db = DAL(myconf.get('db.uri'), pool_size=myconf.get('db.pool_size'), check_reserved=['all'], migrate_enabled=migrate_enabled,
              lazy_tables=lazy_tables, fake_migrate=fake_migrate, fake_migrate_all=fake_migrate_all,
              migrate=migrate )  # fake_migrate_all=True
     db.executesql('PRAGMA journal_mode=WAL')
@@ -91,11 +110,17 @@ else:
 ## by default give a view/generic.extension to all actions from localhost
 ## none otherwise. a pattern can be 'controller/function.extension'
 response.generic_patterns = ['*'] if request.is_local else ['*.json']
+# -------------------------------------------------------------------------
+# choose a style for forms
+# -------------------------------------------------------------------------
+response.formstyle = myconf.get('forms.formstyle')  # or 'bootstrap3_stacked' or 'bootstrap2' or other
+response.form_label_separator = myconf.get('forms.separator') or ''
 ## (optional) optimize handling of static files
 # response.optimize_css = 'concat,minify,inline'
 # response.optimize_js = 'concat,minify,inline'
 ## (optional) static assets folder versioning
 # response.static_version = '0.0.0'
+
 #########################################################################
 ## Here is sample code if you need for
 ## - email capabilities
@@ -108,6 +133,7 @@ response.generic_patterns = ['*'] if request.is_local else ['*.json']
 
 from gluon.tools import Auth, Crud, Service, PluginManager, prettydate
 #auth = Auth(db)
+#auth = Auth(db, host_names=myconf.get('host.names'))
 auth = Auth(db, hmac_key = Auth.get_or_create_key(), signature=True) #secure=True
 crud, service, plugins = Crud(db), Service(), PluginManager()
 
@@ -117,9 +143,11 @@ auth.settings.create_user_groups=False
 
 ## configure email
 mail = auth.settings.mailer
-mail.settings.server = 'logging' or 'correctionsed.com:587'
-mail.settings.sender = 'admin@correctionsed.com'
-mail.settings.login = 'username:password'
+mail.settings.server = 'logging' if request.is_local else myconf.get('smtp.server')
+mail.settings.sender = myconf.get('smtp.sender')
+mail.settings.login = myconf.get('smtp.login')
+mail.settings.tls = myconf.get('smtp.tls') or False
+mail.settings.ssl = myconf.get('smtp.ssl') or False
 
 ## configure auth policy
 # auth.settings.actions_disabled = ['register', 'request_reset_password']

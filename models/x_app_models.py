@@ -1,85 +1,9 @@
 # coding: utf8
 
-import re
 import uuid
 
 from ednet.appsettings import AppSettings
-
-def natural_key(string_):
-    return [int(s) if s.isdigit() else s for s in re.split(r'(\d+)', string_)]
-
-###### Encrypt Filters for Encrypted Fields
-## To use:
-## 1 - Set a variable called x_app_enc_key (16, 24, or 32 bytes)
-x_app_enc_key = 'ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O'
-## 2 - add the following filters for each field to encrypt
-    ## db.t_test.f_field.filter_in = lambda value : w2p_encrypt(value)
-    ## db.t_test.f_field.filter_out = lambda value : w2p_decrypt(value)
-
-# Deal with change to web2py - moved AES to pyaes folder
-try:
-    import gluon.contrib.aes as AES
-except ImportError:
-    import gluon.contrib.pyaes as AES
-
-import threading
-import os
-import base64
-
-def fast_urandom16(urandom=[], locker=threading.RLock()):
-    """
-    this is 4x faster than calling os.urandom(16) and prevents
-    the "too many files open" issue with concurrent access to os.urandom()
-    """
-    try:
-        return urandom.pop()
-    except IndexError:
-        try:
-            locker.acquire()
-            ur = os.urandom(16 * 1024)
-            urandom += [ur[i:i + 16] for i in xrange(16, 1024 * 16, 16)]
-            return ur[0:16]
-        finally:
-            locker.release()
-
-def pad(s, n=32, padchar=' '):
-    while ((len(s) % 32) != 0):
-        s += ' '
-    #pad_len = len(s) % 32 # How many characters do we need to pad out to a multiple of 32
-    #if (pad_len != 0):
-    #    #return s + (32 - len(s) % 32) * padchar
-    #    return s + (
-    return s
-
-def AES_new(key, IV=None):
-    """ Returns an AES cipher object and random IV if None specified """
-    if IV is None:
-        IV = fast_urandom16()
-
-    return AES.new(key, AES.MODE_CBC, IV), IV
-
-def w2p_encrypt(data):
-    global x_app_enc_key
-    key = x_app_enc_key
-    key = pad(key[:32])
-    cipher, IV = AES_new(key)
-    encrypted_data = IV + cipher.encrypt(pad(data))
-    return base64.urlsafe_b64encode(encrypted_data)
-
-def w2p_decrypt(data):
-    global x_app_enc_key
-    key = x_app_enc_key
-    key = pad(key[:32])
-    if (data == None):
-        data = ""
-    data = base64.urlsafe_b64decode(data)
-    IV, data = data[:16], data[16:]
-    cipher, _ = AES_new(key, IV=IV)
-    data = cipher.decrypt(data)
-    data = data.rstrip(' ')
-    return data
-
-###### END Encrypt Filters for Encrypted Fields
+from ednet.util import Util
 
 db.define_table("quota_sizes",
                 Field("int_size", "bigint"),
@@ -278,19 +202,19 @@ db.define_table("my_app_settings",
                 )
 
 ## Enable encryption
-db.my_app_settings.ad_service_password.filter_in = lambda value : w2p_encrypt(value)
-db.my_app_settings.ad_service_password.filter_out = lambda value : w2p_decrypt(value)
-db.my_app_settings.file_server_login_pass.filter_in = lambda value : w2p_encrypt(value)
-db.my_app_settings.file_server_login_pass.filter_out = lambda value : w2p_decrypt(value)
-db.my_app_settings.zpool_login_password.filter_in = lambda value : w2p_encrypt(value)
-db.my_app_settings.zpool_login_password.filter_out = lambda value : w2p_decrypt(value)
+db.my_app_settings.ad_service_password.filter_in = lambda value : Util.encrypt(value)
+db.my_app_settings.ad_service_password.filter_out = lambda value : Util.decrypt(value)
+db.my_app_settings.file_server_login_pass.filter_in = lambda value : Util.encrypt(value)
+db.my_app_settings.file_server_login_pass.filter_out = lambda value : Util.decrypt(value)
+db.my_app_settings.zpool_login_password.filter_in = lambda value : Util.encrypt(value)
+db.my_app_settings.zpool_login_password.filter_out = lambda value : Util.decrypt(value)
 
 
 db.define_table("student_info",
                 Field("account_id", "reference auth_user"),
                 Field("user_id"),
                 Field("student_name"),
-                Field("student_password"),
+                Field("student_password", "password"),
                 Field("import_classes"),
                 Field("program", "string", default=""),
                 Field("additional_fields", "text"),
@@ -307,8 +231,8 @@ db.define_table("student_info",
                 )
 
 # Enable encryption
-db.student_info.student_password.filter_in = lambda value : w2p_encrypt(value)
-db.student_info.student_password.filter_out = lambda value : w2p_decrypt(value)
+db.student_info.student_password.filter_in = lambda value : Util.encrypt(value)
+db.student_info.student_password.filter_out = lambda value : Util.decrypt(value)
 
 # Indexes
 db.executesql('CREATE INDEX IF NOT EXISTS account_id_idx ON student_info (account_id);')
@@ -325,7 +249,7 @@ db.define_table("student_enrollment",
 db.define_table("student_import_queue",
                 Field("user_id"),
                 Field("student_name"),
-                Field("student_password"),
+                Field("student_password", "password"),
                 Field("import_classes"),
                 Field("program", "string", default=""),
                 Field("additional_fields", "text"),
@@ -338,8 +262,8 @@ db.define_table("student_import_queue",
                 )
 
 ## Enable encryption
-db.student_import_queue.student_password.filter_in = lambda value : w2p_encrypt(value)
-db.student_import_queue.student_password.filter_out = lambda value : w2p_decrypt(value)
+db.student_import_queue.student_password.filter_in = lambda value : Util.encrypt(value)
+db.student_import_queue.student_password.filter_out = lambda value : Util.decrypt(value)
 
 db.define_table("student_ad_import_status",
                 Field("user_id")
@@ -367,7 +291,7 @@ db.define_table("faculty_info",
                 Field("account_id", "reference auth_user"),
                 Field("user_id"),
                 Field("faculty_name"),
-                Field("faculty_password"),
+                Field("faculty_password", "password"),
                 Field("import_classes"),
                 Field("program", "string", default=""),
                 Field("additional_fields", "text"),
@@ -384,8 +308,8 @@ db.define_table("faculty_info",
                 )
 
 ## Enable encryption
-db.faculty_info.faculty_password.filter_in = lambda value : w2p_encrypt(value)
-db.faculty_info.faculty_password.filter_out = lambda value : w2p_decrypt(value)
+db.faculty_info.faculty_password.filter_in = lambda value : Util.encrypt(value)
+db.faculty_info.faculty_password.filter_out = lambda value : Util.decrypt(value)
 
 ## Indexes
 db.executesql('CREATE INDEX IF NOT EXISTS account_id_idx ON faculty_info (account_id);')
@@ -402,7 +326,7 @@ db.define_table("faculty_enrollment",
 db.define_table("faculty_import_queue",
                 Field("user_id"),
                 Field("faculty_name"),
-                Field("faculty_password"),
+                Field("faculty_password", "password"),
                 Field("import_classes"),
                 Field("program", "string", default=""),
                 Field("additional_fields", "text"),
@@ -415,8 +339,8 @@ db.define_table("faculty_import_queue",
                 )
 
 ## Enable encryption
-db.faculty_import_queue.faculty_password.filter_in = lambda value : w2p_encrypt(value)
-db.faculty_import_queue.faculty_password.filter_out = lambda value : w2p_decrypt(value)
+db.faculty_import_queue.faculty_password.filter_in = lambda value : Util.encrypt(value)
+db.faculty_import_queue.faculty_password.filter_out = lambda value : Util.decrypt(value)
 
 db.define_table("faculty_ad_import_status",
                 Field("user_id")
