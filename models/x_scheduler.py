@@ -14,6 +14,37 @@ from ednet import Student
 
 # Task Scheduler Code
 
+def update_media_database_from_json_files():
+    # Go through the media files and find json files that aren't
+    # already in the database.
+    # This is useful for when we copy movie files back and forth between systems
+    #Starts in the Models folder
+    w2py_folder = os.path.abspath(__file__)
+    #print "Running File: " + app_folder
+    w2py_folder = os.path.dirname(w2py_folder)
+    # app folder
+    w2py_folder = os.path.dirname(w2py_folder)
+    app_folder = w2py_folder
+    # Applications folder
+    w2py_folder = os.path.dirname(w2py_folder)
+    # Root folder
+    w2py_folder = os.path.dirname(w2py_folder)
+    #print "W2Py Folder: " + w2py_folder
+    target_folder = os.path.join(app_folder, 'static')
+    
+    # base folder for media files
+    target_folder = os.path.join(target_folder, 'media')
+    
+    # Walk the folders/files
+    print "looking in: " + target_folder
+    for root, dirs, files in os.walk(target_folder):
+        for f in files:
+            if f.endswith("json"):
+                print "Found Json: ", root, f
+    pass
+    return True
+
+
 def process_media_file(media_id):
     ret = ""
     
@@ -638,6 +669,7 @@ scheduler = Scheduler(db_scheduler, max_empty_runs=100, heartbeat=1,
                                  remove_old_wamap_video_files=remove_old_wamap_video_files,
                                  download_wamap_qimages=download_wamap_qimages,
                                  refresh_all_ad_logins=refresh_all_ad_logins,
+                                 update_media_database_from_json_files=update_media_database_from_json_files,
                                  ))
 current.scheduler = scheduler
 

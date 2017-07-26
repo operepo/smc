@@ -1,4 +1,18 @@
-{{extend 'layout.html'}}<script>$(function() {		GetProcessQueue();		window.setInterval(function() {GetProcessQueue();}, 15000);    });		function GetProcessQueue() {		web2py_component('{{=URL('media', 'process_queue.load')}}',                         target='process_queue_view');			}</script>
+{{extend 'layout.html'}}
+
+<script>
+$(function() {
+		GetProcessQueue();
+		window.setInterval(function() {GetProcessQueue();}, 15000);
+    });
+	
+	function GetProcessQueue() {
+		web2py_component('{{=URL('media', 'process_queue.load')}}',
+                         target='process_queue_view');
+		
+	}
+</script>
+
 <h1>Upload a Media File</h1>
 <p>
 	Media files will be added to the process queue and converted to an internet and mobile friendly format. You can add Movie AND audio files here.
@@ -15,8 +29,15 @@
 <div id="process_queue" class='well'>
 	<p>
 		<b>NOTE: </b> Large media files can take a few hours to process. You can use the retry link to make the system try again if a media file gets stuck in the queue.
-	</p>	<div id="process_queue_view">		<img src="{{=URL('static', 'images/progress.gif') }}" />	</div>
+	</p>
+	<div id="process_queue_view">
+		<img src="{{=URL('static', 'images/progress.gif') }}" />
+	</div>
 	<!--LOAD('media', 'process_queue.load',content=DIV(IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='float: left;'), P('Getting Process Queue')), ajax=True) -->
 </div>
 
-
+<h1>Import Media Files</h1>
+<p>
+    Start a process that will check for media files that aren't in the database. Usefull if you uploaded a batch of movies from another source.
+</p>
+{{=import_form}}

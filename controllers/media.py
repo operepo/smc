@@ -168,7 +168,11 @@ def upload_media():
     form = SQLFORM(db.media_file_import_queue, showid=False,
                    fields=['title', 'description', 'category', 'tags', 'media_file'], _name="queue_media").process(formname="queue_media")
     
-    
+    import_form = SQLFORM.factory(submit_button="Import Videos", _name="import_videos").process(formname="import_videos")
+    if import_form.accepted:
+        result = scheduler.queue_task('update_media_database_from_json_files', pvars=dict(), timeout=18000, immediate=True, sync_output=5, group_name="process_videos")
+        response.flash = "Import process started!" # + str(result)
+        
     if (form.accepted):
         # Saved
         new_id = form.vars.id
@@ -186,7 +190,7 @@ def upload_media():
     
     
     ret = ""
-    return dict(form=form, ret=ret)
+    return dict(form=form, ret=ret, import_form=import_form)
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
 def multi_upload_media():
@@ -864,4 +868,3 @@ def getTaskProgress(media_id):
         ret = str(task.scheduler_run.run_output)
     
     return ret
-
