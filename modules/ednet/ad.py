@@ -147,6 +147,11 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
                 err += "'>Active Directory Documentation Page</a><br/>"
                 AD._errors.append(err)
                 return False
+            except Exception, ex:
+                # unkown error?
+                err += "Unknown Error " + str(ex)
+                AD._errors.append(err)
+                return False
         else:
             ret = True
         return ret
@@ -842,4 +847,3 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         return ret
 
 ###### End ActiveDirectoryAPIClass
-

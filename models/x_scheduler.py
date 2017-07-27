@@ -14,6 +14,36 @@ from ednet import Student
 
 # Task Scheduler Code
 
+
+def update_media_meta_data(media_file):
+    print "Found Json: ", media_file
+    
+    # Open the json file
+    try:
+        f = open(media_file, "r")
+        tmp = f.read()
+        meta = loads(tmp)
+        f.close()
+        
+        # See if the item is in the database
+        item = db.media_files(media_guid=meta['media_guid'])
+        if item is None:
+            # Record not found!
+            print "Record not found: ", meta['media_guid']
+            db.media_files.insert(media_guid=meta['media_guid'], title=meta['title'], description=meta['description'], category=meta['category'],
+                               tags=loads(meta['tags']), width=meta['width'], height=meta['height'], quality=meta['quality'], media_type=meta['media_type'])
+            db.commit()
+        else:
+            print "Record FOUND: ", meta['media_guid']
+            item.update_record(title=meta['title'], description=meta['description'], category=meta['category'],
+                               tags=loads(meta['tags']), width=meta['width'], height=meta['height'], quality=meta['quality'], media_type=meta['media_type'])
+            db.commit()
+    except Exception as ex:
+        print "Error processing media file: ", media_file, str(ex)
+        db.rollback()
+    
+    
+
 def update_media_database_from_json_files():
     # Go through the media files and find json files that aren't
     # already in the database.
@@ -40,7 +70,8 @@ def update_media_database_from_json_files():
     for root, dirs, files in os.walk(target_folder):
         for f in files:
             if f.endswith("json"):
-                print "Found Json: ", root, f
+                f_path = os.path.join(root, f)
+                update_media_meta_data(f_path)
     pass
     return True
 
@@ -675,16 +706,16 @@ current.scheduler = scheduler
 
 
 # Make sure to run the ad login refresh every hour or so
-refresh_ad_login = cache.ram('refresh_ad_login', lambda: True, 60*60)
-if (refresh_ad_login == True):
-    cache.ram('refresh_ad_login', lambda: False, 0)
+refresh_ad_login = current.cache.ram('refresh_ad_login', lambda: True, time_expire=60*60)
+if refresh_ad_login is True:
+    current.cache.ram('refresh_ad_login', lambda: False, time_expire=0)
     # Update the last login value for all users (students and faculty)
     if (AD.ConnectAD() != True):
         # Not enabled, skip
         pass
     else:
         # Schedule the process
-        result = scheduler.queue_task('refresh_all_ad_logins', timeout=1200, immediate=True, sync_output=5, group_name="misc")
+        result = scheduler.queue_task('refresh_all_ad_logins', timeout=1200, immediate=True, sync_output=5, group_name="misc", repeats=1, period=0)
         pass
     
     # Make sure to start the scheduler process
