@@ -261,10 +261,14 @@ class Student:
         
         # Set AD password
         user_name = Student.GetUsername(student_id)
-        user_dn = Student.GetAD_DN(user_name, Student.GetProgram(student_id))
-        if (AD.SetPassword(user_dn, new_password) != True):
-            return "<b>Error setting AD password:</b> " + AD.GetErrorString()
-        
+        if (AD.Connect() != True):
+            user_dn = Student.GetAD_DN(user_name, Student.GetProgram(student_id))
+            if (AD.SetPassword(user_dn, new_password) != True):
+                return "<b>Error setting AD password:</b> " + AD.GetErrorString()
+        else:
+            # Don't set ad password if ad isn't enabled
+            pass
+            
         # Set Canvas password
         if (Canvas.SetPassword(user_name, new_password) != True):
             return "<b>Error setting Canvas password:</b> " + Canvas.GetErrorString()
