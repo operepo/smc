@@ -26,65 +26,6 @@ import uuid
 import hashlib
 from Crypto.Hash import SHA, HMAC
 
-# Deal with change to web2py - moved AES to pyaes folder
-try:
-    import gluon.contrib.aes as AES
-except ImportError:
-    import gluon.contrib.pyaes as AES
-
-import threading
-import base64
-
-def fast_urandom16(urandom=[], locker=threading.RLock()):
-    """
-    this is 4x faster than calling os.urandom(16) and prevents
-    the "too many files open" issue with concurrent access to os.urandom()
-    """
-    try:
-        return urandom.pop()
-    except IndexError:
-        try:
-            locker.acquire()
-            ur = os.urandom(16 * 1024)
-            urandom += [ur[i:i + 16] for i in xrange(16, 1024 * 16, 16)]
-            return ur[0:16]
-        finally:
-            locker.release()
-
-def pad(s, n=32, padchar=' '):
-    while ((len(s) % 32) != 0):
-        s += ' '
-    #pad_len = len(s) % 32 # How many characters do we need to pad out to a multiple of 32
-    #if (pad_len != 0):
-    #    #return s + (32 - len(s) % 32) * padchar
-    #    return s + (
-    return s
-
-def AES_new(key, IV=None):
-    """ Returns an AES cipher object and random IV if None specified """
-    if IV is None:
-        IV = fast_urandom16()
-
-    return AES.new(key, AES.MODE_CBC, IV), IV
-
-def encrypt(data, key):
-    key = pad(key[:32])
-    cipher, IV = AES_new(key)
-    encrypted_data = IV + cipher.encrypt(pad(data))
-    return base64.urlsafe_b64encode(encrypted_data)
-
-def decrypt(data, key):
-    key = pad(key[:32])
-    if (data == None):
-        data = ""
-    data = base64.urlsafe_b64decode(data)
-    IV, data = data[:16], data[16:]
-    cipher, _ = AES_new(key, IV=IV)
-    data = cipher.decrypt(data)
-    data = data.rstrip(' ')
-    return data
-
-
 class Canvas:
     
     # Config Values
@@ -302,7 +243,7 @@ class Canvas:
             si_rows = db(db.student_info.account_id == account_id).select(db.student_info.canvas_auth_token, db.student_info.student_password, db.student_info.student_name)
             for si_row in si_rows:
                 access_token = si_row["canvas_auth_token"]
-                hash = encrypt(si_row["student_password"], access_token)
+                hash = Util.encrypt(si_row["student_password"], access_token)
                 student_name = si_row["student_name"]
         if access_token == "" or access_token == "<ENV>":
             # None present, make a new one
@@ -317,7 +258,7 @@ class Canvas:
         sql = "DELETE FROM access_tokens WHERE purpose='OPEStudentIntegration'"
         db_canvas.executesql(sql)
         hm_token = HMAC.new(canvas_secret, access_token, SHA).hexdigest()
-        sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + "', 'OPEStudentIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "');"
+        sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint, created_at, updated_at ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + "', 'OPEStudentIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now() );"
         db_canvas.executesql(sql)
         db_canvas.commit()
         # msg += "   RAN SQL: " + sql

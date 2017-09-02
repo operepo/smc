@@ -76,16 +76,22 @@ class Util:
         return AES.AESModeOfOperationCBC(key, iv = iv), iv
     
     @staticmethod
-    def encrypt(data):
-        key = Util.aes_key
+    def encrypt(data, lkey=None):
+        if not lkey is None:
+            key = lkey
+        else:
+            key = Util.aes_key
         key = pad(key[:32])
         cipher, iv = Util.AES_new(key)
         encrypted_data = iv + cipher.encrypt(pad(data, 16))
         return base64.urlsafe_b64encode(encrypted_data)
 
     @staticmethod
-    def decrypt(data):
-        key = Util.aes_key
+    def decrypt(data, lkey=None):
+        if not lkey is None:
+            key = lkey
+        else:
+            key = Util.aes_key
         key = pad(key[:32])
         if (data == None):
             data = ""
