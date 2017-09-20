@@ -456,6 +456,28 @@ db.executesql('CREATE INDEX IF NOT EXISTS source_url_idx ON wamap_pdfs (source_u
 db.executesql('CREATE INDEX IF NOT EXISTS downloaded_idx ON wamap_pdfs (downloaded);')
 
 
+# Tables for inmate laptop firewall rules
+db.define_table('ope_laptop_firewall_rules',
+                Field('rule_name', 'string', requires=IS_NOT_EMPTY()),
+                Field('direction', 'string', default='in', requires=IS_IN_SET(['in', 'out'])),
+                Field('action', 'string', default='allow', requires=IS_IN_SET(['allow', 'block', 'bypass'])),
+                Field('program', 'string', default=''),
+                Field('service', 'string', default='any'),
+                Field('description', 'string', default=''),
+                Field('enable', 'string', default='yes', requires=IS_IN_SET(['yes', 'no'])),
+                Field('profile', 'string', default='any', requires=IS_IN_SET(['any', 'public', 'private', 'domain'])),
+                Field('localip', 'string', default=''),
+                Field('remoteip', 'string', default=''),
+                Field('localport', 'string', default='any', requires=IS_INT_IN_RANGE(1, 65535) | IS_IN_SET(['any', 'rpc', 'rpc-epmap', 'iphttps', 'teredo'])),
+                Field('remoteport', 'string', default='any', requires=IS_INT_IN_RANGE(1, 65535) | IS_IN_SET(['any'])),
+                Field('protocol', 'string', default='tcp', requires=IS_IN_SET(['any', 'icmpv4', 'icmpv6', 'tcp', 'udp']) | IS_INT_IN_RANGE(1, 65535)),
+                Field('interfacetype', 'string', default='any', requires=IS_IN_SET(['any', 'wireless', 'lan', 'ras'])),
+                Field('rmtcomputergrp', 'string', default=''),
+                Field('rmtusrgtp', 'string', default=''),
+                Field('edge', 'string', default='no', requires=IS_IN_SET(['yes', 'deferapp', 'deferuser', 'no'])),
+                Field('security', 'string', default='notrequired', requires=IS_IN_SET(['authenticate', 'authenc', 'authdynenc', 'authnoencap', 'notrequired'])),
+                )
+
 # Adjust the app logo if it is set
 app_logo = AppSettings.GetValue('app_logo', '<none>')
 if (app_logo != "<none>"):
