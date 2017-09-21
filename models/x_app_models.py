@@ -460,23 +460,26 @@ db.executesql('CREATE INDEX IF NOT EXISTS downloaded_idx ON wamap_pdfs (download
 db.define_table('ope_laptop_firewall_rules',
                 Field('rule_name', 'string', requires=IS_NOT_EMPTY()),
                 Field('direction', 'string', default='in', requires=IS_IN_SET(['in', 'out'])),
-                Field('action', 'string', default='allow', requires=IS_IN_SET(['allow', 'block', 'bypass'])),
-                Field('program', 'string', default=''),
-                Field('service', 'string', default='any'),
+                Field('fw_action', 'string', default='allow', requires=IS_IN_SET(['allow', 'block', 'bypass'])),
+                Field('program', 'string', default='', label="Program (path to exe or blank)"),
+                Field('service', 'string', default='', label="Service (short name or blank)"),
                 Field('description', 'string', default=''),
-                Field('enable', 'string', default='yes', requires=IS_IN_SET(['yes', 'no'])),
+                Field('fw_enable', 'string', default='yes', requires=IS_IN_SET(['yes', 'no']), label="Enable (yes or no)"),
                 Field('profile', 'string', default='any', requires=IS_IN_SET(['any', 'public', 'private', 'domain'])),
                 Field('localip', 'string', default=''),
                 Field('remoteip', 'string', default=''),
-                Field('localport', 'string', default='any', requires=IS_INT_IN_RANGE(1, 65535) | IS_IN_SET(['any', 'rpc', 'rpc-epmap', 'iphttps', 'teredo'])),
-                Field('remoteport', 'string', default='any', requires=IS_INT_IN_RANGE(1, 65535) | IS_IN_SET(['any'])),
-                Field('protocol', 'string', default='tcp', requires=IS_IN_SET(['any', 'icmpv4', 'icmpv6', 'tcp', 'udp']) | IS_INT_IN_RANGE(1, 65535)),
+                Field('localport', 'string', default='any'), # , requires=[IS_IN_SET(['any', 'rpc', 'rpc-epmap', 'iphttps', 'teredo'], IS_INT_IN_RANGE(1, 65535))], label="Local Port (port number or any, rpc, rpc-epmap, iphttps, toredo)"),
+                Field('remoteport', 'string', default='any'), # , requires=[IS_IN_SET(['any'], IS_INT_IN_RANGE(1, 65535))], label="Remote Port (port number or any, rpc, rpc-epmap, iphttps, toredo)"),
+                Field('protocol', 'string', default='tcp'), # , requires=[IS_IN_SET(['any', 'icmpv4', 'icmpv6', 'tcp', 'udp'], IS_INT_IN_RANGE(1, 65535))], label="Protocol (protocl number or any, icmpv4, icmpv6, tcp, udp)"),
                 Field('interfacetype', 'string', default='any', requires=IS_IN_SET(['any', 'wireless', 'lan', 'ras'])),
-                Field('rmtcomputergrp', 'string', default=''),
-                Field('rmtusrgtp', 'string', default=''),
+                Field('rmtcomputergrp', 'string', default='', label="Rmtcomputergrp (SDDLString - see netsh advfirewall for more info)"),
+                Field('rmtusrgrp', 'string', default='', label="Rmtusrgrp (same as Rmtcomputergrp)"),
                 Field('edge', 'string', default='no', requires=IS_IN_SET(['yes', 'deferapp', 'deferuser', 'no'])),
-                Field('security', 'string', default='notrequired', requires=IS_IN_SET(['authenticate', 'authenc', 'authdynenc', 'authnoencap', 'notrequired'])),
+                Field('fw_security', 'string', default='notrequired', requires=IS_IN_SET(['authenticate', 'authenc', 'authdynenc', 'authnoencap', 'notrequired']), label="Security (ISec options - default notrequired)"),
+                Field('can_modify', 'boolean', default=True, writable=False, readable=False),
                 )
+
+
 
 # Adjust the app logo if it is set
 app_logo = AppSettings.GetValue('app_logo', '<none>')

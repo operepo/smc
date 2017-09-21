@@ -60,6 +60,9 @@ response.menu = [
 			(T('Switch Mode'), False, URL('admin', 'switchmode')),
 			(T('Switch AD Quota'), False, URL('admin', 'switchquota')),
 			(T('Reset SMC'), False, URL('admin', 'reset_smc')),
+            (T('OPE Project'), False, URL('admin', 'ope'), [
+                (T('Laptop Firewall'), False, URL('admin', 'laptop_firewall')),
+            ])
         ]),
     #(SPAN('Documentation', _class='highlighted'), False, URL('docs', 'index'), [
     #        (T('Getting Started'), False, URL('docs', 'index'))

@@ -43,3 +43,9 @@ def credential_student():
             # User doesn't exit!
             msg = "Invalid User!"
     return dict(key=key, msg=msg, hash=hash, full_name=full_name)
+
+def get_firewall_list():
+    response.view = 'default/index.json'
+    db = current.db
+    rs = db(db.ope_laptop_firewall_rules).select(db.ope_laptop_firewall_rules.ALL).as_list()
+    return response.json(rs)

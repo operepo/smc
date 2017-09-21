@@ -405,3 +405,11 @@ def isFFMPEGRunning():
     if 'ffmpeg -y' in out:
         ret = "IS"
     return ret
+
+@auth.requires_membership("Administrators")
+def ope():
+    return dict(message="Welcome")
+
+@auth.requires_membership("Administrators")
+def laptop_firewall():
+    return dict(message="Welcome")
