@@ -1,7 +1,7 @@
 import sys
 import os
 import subprocess
-
+import urllib
 from gluon import current
 
 import paramiko
@@ -16,6 +16,23 @@ auth.settings.allow_basic_login = True
 #auth.settings.actions_disabled.append('login')
 #auth.settings.allow_basic_login_only = True
 #auth.settings.actions.login_url=URL('your_own_error_page')
+
+@auth.requires_membership("Administrators")
+def test():
+    try:
+        canvas_db_pw = str(os.environ["IT_PW"]) + ""
+    except KeyError as ex:
+        # IT_PW not set?
+        canvas_db_pw = "<IT_PW_NOT_SET>"
+    db_canvas = None
+    err = None
+    try:
+        db_canvas = DAL('postgres://postgres:' + urllib.quote_plus(canvas_db_pw) + '@postgresql/canvas_production', decode_credentials=True, migrate=False)
+    except RuntimeError as ex:
+        # Error connecting, move on and return None
+        db_canvas = None
+        err = str(ex)
+    return dict(db_canvas=db_canvas, err=err)
 
 @auth.requires_membership("Administrators")
 def credential_student():
