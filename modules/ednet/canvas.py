@@ -2,6 +2,7 @@
 from gluon import *
 from gluon import current
 
+import urllib
 import time
 import sys
 import json
@@ -94,7 +95,7 @@ class Canvas:
         db_canvas = None
 
         try:
-            db_canvas = DAL('postgres://postgres:' + canvas_db_pw + '@postgresql/canvas_production', migrate=False)
+            db_canvas = DAL('postgres://postgres:' + urllib.quote_plus(canvas_db_pw) + '@postgresql/canvas_production', decode_credentials=True, migrate=False)
         except RuntimeError as ex:
             # Error connecting, move on and return None
             db_canvas = None
