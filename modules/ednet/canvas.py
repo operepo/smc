@@ -216,7 +216,7 @@ class Canvas:
         canvas_secret = Canvas.GetCanvasSecret()
         if canvas_secret == "":
             msg += "   No canvas secret found!"
-            return "", msg
+            return "", msg, "", ""
 
         # Connect to the canvas database
         db_canvas = Canvas.ConnectDB()
@@ -230,7 +230,7 @@ class Canvas:
 
         if user_id < 1:
             msg += "  Unable to find user in canvas: " + user_name
-            return "", msg
+            return "", msg, "", ""
 
         # We should have a user id and a dev key id, get the access token for this user
         access_token = ""
