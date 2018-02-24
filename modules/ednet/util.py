@@ -57,14 +57,28 @@ def pad(s, n=32, padchar=' '):
 
 
 class Util:
-    aes_key = 'ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O'
+    aes_key = None
+    default_aes_key = 'ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O'
     
     def __init__(self):
         pass
     
     @staticmethod
+    def ensure_key():
+        # Set AES Key for the app - load canvas secret if available
+        if Util.aes_key is None:
+            try:
+                Util.aes_key = str(os.environ["CANVAS_SECRET"]) + ""
+                # Make sure its 32 characters
+                # Util.aes_key = Util.aes_key[:32]
+                # Util.aes_key = Util.aes_key.ljust(32, "0")
+                Util.aes_key = pad(Util.aes_key[:32])
+            except KeyError as ex:
+                Util.aes_key = Util.default_aes_key
+
+    @staticmethod
     def AES_new(key, iv=None):
-        Util.aes_key = key
+        # Util.aes_key = key # Don't store key - overwrites existing default key
         """ Returns an AES cipher object and random IV if None specified """
         if iv is None:
             iv = fast_urandom16()
@@ -77,6 +91,7 @@ class Util:
     
     @staticmethod
     def encrypt(data, lkey=None):
+        Util.ensure_key()
         if not lkey is None:
             key = lkey
         else:
@@ -88,6 +103,7 @@ class Util:
 
     @staticmethod
     def decrypt(data, lkey=None):
+        Util.ensure_key()
         if not lkey is None:
             key = lkey
         else:

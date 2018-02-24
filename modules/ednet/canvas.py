@@ -236,6 +236,7 @@ class Canvas:
         access_token = ""
         hash = ""
         student_name = ""
+        student_pw = ""
         account_id = 0
         rows = db(db.auth_user.username == user_name).select(db.auth_user.id)
         for row in rows:
@@ -244,7 +245,7 @@ class Canvas:
             si_rows = db(db.student_info.account_id == account_id).select(db.student_info.canvas_auth_token, db.student_info.student_password, db.student_info.student_name)
             for si_row in si_rows:
                 access_token = si_row["canvas_auth_token"]
-                hash = Util.encrypt(si_row["student_password"], access_token)
+                student_pw = si_row["student_password"]
                 student_name = si_row["student_name"]
         if access_token == "" or access_token == "<ENV>":
             # None present, make a new one
@@ -263,6 +264,9 @@ class Canvas:
         db_canvas.executesql(sql)
         db_canvas.commit()
         # msg += "   RAN SQL: " + sql
+        
+        # Calculate pw hash
+        hash = Util.encrypt(student_pw, access_token)
 
         return access_token, msg, hash, student_name
 

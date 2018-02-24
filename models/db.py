@@ -240,3 +240,4 @@ from gluon import current
 current.db = db
 current.auth = auth
 current.smc_log = ""
+current.config = myconf

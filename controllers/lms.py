@@ -9,7 +9,7 @@ import paramiko
 from ednet.ad import AD
 from ednet.canvas import Canvas
 from ednet.appsettings import AppSettings
-
+from ednet.util import Util
 
 # Needed for remote connection?
 auth.settings.allow_basic_login = True
@@ -19,20 +19,12 @@ auth.settings.allow_basic_login = True
 
 @auth.requires_membership("Administrators")
 def test():
-    try:
-        canvas_db_pw = str(os.environ["IT_PW"]) + ""
-    except KeyError as ex:
-        # IT_PW not set?
-        canvas_db_pw = "<IT_PW_NOT_SET>"
-    db_canvas = None
-    err = None
-    try:
-        db_canvas = DAL('postgres://postgres:' + urllib.quote_plus(canvas_db_pw) + '@postgresql/canvas_production', decode_credentials=True, migrate=False)
-    except RuntimeError as ex:
-        # Error connecting, move on and return None
-        db_canvas = None
-        err = str(ex)
-    return dict(db_canvas=db_canvas, err=err)
+    #pw = "Sid777777!"
+    #enc_pw = "_6tCszfjuGddHJocWIdjR3CXVLU2l0BvgPqbkUaIqVs="
+    #enc_pw = Util.encrypt("_6tCszfjuGddHJocWIdjR3CXVLU2l0BvgPqbkUaIqVs=")
+    #txt_pw = Util.decrypt(enc_pw,"3e7911db9b4c39309d3d41d393ef861efd8e56f21d257ec8a5d507cc")
+    # key = Util.aes_key
+    return locals()
 
 @auth.requires_membership("Administrators")
 def credential_student():
