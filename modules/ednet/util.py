@@ -87,7 +87,7 @@ class Util:
         #Util.aes = pyaes.AESModeOfOperationCBC(key, iv = iv)
         #plaintext = "TextMustBe16Byte"
         #ciphertext = aes.encrypt(plaintext)
-        return AES.AESModeOfOperationCBC(key, iv = iv), iv
+        return AES.AESModeOfOperationOFB(key, iv = iv), iv
     
     @staticmethod
     def encrypt(data, lkey=None):

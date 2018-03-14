@@ -267,9 +267,13 @@ class Faculty:
         
         # Set AD password
         user_name = Faculty.GetUsername(faculty_id)
-        user_dn = Faculty.GetAD_DN(user_name, Faculty.GetProgram(faculty_id))
-        if (AD.SetPassword(user_dn, new_password) != True):
-            return "<b>Error setting AD password:</b> " + AD.GetErrorString()
+        if (AD.Connect() != True):
+            user_dn = Faculty.GetAD_DN(user_name, Faculty.GetProgram(faculty_id))
+            if (AD.SetPassword(user_dn, new_password) != True):
+                return "<b>Error setting AD password:</b> " + AD.GetErrorString()
+        else:
+            # Don't set pw if AD is disabled
+            pass
         
         # Set Canvas password
         if (Canvas.SetPassword(user_name, new_password) != True):
