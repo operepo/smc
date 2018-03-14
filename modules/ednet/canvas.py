@@ -257,7 +257,7 @@ class Canvas:
             # msg += " Generated new access token..."
 
         # Make sure canvas access token matches what we have
-        sql = "DELETE FROM access_tokens WHERE purpose='OPEStudentIntegration'"
+        sql = "DELETE FROM access_tokens WHERE purpose='OPEStudentIntegration' and user_id='" + str(user_id) + "'"
         db_canvas.executesql(sql)
         hm_token = HMAC.new(canvas_secret, access_token, SHA).hexdigest()
         sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint, created_at, updated_at ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + "', 'OPEStudentIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now() );"
