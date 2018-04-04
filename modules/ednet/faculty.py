@@ -267,7 +267,7 @@ class Faculty:
         
         # Set AD password
         user_name = Faculty.GetUsername(faculty_id)
-        if (AD.Connect() != True):
+        if (AD.Connect() == True):
             user_dn = Faculty.GetAD_DN(user_name, Faculty.GetProgram(faculty_id))
             if (AD.SetPassword(user_dn, new_password) != True):
                 return "<b>Error setting AD password:</b> " + AD.GetErrorString()
