@@ -402,7 +402,7 @@ db.define_table('playlist',
                 Field('playlist_guid', 'string', default=str(uuid.uuid4()).replace('-', '')),
                 Field('title', 'string', requires=IS_NOT_EMPTY()),
                 auth.signature,
-                rnamne="playlists.1"
+                rname="playlists.1"
                 )
 
 db.define_table('playlist_items',
