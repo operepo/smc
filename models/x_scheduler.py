@@ -6,6 +6,9 @@ import subprocess
 from gluon.contrib.simplejson import loads, dumps
 import urllib
 
+# For finding number of CPUs
+import multiprocessing
+
 from pytube import YouTube
 
 from ednet.ad import AD
@@ -87,6 +90,13 @@ def process_media_file(media_id):
         ret = "ERROR - NO FFMPEG APP FOUND! " + ffmpeg
         print ret
         return ret
+    
+    # Find number of CPUs
+    cpus = int(multiprocessing.cpu_count())
+    # Drop the number of threads so we don't use up all CPU power
+    cpus -= 2
+    if cpus < 1:
+        cpus = 1
     
     # Grab the media file
     #media_file = None
@@ -182,14 +192,14 @@ def process_media_file(media_id):
     
     # Do MP4
     #cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -profile main -crf 20 -acodec libfaac -ab 192k -vf scale='720:-1' '" + output_mp4 + "'"
-    cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -movflags faststart -profile:v main -crf 20 -acodec aac -ab 128k '" + output_mp4 + "'"
+    cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -movflags faststart -profile:v main -crf 20 -acodec aac -ab 128k -threads " + str(cpus) + " '" + output_mp4 + "'"
     #print "Creating MP4..."  + " [" + str(time.time()) + "]"
     print "!clear!30%"
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     mp4_ret = p.communicate()[0]
     
     # Do MP4 with mobile quality
-    cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -movflags faststart -profile main -crf 20 -acodec aac -ab 128k -vf scale='2*trunc(oh*a/2):480' '" + output_mobile_mp4 + "'"
+    cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -movflags faststart -profile main -crf 20 -acodec aac -ab 128k -vf scale='2*trunc(oh*a/2):480' -threads " + str(cpus) + " '" + output_mobile_mp4 + "'"
     #print "Creating mobile MP4..."  + " [" + str(time.time()) + "]"
     print "!clear!70%"
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
