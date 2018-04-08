@@ -32,7 +32,7 @@
 <b>Embed This Movie (Player With Details): </b>
 <div class='well'>
 	&lt;iframe width="{{=iframe_width}}" height="{{=iframe_height}}" src="{{=URL('media', 'player'+"/"+movie_id, host=True)}}" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;
-</div><b>Download Raw Video Files: </b><div class='well'>	<p><a href="{{ = URL('media', 'dl_media/'+movie_id+'/mp4' ) }}">MP4 File</a></p>	<p><a href="{{ = URL('media', 'dl_media/'+movie_id+'/ogv' ) }}">OGV File</a></p>	<p><a href="{{ = URL('media', 'dl_media/'+movie_id+'/mobile.mp4' ) }}">Tablet File</a></p></div>
+</div><b>Download Raw Video Files: </b><div class='well'>	<p><a href="{{ = URL('media', 'dl_media/'+movie_id+'/mp4' ) }}">MP4 File</a></p>	<!--p><a href="{{ = URL('media', 'dl_media/'+movie_id+'/ogv' ) }}">OGV File</a></p-->	<p><a href="{{ = URL('media', 'dl_media/'+movie_id+'/mobile.mp4' ) }}">Tablet File</a></p></div>
 
 <script type="text/javascript">
     $(document).ready(function() {

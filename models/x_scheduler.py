@@ -82,7 +82,7 @@ def process_media_file(media_id):
     # Find ffmpeg binary
     ffmpeg = "/usr/bin/ffmpeg"
     if (os.path.isfile(ffmpeg) != True):
-        ffmpeg = "/usr/local/bin/ffmpeg "
+        ffmpeg = "/usr/local/bin/ffmpeg"
     if (os.path.isfile(ffmpeg) != True):
         ret = "ERROR - NO FFMPEG APP FOUND! " + ffmpeg
         print ret
@@ -173,11 +173,11 @@ def process_media_file(media_id):
     
     # Do OGV
     #cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale 6 -acodec libvorbis -ab 192k -vf scale='640:-1' '" + output_ogv + "'"
-    cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale:v 5 -acodec libvorbis -ab 128k '" + output_ogv + "'"
+    #cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale:v 5 -acodec libvorbis -ab 128k '" + output_ogv + "'"
     #print "Creating OGV..."  + " [" + str(time.time()) + "]"
     print "!clear!10%"
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    ogv_ret = p.communicate()[0]
+    #p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+    #ogv_ret = p.communicate()[0]
     
     
     # Do MP4
