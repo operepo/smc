@@ -774,7 +774,7 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
 
             # Set permissions
             r = AD._winrm.run_cmd('icacls', ['"' + folder_path + '"',
-                "/grant", '"' + user_name + ':(DE,GR,GW,GE,RD,WD,AD,X,DC,RA)"', "/inheritance:e",
+                "/grant", '"' + user_name + ':(OI)(CI)(DE,GR,GW,GE,RD,WD,AD,X,DC,RA)"', "/inheritance:e",
                 "/T", "/C", "/Q" ]) # "/T"
             ret += r.std_out + " err: " + r.std_err
             if (r.std_err != ""):
