@@ -44,8 +44,10 @@ startup = cache.ram('startup', lambda: True, time_expire=600)
 if (startup == True):
     # Set password
     from gluon.main import save_password
-    pw = str(os.environ["IT_PW"]) + ""
-    pw = pw.strip()
+    pw = ""
+    if "IT_PW" in os.environ:
+        pw = str(os.environ["IT_PW"]) + ""
+        pw = pw.strip()
     if (pw != ""):
         # Set pw for w2p admin login (parameters_??.py file)
         save_password(pw,80)
