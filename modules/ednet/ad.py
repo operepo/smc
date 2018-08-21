@@ -779,6 +779,13 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             ret += r.std_out + " err: " + r.std_err
             if (r.std_err != ""):
                 AD._errors.append("<b>Error setting permissions on home directory:</b> " + str(r.std_out) + " - " + str(r.std_err) + "<br />")
+            # Set permissions for CREATOR OWNER user (needed for recycle bin permissions)
+            r = AD._winrm.run_cmd('icacls', ['"' + folder_path + '"',
+                "/grant", '"CREATOR OWNER:(OI)(CI)(IO)(DE,GR,GW,GE,RD,WD,AD,X,DC,RA)"', "/inheritance:e",
+                "/T", "/C", "/Q" ]) # "/T"
+            ret += r.std_out + " err: " + r.std_err
+            if (r.std_err != ""):
+                AD._errors.append("<b>Error setting permissions on home directory:</b> " + str(r.std_out) + " - " + str(r.std_err) + "<br />")
         except:
             er = "<b>Error creating home folder: </b> " + str(folder_path)
             ret += er
