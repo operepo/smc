@@ -126,6 +126,7 @@ class AD:
                 AD._ldap.simple_bind_s(AD._ldap_login_user.encode(AD._ad_encoding), AD._ldap_login_pass.encode(AD._ad_encoding))
                 ret = True
             except ldap.INVALID_CREDENTIALS, message:
+                AD._ldap = None
                 err = """
 <h1>Active Directory Login Error </h1>
 <p style="font-size: 10px;">%s</p>
@@ -137,6 +138,7 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
                 AD._errors.append(err)
                 return False
             except ldap.SERVER_DOWN, message:
+                AD._ldap = None
                 err = """
 <h1>Active Directory Connection error </h1>
 <p style="font-size: 10px;">%s</p>
@@ -148,6 +150,7 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
                 AD._errors.append(err)
                 return False
             except Exception, ex:
+                AD._ldap = None
                 # unkown error?
                 err += "Unknown Error " + str(ex)
                 AD._errors.append(err)
