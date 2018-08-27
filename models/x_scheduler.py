@@ -663,8 +663,11 @@ def refresh_all_ad_logins():
     ret = ""
     
     # Update the last login value for all users (students and faculty)
-    if (AD.ConnectAD() != True):
+    if (AD._ldap_enabled != True):
         ret = "[AD Disabled]"
+        return ret
+    if (AD.ConnectAD() != True):
+        ret = "[AD Connection Error]"
         return ret
     
     # Grab list of students
@@ -720,7 +723,7 @@ refresh_ad_login = current.cache.ram('refresh_ad_login', lambda: True, time_expi
 if refresh_ad_login is True:
     current.cache.ram('refresh_ad_login', lambda: False, time_expire=0)
     # Update the last login value for all users (students and faculty)
-    if (AD.ConnectAD() != True):
+    if (AD._ldap_enabled != True):
         # Not enabled, skip
         pass
     else:
