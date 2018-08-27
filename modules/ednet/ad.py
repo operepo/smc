@@ -612,6 +612,8 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
     @staticmethod
     def SetPassword(user_dn, password):
         ret = False
+        # Need to clear errors so we don't queue up errors from last time this failed.
+        AD._errors = []
 
         if (AD.ConnectAD() != True):
             return ret
