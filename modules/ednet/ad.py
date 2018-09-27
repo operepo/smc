@@ -53,6 +53,8 @@ class AD:
     _init_run = False
 
     _ldap = None
+    _ldap_connect_time = datetime.today() - timedelta(seconds=600)
+    _ldap_keepalive_timeout = 300
 
     _winrm = None
 
@@ -95,7 +97,12 @@ class AD:
     @staticmethod
     def Close():
         if (AD._ldap != None):
-            AD._ldap.unbind_s()
+            try:
+                AD._ldap.unbind_s()
+            except:
+                # Just make sure the close doesn't fail with fatal error
+                # This may be being called in response to an exception
+                pass
 
         AD._ldap = None
         AD._init_run = False
@@ -113,6 +120,10 @@ class AD:
 
     @staticmethod
     def ConnectAD():
+        if AD._ldap_connect_time < datetime.today() - timedelta(seconds=AD._ldap_keepalive_timeout):
+            # if it has been too long since this connection was established, force a reconnect
+            AD.Close()
+        
         ret = False
         AD.Init()
 
@@ -125,8 +136,9 @@ class AD:
                 #AD._ldap.simple_bind_s(AD._ldap_login_user, AD._ldap_login_pass)
                 AD._ldap.simple_bind_s(AD._ldap_login_user.encode(AD._ad_encoding), AD._ldap_login_pass.encode(AD._ad_encoding))
                 ret = True
+                AD._ldap_connect_time = datetime.today()
             except ldap.INVALID_CREDENTIALS, message:
-                AD._ldap = None
+                AD.Close()
                 err = """
 <h1>Active Directory Login Error </h1>
 <p style="font-size: 10px;">%s</p>
@@ -138,7 +150,7 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
                 AD._errors.append(err)
                 return False
             except ldap.SERVER_DOWN, message:
-                AD._ldap = None
+                AD.Close()
                 err = """
 <h1>Active Directory Connection error </h1>
 <p style="font-size: 10px;">%s</p>
@@ -150,8 +162,8 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
                 AD._errors.append(err)
                 return False
             except Exception, ex:
-                AD._ldap = None
-                # unkown error?
+                AD.Close()
+                # unknown error?
                 err += "Unknown Error " + str(ex)
                 AD._errors.append(err)
                 return False
