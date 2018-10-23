@@ -55,6 +55,7 @@ class AD:
     _ldap = None
     _ldap_connect_time = datetime.today() - timedelta(seconds=600)
     _ldap_keepalive_timeout = 300
+    _ldap_connection_tries = 0
 
     _winrm = None
 
@@ -133,6 +134,7 @@ class AD:
             AD._ldap.set_option(ldap.OPT_REFERRALS, 0)
 
             try:
+                AD._ldap_connection_tries += 1
                 #AD._ldap.simple_bind_s(AD._ldap_login_user, AD._ldap_login_pass)
                 AD._ldap.simple_bind_s(AD._ldap_login_user.encode(AD._ad_encoding), AD._ldap_login_pass.encode(AD._ad_encoding))
                 ret = True
