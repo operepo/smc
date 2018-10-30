@@ -152,7 +152,7 @@ if (db(db.zpool_sync).count() < 1):
 db.define_table("my_app_settings",
                 Field("app_name", default="SMC"),
                 Field("app_description", default="Student Management Console - Import/Enrollment for Active Directory and Canvas"),
-                Field("app_logo", "upload", autodelete=True),
+                Field("app_logo", "upload", length=64, autodelete=True),
                 
                 Field("ad_import_enabled", "boolean", default="False"),
                 Field("file_server_import_enabled", "boolean", default="False"),
@@ -274,7 +274,7 @@ db.define_table("student_canvas_import_status",
                 )
 
 db.define_table("student_excel_uploads",
-                Field("excel_file", 'upload', autodelete=True),
+                Field("excel_file", 'upload', length=64, autodelete=True),
                 auth.signature
                 )
 
@@ -351,7 +351,7 @@ db.define_table("faculty_canvas_import_status",
                 )
 
 db.define_table("faculty_excel_uploads",
-                Field("excel_file",'upload', autodelete=True),
+                Field("excel_file",'upload', length=64, autodelete=True),
                 auth.signature
                 )
 
@@ -372,7 +372,7 @@ db.define_table('media_file_import_queue',
                 Field('media_type', 'string', default='video', requires=IS_IN_SET(['video', 'song'])),
                 Field('category', 'string'),
                 Field('tags', 'list:string'),
-                Field('media_file','upload', autodelete=True, uploadseparate=True, requires=IS_NOT_EMPTY()),
+                Field('media_file','upload', length=64, autodelete=True, uploadseparate=True, requires=IS_NOT_EMPTY()),
                 Field('width', 'integer', default=0),
                 Field('height', 'integer', default=0),
                 Field('quality', 'string', default='normal', requires=IS_IN_SET(['normal', 'low', 'high'])),
