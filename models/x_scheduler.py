@@ -732,5 +732,5 @@ if refresh_ad_login is True:
         pass
     
     # Make sure to start the scheduler process
-    cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_misc_scheduler.py') + " > /dev/null 2>&1 &"
-    p = subprocess.Popen(cmd, shell=True, close_fds=True)
+    #cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_misc_scheduler.py') + " > /dev/null 2>&1 &"
+    #p = subprocess.Popen(cmd, shell=True, close_fds=True)

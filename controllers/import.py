@@ -12,8 +12,8 @@ def index(): return dict(message="hello from import.py")
 
 def start_create_home_directory():
 	# Start the worker process
-	cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_create_home_directory_scheduler.py') + " > /dev/null 2>&1 &"
-	p = subprocess.Popen(cmd, shell=True, close_fds=True)
+	#cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_create_home_directory_scheduler.py') + " > /dev/null 2>&1 &"
+	#p = subprocess.Popen(cmd, shell=True, close_fds=True)
 	ret = ""
 	#ret = p.wait()
 	#ret = p.communicate()[0]

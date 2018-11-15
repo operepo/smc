@@ -2,6 +2,9 @@
 import sys, os
 import subprocess
 
+# Scheduler run by supervisor - do not need to run it manually anymore
+sys.exit(0)
+
 # Get the current folder
 folder = os.path.abspath(__file__)
 folder = os.path.dirname(folder)

@@ -781,8 +781,8 @@ def start_process_queue():
 
 def start_process_queue_wamap_delete():
     # Start the worker process
-    cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_wamap_delete_scheduler.py') + " > /dev/null 2>&1 &"
-    p = subprocess.Popen(cmd, shell=True, close_fds=True)
+    #cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_wamap_delete_scheduler.py') + " > /dev/null 2>&1 &"
+    #p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     #ret = p.wait()
     #ret = p.communicate()[0]
@@ -794,8 +794,8 @@ def start_process_queue_wamap_delete():
 
 def start_process_videos():
     # Start the worker process
-    cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_process_video_scheduler.py') + " > /dev/null 2>&1 &"
-    p = subprocess.Popen(cmd, shell=True, close_fds=True)
+    #cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_process_video_scheduler.py') + " > /dev/null 2>&1 &"
+    #p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     #ret = p.wait()
     #ret = p.communicate()[0]
@@ -807,8 +807,8 @@ def start_process_videos():
 
 def start_wamap_videos():
     # Start the worker process
-    cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_wamap_videos_scheduler.py') + " > /dev/null 2>&1 &"
-    p = subprocess.Popen(cmd, shell=True, close_fds=True)
+    #cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_wamap_videos_scheduler.py') + " > /dev/null 2>&1 &"
+    #p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     #ret = p.wait()
     #ret = p.communicate()[0]
