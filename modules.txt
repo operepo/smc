@@ -1,0 +1,10 @@
+requests
+ldap
+paramiko
+ecdsa
+isodate
+pytube
+pywinrm
+xlrd
+psutil
+

@@ -1,0 +1,21 @@
+{{extend 'layout.html'}}
+<h1>Configuration Settings</h1>
+
+<p>
+	Select the appropriate configuration option:
+</p>
+
+<ul>
+	<li><a href="{{=URL('admin', 'config_app_settings') }}">App Settings</a></li>
+	<li><a href="{{=URL('admin', 'config_ad_settings') }}">Active Directory Settings</a></li>
+	<li><a href="{{=URL('admin', 'config_file_settings') }}">File Server Settings</a></li>
+	<li><a href="{{=URL('admin', 'config_faculty_settings') }}">Faculty Settings</a></li>
+	<li><a href="{{=URL('admin', 'config_student_settings') }}">Student Settings</a></li>
+	<li><a href="{{=URL('admin', 'config_canvas_settings') }}">Canvas Settings</a></li>
+	<li><a href="{{=URL('admin', 'config_zfs_settings') }}">ZFS Settings</a></li>
+
+	<li><a href="{{=URL('admin', 'config_verify') }}">Verify Settings</a> - <a href="{{=URL('admin', 'config_verify_auto') }}">Auto Create</a></li>
+
+
+	
+</ul>

@@ -6,3 +6,7 @@ Student Management Console - Easy student management and enrollment for educatio
 
 pycrypto
 python-ldap
+
+# Test Cert Files
+test.crt and test.key are for development purposes only. Do not use in production.
+When bundled with OPE services, these files are ignored

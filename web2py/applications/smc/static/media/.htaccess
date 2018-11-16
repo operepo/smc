@@ -1,0 +1,7 @@
+
+AddType audio/ogg .oga
+AddType video/ogg .ogv .ogg
+AddType video/webm .webm
+AddType video/mp4 .mp4
+
+AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/x-javascript
