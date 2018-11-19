@@ -152,8 +152,8 @@ class Student:
     @staticmethod
     def EnableAccount(student_id):
         ret = ""
-        db = current.db # Grab the current db object
-        auth = current.auth # Grab the current auth object
+        db = current.db  # Grab the current db object
+        auth = current.auth  # Grab the current auth object
         
         user_name = Student.GetUsername(student_id)
         

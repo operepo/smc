@@ -11,3 +11,6 @@ private/
 static/media/
 /.idea
 uploads/
+/web2py/parameters_8000.py
+/web2py/httpserver.log
+/web2py/httpserver.pid

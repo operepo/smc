@@ -3,11 +3,11 @@ import os
 import sys
 from getpass import getpass
 
-sys.path.append("/home/www-data/web2py/")
+sys.path.append("/home/www-data/smc/web2py/")
 
 # Move back to the main web2py folder
 #print os.getcwd()
-os.chdir("/home/www-data/web2py/")
+os.chdir("/home/www-data/smc/web2py/")
 #print os.getcwd()
 
 from gluon.main import save_password

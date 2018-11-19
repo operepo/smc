@@ -67,7 +67,7 @@ class AD:
 
     @staticmethod
     def Init():
-        if (AD._init_run != True):
+        if AD._init_run != True:
             AD._ad_encoding = "iso-8859-1"
             AD._ldap_enabled = AppSettings.GetValue('ad_import_enabled', False)
             AD._file_server_import_enabled = AppSettings.GetValue('file_server_import_enabled', False)
@@ -80,19 +80,27 @@ class AD:
             AD._file_server_login_user = AppSettings.GetValue('file_server_login_user', 'Administrator')
             AD._file_server_login_pass = AppSettings.GetValue('file_server_login_pass', 'Super Secret Password')
 
-            #STUDENT SETTINGS
+            # STUDENT SETTINGS
 
             AD._ad_student_cn = AppSettings.GetValue('ad_student_cn', 'OU=Students,DC=ad,DC=correctionsed,DC=com')
             AD._ad_student_group_cn = AppSettings.GetValue('ad_student_group_cn', 'OU=StudentGroups,DC=ad,DC=correctionsed,DC=com')
             AD._ad_student_group_dn = 'CN=Students,' + AD._ad_student_group_cn
 
-            #FACULTY SETTINGS
+            # FACULTY SETTINGS
             AD._ad_faculty_cn = AppSettings.GetValue('ad_faculty_cn', 'OU=Faculty,DC=ad,DC=correctionsed,DC=com')
             AD._ad_faculty_group_cn = AppSettings.GetValue('ad_faculty_group_cn', 'OU=FacultyGroups,DC=ad,DC=correctionsed,DC=com')
             AD._ad_faculty_group_dn = 'CN=Faculty,' + AD._ad_faculty_group_cn
 
             # Allow self signed certs and set options for AD
             ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+            # TODO - Set network timeout and keepalive options to keep connection from closing?
+            ldap.set_option(ldap.OPT_X_KEEPALIVE_IDLE, AD._ldap_keepalive_timeout + 100)
+            ldap.set_option(ldap.OPT_X_KEEPALIVE_INTERVAL, 10)
+            ldap.set_option(ldap.OPT_X_KEEPALIVE_PROBES, 3)
+            ldap.set_option(ldap.OPT_NETWORK_TIMEOUT, 10.0)
+            ldap.set_option(ldap.OPT_TIMEOUT, 10.0)
+
+            # ldap.set_option(ldap.OPT_REFERRALS, 0)
 
             AD._init_run = True
 
@@ -114,9 +122,9 @@ class AD:
     @staticmethod
     def Connect():
         ret = True
-        if (AD.ConnectAD() != True):
+        if AD.ConnectAD() != True:
             ret = False
-        if (AD.ConnectWinRM() != True):
+        if AD.ConnectWinRM() != True:
             ret = False
         return ret
 
@@ -129,7 +137,7 @@ class AD:
         ret = False
         AD.Init()
 
-        if (AD._ldap == None and AD._ldap_enabled == True):
+        if AD._ldap == None and AD._ldap_enabled == True:
             AD._ldap = ldap.initialize(AD._ldap_protocol + AD._ldap_server)
             AD._ldap.protocol_version = 3
             AD._ldap.set_option(ldap.OPT_REFERRALS, 0)
