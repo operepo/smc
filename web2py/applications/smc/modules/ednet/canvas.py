@@ -14,8 +14,8 @@ import requests
 
 # from applications.smc.modules.requests.exceptions import ConnectionError
 # from ..requests.exceptions import ConnectionError
-# from requests.exceptions import ConnectionError
-import requests.exceptions.ConnectionError
+from requests.exceptions import ConnectionError
+# import requests.exceptions.ConnectionError
 
 # from .appsettings import AppSettings
 from ednet.appsettings import AppSettings
@@ -561,14 +561,14 @@ class Canvas:
                 resp = requests.put(canvas_url, headers=headers, data=params, verify=False)
             elif (method == "PATCH"):
                 resp = requests.patch(canvas_url, headers=headers, data=params, verify=False)
-        except ConnectionError, error_message:
+        except ConnectionError as error_message:
             Canvas._errors.append("<b>Canvas API Error:</b> " + server + "/" + api_call + " - %s" % str(error_message))
             return None
         
         if (resp != None):
             try:
                 ret = resp.json()
-            except ValueError, error_message:
+            except ValueError as error_message:
                 Canvas._errors.append("<b>JSON Error! Invalid JSON response: </b>" + str(error_message))
                 return None
         return ret

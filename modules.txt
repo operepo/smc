@@ -1,5 +1,5 @@
 requests
-ldap
+ldap3 # python-ldap
 paramiko
 ecdsa
 isodate
@@ -7,4 +7,5 @@ pytube
 pywinrm
 xlrd
 psutil
+pycryptodome
 

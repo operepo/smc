@@ -15,6 +15,7 @@ try:
 except:
     xrange = range
 
+
 def natural_key(string_):
     return [int(s) if s.isdigit() else s for s in re.split(r'(\d+)', string_)]
 
@@ -50,7 +51,7 @@ def pad(s, n=32, padchar=' '):
         # Handle empty value - pad it out w empty data
         s += padchar * n
         return s
-    while ((len(s) % n) != 0):
+    while (len(s) % n) != 0:
         s += padchar
     # pad_len = len(s) % 32 # How many characters do we need to pad out to a multiple of 32
     # if (pad_len != 0):
@@ -115,12 +116,15 @@ class Util:
         else:
             key = Util.aes_key
         key = pad(key[:32])
-        if (data == None):
+        if data == None:
             data = ""
         try:
             data = base64.urlsafe_b64decode(data)
         except TypeError as ex:
             # Don't let error blow things up
+            pass
+        except Exception as ex:
+            print("Unkown error! " + str(ex))
             pass
         iv, data = data[:16], data[16:]
         try:

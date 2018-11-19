@@ -140,7 +140,7 @@ def refresh_datasets():
         
         db.commit()
         succeeded = True
-    except Exception, e:
+    except Exception as e:
         message += "Error getting datasets: " + str(e)
     
     return dict(succeeded=succeeded, message=message)
@@ -366,7 +366,7 @@ def reset_smc():
         response.flash = "SMC App Reset" + str(ret)
     
     if kill_scheduler.accepted:
-        #kill_process_videos_schedule_process()
+        # kill_process_videos_schedule_process()
         kill_all_workers()
         response.flash = "Scheduler process killed" # + str(ret)
     
@@ -406,9 +406,11 @@ def isFFMPEGRunning():
         ret = "IS"
     return ret
 
+
 @auth.requires_membership("Administrators")
 def ope():
     return dict(message="Welcome")
+
 
 @auth.requires_membership("Administrators")
 def laptop_firewall():

@@ -2,7 +2,7 @@
 # try something like
 
 #from ednet.ad import AD
-#from ednet import Util, SequentialGUID, AppSettings, W2Py, Student
+from ednet import Util, SequentialGUID, AppSettings, W2Py, Student
 #from ednet import *
 from ednet.ad import AD
 from ednet.faculty import Faculty
@@ -10,11 +10,59 @@ from ednet.util import Util
 from ednet.canvas import Canvas
 from pytube import YouTube
 import os
+import ssl
 
-import ldap
+# import ldap
+import ldap3
+
 
 import sys
 
+
+def ad_test():
+    # ad_pw = AppSettings.GetValue("ad_service_password", "NOT FOUND")
+    # file_pw = AppSettings.GetValue("file_server_login_pass", "NOT FOUND")
+    # c = AD.Connect()
+
+    # Keep this off - exposes too much
+    # ld = AD._ldap
+
+    # whoami = AD._ldap.extend.standard.who_am_i()
+
+    cn_name = "s777777"
+    dn = "cn=s777777,ou=students,dc=pencol,dc=local"
+
+    # r = AD._ldap.search(dn.encode(AD._ad_encoding),
+    #                    "(name=" + str(cn_name).encode(AD._ad_encoding) + ")",
+    #                    search_scope=ldap3.SUBTREE,
+    #                   attributes=['distinguishedName'],
+    #                    )
+    # s = AD._ldap.response
+    # ret_arr)  # ['distinguishedName'])
+
+    # ret = AD.VerifyADSettings(False)
+
+    # Test - Enable user
+    disable = AD.DisableUser(dn)
+    enable = AD.EnableUser(dn)
+
+    last_login_time = AD.GetLastLoginTime(dn)
+
+    grp_dn = "cn=test_group,OU=StudentGroups,DC=pencol,DC=local"
+    cg = AD.CreateGroup(grp_dn)
+
+    add_to_group = AD.AddUserToGroup(dn, grp_dn)
+
+    t_ou_dn = "OU=test_OU,DC=pencol,DC=local"
+    test_ou = AD.CreateOU(t_ou_dn)
+
+
+    err = AD._errors
+
+    # if len(r) != 0 and len(r[0]['attributes']) > 0 and r[0]['attributes']['distinguishedName'] != '':
+    #    ret = r
+
+    return locals()
 
 def test():
 
@@ -31,6 +79,7 @@ def test():
     initial_run = cache.ram("startup", lambda:True, time_expire=3600)
     cache_time = cache.ram("tmptime", lambda:time.ctime(), time_expire=30)
     return locals()
+
 
 def index():
     
@@ -50,7 +99,7 @@ def index():
     
     try:
         f.download()
-    except Exception, e:
+    except Exception as e:
         ret += str(e)
     
     #test = {}
