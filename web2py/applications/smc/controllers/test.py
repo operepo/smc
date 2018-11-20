@@ -30,7 +30,17 @@ def ad_test():
     # whoami = AD._ldap.extend.standard.who_am_i()
 
     cn_name = "s777777"
-    dn = "cn=s777777,ou=students,dc=pencol,dc=local"
+    dn = "cn=s777777,ou=cse,ou=students,dc=pencol,dc=local"
+    container_dn = "ou=cse,ou=students,dc=pencol,dc=local"
+
+    create_user = AD.CreateUser(cn_name, container_dn)
+
+    update_user = AD.UpdateUserInfo(dn, email_address="test@test", first_name="test", last_name="smith",
+                                    display_name="testing", description="this is a test", id_number="10",
+                                    home_drive_letter="w", home_directory="c:\home",
+                                    login_script="login_script", profile_path="pfpath",
+                                    ts_allow_login='FALSE')
+
 
     # r = AD._ldap.search(dn.encode(AD._ad_encoding),
     #                    "(name=" + str(cn_name).encode(AD._ad_encoding) + ")",
@@ -43,18 +53,18 @@ def ad_test():
     # ret = AD.VerifyADSettings(False)
 
     # Test - Enable user
-    disable = AD.DisableUser(dn)
-    enable = AD.EnableUser(dn)
+    #disable = AD.DisableUser(dn)
+    #enable = AD.EnableUser(dn)
 
-    last_login_time = AD.GetLastLoginTime(dn)
+    #last_login_time = AD.GetLastLoginTime(dn)
 
-    grp_dn = "cn=test_group,OU=StudentGroups,DC=pencol,DC=local"
-    cg = AD.CreateGroup(grp_dn)
+    #grp_dn = "cn=test_group,OU=StudentGroups,DC=pencol,DC=local"
+    #cg = AD.CreateGroup(grp_dn)
 
-    add_to_group = AD.AddUserToGroup(dn, grp_dn)
+    #add_to_group = AD.AddUserToGroup(dn, grp_dn)
 
-    t_ou_dn = "OU=test_OU,DC=pencol,DC=local"
-    test_ou = AD.CreateOU(t_ou_dn)
+    #t_ou_dn = "OU=test_OU,DC=pencol,DC=local"
+    #test_ou = AD.CreateOU(t_ou_dn)
 
 
     err = AD._errors

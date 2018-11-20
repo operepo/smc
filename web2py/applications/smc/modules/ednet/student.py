@@ -142,11 +142,12 @@ class Student:
         Student.SetPassword(student_id, pw, False)
         
         user_dn = Student.GetAD_DN(user_name, Student.GetProgram(student_id))
-        AD.DisableUser(user_dn)
+        r = AD.DisableUser(user_dn)
         
         # Update the database to reflect the change
         db(db.student_info.user_id==student_id).update(account_enabled=False)
-        
+        if r is False:
+            ret = "ERROR disabling account - " + AD.GetErrorString()
         return ret
     
     @staticmethod
@@ -163,11 +164,13 @@ class Student:
         
         # AD - Disable
         user_dn = Student.GetAD_DN(user_name, Student.GetProgram(student_id))
-        AD.EnableUser(user_dn)
+        r = AD.EnableUser(user_dn)
         
         # Update the database to reflect the change
         db(db.student_info.user_id==student_id).update(account_enabled=True)
-        
+
+        if r is False:
+            ret = "ERROR disabling account - " + AD.GetErrorString()
         return ret
     
     @staticmethod

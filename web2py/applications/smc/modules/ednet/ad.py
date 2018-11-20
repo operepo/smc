@@ -8,6 +8,7 @@ import ssl
 from ldap3 import Server, Connection, ALL, NTLM, Tls
 import ldap3.core.exceptions
 from ldap3.extend.microsoft.addMembersToGroups import ad_add_members_to_groups
+from ldap3.utils.dn import safe_rdn
 
 # from .winrm import *
 # from winrm import * as winrm
@@ -566,26 +567,43 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         if user is not None:
             # User already exists
             # Do we need to move the user?
-            curr_dn = user[0][1]['distinguishedName'][0]
+            # curr_dn = user[0][1]['distinguishedName'][0]
+            curr_dn = user[0]['attributes']['distinguishedName']
             if curr_dn.lower() != new_user_dn.lower():
                 # Rename to move
                 try:
-                    AD._ldap.rename_s(curr_dn.encode(AD._ad_encoding), "cn=" + user_name.encode(AD._ad_encoding), container_cn.encode(AD._ad_encoding))
-                except ldap.LDAPError as error_message:
-                    AD._errors.append("<b>Error moving user to new OU</b> " + str(user_name) + " %s" % error_message)
+                    # AD._ldap.rename_s(curr_dn.encode(AD._ad_encoding),
+                    #  "cn=" + user_name.encode(AD._ad_encoding), container_cn.encode(AD._ad_encoding))
+                    safe_dn = safe_rdn(curr_dn)
+                    # print("Moving user " + str(curr_dn) + " / " + str(safe_dn) + " / " + str(container_cn))
+                    curr_dn = str(curr_dn)
+                    r = AD._ldap.modify_dn(curr_dn,
+                                           safe_dn,
+                                           new_superior=container_cn)
+                    # print("RET " + str(r))
+                except ldap3.core.exceptions.LDAPOperationsErrorResult as error_message:
+                    # except ldap.LDAPError as error_message:
+                    AD._errors.append("<b>Error moving user to new OU</b> " + str(user_name) + str(error_message))
+                    return False
+                except Exception as error_message:
+                    AD._errors.append("<b>UNKNOWN ERROR moving user to new OU</b> " + str(user_name) + str(error_message))
                     return False
             return True
 
         user_attrs = dict()
         user_attrs['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
         user_attrs['sAMAccountName'] = user_name.encode(AD._ad_encoding)
-        uac = 514 # normal user account
+        uac = 514  # normal user account
         user_attrs['userAccountControl'] = str(uac).encode(AD._ad_encoding)
-        user_ldif = Util.GetModList(user_attrs, None)
+        # user_ldif = Util.GetModList(user_attrs, None)
 
         try:
-            AD._ldap.add_s(new_user_dn.encode(AD._ad_encoding), user_ldif)
-        except ldap.LDAPError as error_message:
+            # AD._ldap.add_s(new_user_dn.encode(AD._ad_encoding), user_ldif)
+            AD._ldap.add(new_user_dn.encode(AD._ad_encoding),
+                         attributes=user_attrs)
+
+        except ldap3.core.exceptions.LDAPExceptionError as error_message:
+            # except ldap.LDAPError as error_message:
             AD._errors.append("<b>Add User Error:</b> " + str(user_name) + " %s" % error_message)
 
         if AD.GetLDAPObject(new_user_dn) is not None:
@@ -594,7 +612,9 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         return ret
 
     @staticmethod
-    def UpdateUserInfo(user_dn, email_address="", first_name="", last_name="", display_name="", description="", id_number="", home_drive_letter="", home_directory="", login_script="", profile_path="",  ts_allow_login='FALSE'):
+    def UpdateUserInfo(user_dn, email_address="", first_name="", last_name="", display_name="", description="",
+                       id_number="", home_drive_letter="", home_directory="", login_script="", profile_path="",
+                       ts_allow_login='FALSE'):
         ret = True
         if AD.ConnectAD() is not True:
             return False
@@ -605,31 +625,37 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             return False
 
         u_attrs = dict()
-        u_attrs['userPrincipalName'] = email_address.encode(AD._ad_encoding)
-        u_attrs['givenName'] = first_name.encode(AD._ad_encoding)
-        u_attrs['sn'] = last_name.encode(AD._ad_encoding)
-        u_attrs['displayName'] = display_name.encode(AD._ad_encoding)
-        u_attrs['description'] = description.encode(AD._ad_encoding)
-        u_attrs['mail'] = email_address.encode(AD._ad_encoding)
-        u_attrs['employeeID'] = id_number.encode(AD._ad_encoding)
-        u_attrs['msTSAllowLogon'] = 'FALSE'
-        u_ldif = Util.GetModList(u_attrs, ldap.MOD_REPLACE)
+        u_attrs['userPrincipalName'] = [(ldap3.MODIFY_REPLACE, [email_address.encode(AD._ad_encoding)])]
+        u_attrs['givenName'] = [(ldap3.MODIFY_REPLACE, [first_name.encode(AD._ad_encoding)])]
+        u_attrs['sn'] = [(ldap3.MODIFY_REPLACE, [last_name.encode(AD._ad_encoding)])]
+        u_attrs['displayName'] = [(ldap3.MODIFY_REPLACE, [display_name.encode(AD._ad_encoding)])]
+        u_attrs['description'] = [(ldap3.MODIFY_REPLACE, [description.encode(AD._ad_encoding)])]
+        u_attrs['mail'] = [(ldap3.MODIFY_REPLACE, [email_address.encode(AD._ad_encoding)])]
+        u_attrs['employeeID'] = [(ldap3.MODIFY_REPLACE, [id_number.encode(AD._ad_encoding)])]
+        u_attrs['msTSAllowLogon'] = [(ldap3.MODIFY_REPLACE, [ts_allow_login])]
+        # u_ldif = Util.GetModList(u_attrs, ldap3.MODIFY_REPLACE)
 
         # Update Base info
         try:
-            AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), u_ldif)
-        except ldap.LDAPError as error_message:
+            # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), u_ldif)
+            AD._ldap.modify(user_dn.encode(AD._ad_encoding),
+                            u_attrs)
+        except ldap3.core.exceptions.LDAPExceptionError as error_message:
+            # except ldap.LDAPError as error_message:
             AD._errors.append("<b>Error updating user: " + str(user_dn) + " %s" % error_message)
             ret = False
 
         # Set drive letter
-        home_drive = [(ldap.MOD_REPLACE, 'homeDrive', [home_drive_letter.encode(AD._ad_encoding)])]
-        if (home_drive_letter == ''):
-            home_drive = [(ldap.MOD_DELETE, 'homeDrive', None)]
+        home_drive = {'homeDrive': [(ldap3.MODIFY_REPLACE, [home_drive_letter.encode(AD._ad_encoding)])]}
+        if home_drive_letter == '':
+            # home_drive = [(ldap.MOD_DELETE, 'homeDrive', None)]
+            home_drive = {'homeDrive': [(ldap3.MODIFY_DELETE, None)]}
         try:
-            AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), home_drive)
-        except ldap.LDAPError as error_message:
-            if (error_message[0]['desc'] == 'No such attribute'):
+            # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), home_drive)
+            AD._ldap.modify(user_dn.encode(AD._ad_encoding), home_drive)
+        except ldap3.core.exceptions.LDAPExceptionError as error_message:
+            # except ldap.LDAPError as error_message:
+            if error_message[0]['desc'] == 'No such attribute':
                 # Ignore error if attribute is already gone
                 pass
             else:
@@ -637,13 +663,17 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
                 ret = False
 
         # Set home directory
-        home_dir = [(ldap.MOD_REPLACE, 'homeDirectory', [home_directory.encode(AD._ad_encoding)])]
+        # home_dir = [(ldap.MOD_REPLACE, 'homeDirectory', [home_directory.encode(AD._ad_encoding)])]
+        home_dir = {'homeDirectory': [(ldap3.MODIFY_REPLACE, [home_directory.encode(AD._ad_encoding)])]}
         if home_directory == '':
-            home_dir = [(ldap.MOD_DELETE, 'homeDirectory', None)]
+            # home_dir = [(ldap.MOD_DELETE, 'homeDirectory', None)]
+            home_dir = {'homeDirectory': [(ldap3.MODIFY_DELETE, None)]}
         try:
-            AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), home_dir)
-        except ldap.LDAPError as error_message:
-            if (error_message[0]['desc'] == 'No such attribute'):
+            # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), home_dir)
+            AD._ldap.modify(user_dn.encode(AD._ad_encoding), home_dir)
+        except ldap3.core.exceptions.LDAPExceptionError as error_message:
+            # except ldap.LDAPError as error_message:
+            if error_message[0]['desc'] == 'No such attribute':
                 # Ignore error if attribute is already gone
                 pass
             else:
@@ -651,13 +681,17 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
                 ret = False
 
         # Save login script path
-        script_path = [(ldap.MOD_REPLACE, 'scriptPath', [login_script.encode(AD._ad_encoding)])]
-        if (login_script == ''):
-            script_path = [(ldap.MOD_DELETE, 'scriptPath', None)]
+        # script_path = [(ldap.MOD_REPLACE, 'scriptPath', [login_script.encode(AD._ad_encoding)])]
+        script_path = {'scriptPath': [(ldap3.MODIFY_REPLACE, [login_script.encode(AD._ad_encoding)])]}
+        if login_script == '':
+            # script_path = [(ldap.MOD_DELETE, 'scriptPath', None)]
+            script_path = {'scriptPath': [(ldap3.MODIFY_DELETE, None)]}
         try:
-            AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), script_path)
-        except ldap.LDAPError as error_message:
-            if (error_message[0]['desc'] == 'No such attribute'):
+            # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), script_path)
+            AD._ldap.modify(user_dn.encode(AD._ad_encoding), script_path)
+        except ldap3.core.exceptions.LDAPExceptionError as error_message:
+            # except ldap.LDAPError as error_message:
+            if error_message[0]['desc'] == 'No such attribute':
                 # Ignore error if attribute is already gone
                 pass
             else:
@@ -665,13 +699,17 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
                 ret = False
 
         # Save Profile Path
-        profile = [(ldap.MOD_REPLACE, 'profilePath', [profile_path.encode(AD._ad_encoding)])]
-        if (profile_path == ''):
-            profile = [(ldap.MOD_DELETE, 'profilePath', None)]
+        # profile = [(ldap.MOD_REPLACE, 'profilePath', [profile_path.encode(AD._ad_encoding)])]
+        profile = {'profilePath': [(ldap3.MODIFY_REPLACE, [profile_path.encode(AD._ad_encoding)])]}
+        if profile_path == '':
+            # profile = [(ldap.MOD_DELETE, 'profilePath', None)]
+            profile = {'profilePath': [(ldap3.MODIFY_DELETE, None)]}
         try:
-            AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), profile)
-        except ldap.LDAPError as error_message:
-            if (error_message[0]['desc'] == 'No such attribute'):
+            # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), profile)
+            AD._ldap.modify(user_dn.encode(AD._ad_encoding), profile)
+        except ldap3.core.exceptions.LDAPExceptionError as error_message:
+            # except ldap.LDAPError as error_message:
+            if error_message[0]['desc'] == 'No such attribute':
                 # Ignore error if attribute is already gone
                 pass
             else:
@@ -693,13 +731,19 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             AD._errors.append("<B>User not found - setting password aborted:</b> " + str(user_dn))
             return ret
 
-        unicode_pw = unicode('\"' + password + '\"', 'iso-8859-1')
-        password_value = unicode_pw.encode('utf-16-le')
-        add_pass = [(ldap.MOD_REPLACE, 'unicodePwd', [password_value])]
+        unicode_pw = ('\"' + password + '\"').encode('utf-16-le')  # unicode('\"' + password + '\"', 'iso-8859-1')
+        # password_value = unicode_pw.encode('utf-16-le')
+        # add_pass = [(ldap.MOD_REPLACE, 'unicodePwd', [unicode_pw])]
+        add_pass = {'unicodePwd': [(ldap3.MODIFY_REPLACE, [unicode_pw])]}
         try:
-            AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), add_pass)
+            # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), add_pass)
+            AD._ldap.modify(user_dn, add_pass)
             # AD._errors.append("<b>Setting password: </b> " + str(user_dn))
-        except ldap.LDAPError as error_message:
+        except ldap3.core.exceptions.LDAPNoSuchObjectResult as error_message:
+            AD._errors.append("<b>Unable to find user :</b> " + str(user_dn) + " %s" % error_message)
+            return ret
+        except ldap3.core.exceptions.LDAPExceptionError as error_message:
+            # except ldap.LDAPError as error_message:
             AD._errors.append("<b>Error setting password for user:</b> " + str(user_dn) + " %s" % error_message)
             return ret
         return True
@@ -716,15 +760,21 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
 
         uac = 0x10200  # normal account, enabled, don't expire password
         if enabled is not True:
-            uac = 0x10202 # normal account, DISABLED, don't expire password
+            uac = 0x10202  # normal account, DISABLED, don't expire password
         # mod_acct = [(ldap.MOD_REPLACE, 'userAccountControl', str(uac).encode(AD._ad_encoding))]
         mod_acct = {'userAccountControl': [(ldap3.MODIFY_REPLACE, [str(uac).encode(AD._ad_encoding)])]}
 
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), mod_acct)
-            ret = AD._ldap.modify(user_dn, mod_acct)
-            # ret = True
-        except ldap3.core.exceptions.LDAPOperationsErrorResult as error_message:
+            ret = AD._ldap.modify(user_dn.encode(AD._ad_encoding), mod_acct)
+            ret = True
+        except ldap3.core.exceptions.LDAPNoSuchObjectResult as error_message:
+            AD._errors.append("<b>Unable to find object :</b> " + str(user_dn) + " %s" % error_message)
+            return ret
+        except ldap3.core.exceptions.LDAPUnwillingToPerformResult as error_message:
+            AD._errors.append("<b>Error enabling/disabling user: </b>" + str(user_dn) + "%s" % error_message)
+            return ret
+        except ldap3.core.exceptions.LDAPExceptionError as error_message:
             # except ldap.LDAPError as error_message:
             AD._errors.append("<b>Error enabling/disabling user: </b>" + str(user_dn))
             return ret
@@ -871,7 +921,7 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             return ret
 
         if AD._file_server_import_enabled is not True:
-            return "AD Disabled" # Return true if disabled since it isn't an error
+            return "AD Disabled"  # Return true if disabled since it isn't an error
 
         try:
             # Create the folder

@@ -24,8 +24,7 @@ if db(db.auth_user.id > 0).count() == 0:
         last_name='admin',
         email='admin@correctionsed.com',
         username='admin',
-        #password='sha512$808af3963c00c669$111d57c854f71967c7d45bad3acb6c68685bfae6392fd9bef161a65a918c4d947051ab8d2f54cd1c4fa2e068627ce98751fa6dcf7bd8c4b4492de30f2085e7fe',
-        password= 'sha512$89ae76a571eccb1e$9a7bc499dcb92f1f3f142e9a1c3c65d07ab6517ab8bfb06760a68ee8ef5de41b9d89e0a4ca1080f47654df8a0f9c443d0745443384cbfba33cab9a2ecaa08d26',
+        password='sha512$879808aa38f13af4$9eb1bdf5159c075f5a7f3bb4cf73fa2acbee1f25351badf3e3417f0f32010bcdc3a746974150c7fe2ea780ee4aad8cda457236853f1fa60a0a9097c15d721bb8',
     )
     db.commit()
     new_admin = True

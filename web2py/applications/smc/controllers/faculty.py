@@ -34,6 +34,7 @@ def changepassword():
         response.flash = "Unable to set new password"
     return dict(form=form)
 
+
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def index(): return dict(message="hello from faculty.py")
 
@@ -276,8 +277,8 @@ def faculty_change_password():
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def student_toggle_enabled():
     student_id = request.args(0)
-    if (student_id == None):
-        if (session.back):
+    if student_id == None:
+        if session.back:
             redirect(session.back)
         else:
             redirect(URL('faculty', 'manage_student'))
@@ -292,17 +293,20 @@ def student_toggle_enabled():
     else:
         if (student.account_enabled == True):
             # Disable
-            Student.DisableAccount(student_id)
-            message = "Account disabled."
-            #message += AD.GetErrorString()
-            status_action='Disable Account'
+            r = Student.DisableAccount(student_id)
+            if r != "":
+                r = " - ERROR trying to disable account - most likely couldn't find LDAP object. Make sure AD Student Cn is configured correctly in  Admin -> Configure App -> Student Settings  (missing cn=<program>)??"  + r
+            message = "Account disabled. " + r
+            status_action = 'Disable Account'
         else:
             # Enable
-            Student.EnableAccount(student_id)
-            message = "Account enabled."
-            status_action='Enable Account'
-    #message += Student.GetPassword(student_id)
+            r = Student.EnableAccount(student_id)
+            if r != "":
+                r = " - ERROR trying to enable account - most likely couldn't find LDAP object. Make sure AD Student Cn is configured correctly in  Admin -> Configure App -> Student Settings  (missing cn=<program>)??"  + r
+            message = "Account enabled. " + r
+            status_action = 'Enable Account'
     return dict(message=message, current_user=current_user, status_action=status_action)
+
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def student_toggle_upload_media():

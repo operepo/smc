@@ -11,7 +11,7 @@ db.define_table("quota_sizes",
                 Field("sort_order", "integer")
                 )
 
-#db(db.quota_sizes).delete()
+# db(db.quota_sizes).delete()
 if (db(db.quota_sizes).count() < 1):
         # Add a row
         db.quota_sizes.insert(int_size= '0',
@@ -138,13 +138,13 @@ if (db(db.quota_sizes).count() < 1):
 db.define_table("zpool_datasets",
                 Field("name"),
                 )
-if (db(db.zpool_datasets).count() < 1):
+if db(db.zpool_datasets).count() < 1:
     db.zpool_datasets.insert(name="")
 
 db.define_table("zpool_sync",
                 Field("name"),
                 )
-if (db(db.zpool_sync).count() < 1):
+if db(db.zpool_sync).count() < 1:
     db.zpool_sync.insert(name="disabled")
     db.zpool_sync.insert(name="standard")
     db.zpool_sync.insert(name="always")
@@ -167,7 +167,7 @@ db.define_table("my_app_settings",
                 Field("student_id_pattern", default="s<user_id>"),
                 Field("student_password_pattern", default="Sid<user_id>!"),
                 Field("student_email_pattern", default="s<user_id>@correctionsed.com"),
-                Field("ad_student_cn", default="OU=Students,DC=ad,DC=correctionsed,DC=com"),
+                Field("ad_student_cn", default="OU=<program>,OU=Students,DC=ad,DC=correctionsed,DC=com"),
                 Field("ad_student_group_cn", default="OU=StudentGroups,DC=ad,DC=correctionsed,DC=com"),
                 Field("ad_student_home_directory", default="\\\\files\\students\\%username%"),
                 Field("ad_student_home_drive", default="", requires=IS_IN_SET(["", "C:", "D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:", "L:", "M:", "N:", "O:", "P:", "Q:", "R:", "S:", "T:", "U:", "V:", "W:", "X:", "Y:", "Z:" ], zero=None)),
@@ -177,7 +177,7 @@ db.define_table("my_app_settings",
                 Field("faculty_id_pattern", default="<user_id>"),
                 Field("faculty_password_pattern", default="Fid<user_id>#"),
                 Field("faculty_email_pattern", default="<user_name>@correctionsed.com"),
-                Field("ad_faculty_cn", default="OU=Faculty,DC=ad,DC=correctionsed,DC=com"),
+                Field("ad_faculty_cn", default="OU=<program>,OU=Faculty,DC=ad,DC=correctionsed,DC=com"),
                 Field("ad_faculty_group_cn", default="OU=FacultyGroups,DC=ad,DC=correctionsed,DC=com"),
                 Field("ad_faculty_home_directory", default="\\\\files\\faculty\\%username%"),
                 Field("ad_faculty_home_drive", default="", requires=IS_IN_SET(["", "C:", "D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:", "L:", "M:", "N:", "O:", "P:", "Q:", "R:", "S:", "T:", "U:", "V:", "W:", "X:", "Y:", "Z:" ], zero=None)),
