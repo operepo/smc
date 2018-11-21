@@ -34,13 +34,19 @@ def ad_test():
     container_dn = "ou=cse,ou=students,dc=pencol,dc=local"
 
     create_user = AD.CreateUser(cn_name, container_dn)
+    Student.SetPassword("777777", "Sid777777!")
 
     update_user = AD.UpdateUserInfo(dn, email_address="test@test", first_name="test", last_name="smith",
                                     display_name="testing", description="this is a test", id_number="10",
-                                    home_drive_letter="w", home_directory="c:\home",
+                                    home_drive_letter="W", home_directory="c:\home",
                                     login_script="login_script", profile_path="pfpath",
                                     ts_allow_login='FALSE')
 
+
+    # Test - Enable user
+    # disable = AD.DisableUser(dn)
+    # enable = AD.EnableUser(dn)
+    Student.EnableAccount("777777")
 
     # r = AD._ldap.search(dn.encode(AD._ad_encoding),
     #                    "(name=" + str(cn_name).encode(AD._ad_encoding) + ")",
@@ -52,9 +58,7 @@ def ad_test():
 
     # ret = AD.VerifyADSettings(False)
 
-    # Test - Enable user
-    #disable = AD.DisableUser(dn)
-    #enable = AD.EnableUser(dn)
+
 
     #last_login_time = AD.GetLastLoginTime(dn)
 

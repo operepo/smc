@@ -14,6 +14,7 @@ from ednet.appsettings import AppSettings
 
 @auth.requires_membership("Administrators")
 def index():
+    response.view = 'generic.html'
     return dict(message="hello from admin.py")
 
 @auth.requires_membership("Administrators")
@@ -268,6 +269,7 @@ def switchquota():
             response.flash = "Quota set to enforcing" # + str(ret)
     
     return dict(switch_disabled=disabled, switch_tracking=tracking, switch_enforcing=enforcing)
+
 
 @auth.requires_membership("Administrators")
 def verify_settings():

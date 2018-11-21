@@ -594,6 +594,8 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         user_attrs['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
         user_attrs['sAMAccountName'] = user_name.encode(AD._ad_encoding)
         uac = 514  # normal user account
+        # Can't use other options until a password is set
+        # uac = 0x10200  # normal account, enabled, don't expire password
         user_attrs['userAccountControl'] = str(uac).encode(AD._ad_encoding)
         # user_ldif = Util.GetModList(user_attrs, None)
 
@@ -649,72 +651,88 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         home_drive = {'homeDrive': [(ldap3.MODIFY_REPLACE, [home_drive_letter.encode(AD._ad_encoding)])]}
         if home_drive_letter == '':
             # home_drive = [(ldap.MOD_DELETE, 'homeDrive', None)]
-            home_drive = {'homeDrive': [(ldap3.MODIFY_DELETE, None)]}
+            home_drive = {'homeDrive': [ldap3.MODIFY_DELETE, []]}
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), home_drive)
             AD._ldap.modify(user_dn.encode(AD._ad_encoding), home_drive)
+        except ldap3.core.exceptions.LDAPNoSuchAttributeResult as error_message:
+            # Normal if attribute is already missing
+            # print("NO SUCH ATTRIBUTE - homeDrive")
+            pass
         except ldap3.core.exceptions.LDAPExceptionError as error_message:
             # except ldap.LDAPError as error_message:
-            if error_message[0]['desc'] == 'No such attribute':
-                # Ignore error if attribute is already gone
-                pass
-            else:
-                AD._errors.append("<b>Error updating user:</b> " + str(user_dn) + " %s" % error_message)
-                ret = False
+            # if error_message[0]['desc'] == 'No such attribute':
+            #    # Ignore error if attribute is already gone
+            #    pass
+            # else:
+            AD._errors.append("<b>Error updating user:</b> " + str(user_dn) + " %s" % error_message)
+            ret = False
 
         # Set home directory
         # home_dir = [(ldap.MOD_REPLACE, 'homeDirectory', [home_directory.encode(AD._ad_encoding)])]
         home_dir = {'homeDirectory': [(ldap3.MODIFY_REPLACE, [home_directory.encode(AD._ad_encoding)])]}
         if home_directory == '':
             # home_dir = [(ldap.MOD_DELETE, 'homeDirectory', None)]
-            home_dir = {'homeDirectory': [(ldap3.MODIFY_DELETE, None)]}
+            home_dir = {'homeDirectory': [(ldap3.MODIFY_DELETE, [])]}
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), home_dir)
             AD._ldap.modify(user_dn.encode(AD._ad_encoding), home_dir)
+        except ldap3.core.exceptions.LDAPNoSuchAttributeResult as error_message:
+            # Normal if attribute is already missing
+            # print("NO SUCH ATTRIBUTE - homeDirectory")
+            pass
         except ldap3.core.exceptions.LDAPExceptionError as error_message:
             # except ldap.LDAPError as error_message:
-            if error_message[0]['desc'] == 'No such attribute':
-                # Ignore error if attribute is already gone
-                pass
-            else:
-                AD._errors.append("<b>Error setting home directory:</b> %s" % error_message)
-                ret = False
+            # if error_message[0]['desc'] == 'No such attribute':
+            #    # Ignore error if attribute is already gone
+            #    pass
+            # else:
+            AD._errors.append("<b>Error setting home directory:</b> %s" % error_message)
+            ret = False
 
         # Save login script path
         # script_path = [(ldap.MOD_REPLACE, 'scriptPath', [login_script.encode(AD._ad_encoding)])]
         script_path = {'scriptPath': [(ldap3.MODIFY_REPLACE, [login_script.encode(AD._ad_encoding)])]}
         if login_script == '':
             # script_path = [(ldap.MOD_DELETE, 'scriptPath', None)]
-            script_path = {'scriptPath': [(ldap3.MODIFY_DELETE, None)]}
+            script_path = {'scriptPath': [(ldap3.MODIFY_DELETE, [])]}
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), script_path)
             AD._ldap.modify(user_dn.encode(AD._ad_encoding), script_path)
+        except ldap3.core.exceptions.LDAPNoSuchAttributeResult as error_message:
+            # Normal if attribute is already missing
+            # print("NO SUCH ATTRIBUTE - scriptPath")
+            pass
         except ldap3.core.exceptions.LDAPExceptionError as error_message:
             # except ldap.LDAPError as error_message:
-            if error_message[0]['desc'] == 'No such attribute':
-                # Ignore error if attribute is already gone
-                pass
-            else:
-                AD._errors.append("<b>Error setting script directory:</b> %s" % error_message)
-                ret = False
+            # if error_message[0]['desc'] == 'No such attribute':
+            #    # Ignore error if attribute is already gone
+            #    pass
+            # else:
+            AD._errors.append("<b>Error setting script directory:</b> %s" % error_message)
+            ret = False
 
         # Save Profile Path
         # profile = [(ldap.MOD_REPLACE, 'profilePath', [profile_path.encode(AD._ad_encoding)])]
         profile = {'profilePath': [(ldap3.MODIFY_REPLACE, [profile_path.encode(AD._ad_encoding)])]}
         if profile_path == '':
             # profile = [(ldap.MOD_DELETE, 'profilePath', None)]
-            profile = {'profilePath': [(ldap3.MODIFY_DELETE, None)]}
+            profile = {'profilePath': [(ldap3.MODIFY_DELETE, [])]}
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), profile)
             AD._ldap.modify(user_dn.encode(AD._ad_encoding), profile)
+        except ldap3.core.exceptions.LDAPNoSuchAttributeResult as error_message:
+            # Normal if attribute is already missing
+            # print("NO SUCH ATTRIBUTE - profilePath")
+            pass
         except ldap3.core.exceptions.LDAPExceptionError as error_message:
             # except ldap.LDAPError as error_message:
-            if error_message[0]['desc'] == 'No such attribute':
-                # Ignore error if attribute is already gone
-                pass
-            else:
-                AD._errors.append("<b>Error setting profile directory:</b> %s" % error_message)
-                ret = False
+            # if error_message[0]['desc'] == 'No such attribute':
+            #    # Ignore error if attribute is already gone
+            #    pass
+            # else:
+            AD._errors.append("<b>Error setting profile directory:</b> %s" % error_message)
+            ret = False
 
         return ret
     
