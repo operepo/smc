@@ -160,37 +160,38 @@ def player():
     
     return dict(poster=poster, source_ogg=source_ogg, source_mp4=source_mp4, source_mobile_mp4=source_mobile_mp4, source_webm=source_webm, movie_id=movie_id, width=width, height=height, title=title,description=description, tags=tags, autoplay=autoplay, iframe_width=iframe_width, iframe_height=iframe_height, views=views)
 
+
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
 def upload_media():
     ret = start_process_videos()
     
-    #rows = db().select(db.my_app_settings.ALL)
+    # rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.media_file_import_queue, showid=False,
                    fields=['title', 'description', 'category', 'tags', 'media_file'], _name="queue_media").process(formname="queue_media")
     
     import_form = SQLFORM.factory(submit_button="Import Videos", _name="import_videos").process(formname="import_videos")
     if import_form.accepted:
         result = scheduler.queue_task('update_media_database_from_json_files', pvars=dict(), timeout=18000, immediate=True, sync_output=5, group_name="process_videos")
-        response.flash = "Import process started!" # + str(result)
+        response.flash = "Import process started!"  # + str(result)
         
-    if (form.accepted):
+    if form.accepted:
         # Saved
         new_id = form.vars.id
         original_file_name = form.vars.media_file
         db(db.media_file_import_queue.id==new_id).update(original_file_name=original_file_name)
         db.commit()
         result = scheduler.queue_task('process_media_file', pvars=dict(media_id=new_id), timeout=18000, immediate=True, sync_output=5, group_name="process_videos")
-        response.flash = "Media File Queued!" # + str(result)
+        response.flash = "Media File Queued!"  # + str(result)
         pass
-    elif (form.errors):
-        response.flash = "Error! " #+ str(form.errors)
+    elif form.errors:
+        response.flash = "Error! "  # + str(form.errors)
     else:
-        #response.flash = "Process Queue: " + str(ret)
+        # response.flash = "Process Queue: " + str(ret)
         pass
-    
-    
+
     ret = ""
     return dict(form=form, ret=ret, import_form=import_form)
+
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
 def multi_upload_media():

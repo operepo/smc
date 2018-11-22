@@ -23,7 +23,23 @@ if request.global_settings.web2py_version < "2.14.1":
 
 ## if SSL/HTTPS is properly configured and you want all HTTP requests to
 ## be redirected to HTTPS, uncomment the line below:
-request.requires_https()
+#print(request.application, request.controller, request.function, request.extension, request.view, request.folder)
+if request.controller == 'default' and request.function == 'index' and request.extension == 'html':
+    # Skip https here
+    pass
+elif request.is_scheduler is True:
+    pass
+#elif request.controller == 'media' and request.function == 'index':
+#    pass
+#elif request.controller == 'media' and request.function == 'player':
+#    pass
+else:
+    # All other requests need https
+    request.requires_https()
+
+# if request.is_scheduler is not True and request.is_local is not True:
+# request.requires_https()
+
 
 # -------------------------------------------------------------------------
 # app configuration made easy. Look inside private/appconfig.ini

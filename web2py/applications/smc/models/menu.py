@@ -7,8 +7,8 @@
 
 ##response.logo = A(B('web',SPAN(2),'py'),XML('&trade;&nbsp;'),
 ##                  _class="brand",_href="http://www.web2py.com/")
-response.logo = IMG(_src=URL('static','images/pc_logo.png'), _alt="Peninsula College", _class="brand",_style="height: 30px;")
-response.title = request.application.replace('_',' ').title()
+response.logo = IMG(_src=URL('static','images/pc_logo.png'), _alt="Peninsula College", _class="brand", _style="height: 30px;")
+response.title = request.application.replace('_', ' ').title()
 response.subtitle = 'Student Management Console - Import/Enrollment for Active Directory and Canvas'
 
 ## read more at http://dev.w3.org/html5/markup/meta.name.html
@@ -25,20 +25,20 @@ response.google_analytics_id = None
 
 response.menu = [
     (T('Home'), False, URL('default', 'index'), []),
-	(T('Media'), False, URL('media', 'index'), [
-			(T('Media Library'), False, URL('media','index')),
-			#(T('Playlists'), False, URL('media','playlists')),
-			(T('Upload Media'), False, URL('media','upload_media')),
-			(T('WAMAP Import'), False, URL('media','wamap_import')),
-		]),
+    (T('Media'), False, URL('media', 'index'), [
+            (T('Media Library'), False, URL('media','index')),
+            # (T('Playlists'), False, URL('media','playlists')),
+            (T('Upload Media'), False, URL('media','upload_media')),
+            (T('WAMAP Import'), False, URL('media','wamap_import')),
+        ]),
     (SPAN('Students', _class='highlighted'), False, URL('student', 'index'), [
             (T('Change Password'), False, URL('student','changepassword'))
         ]),
     (SPAN('Faculty', _class='highlighted'), False, URL('faculty', 'index'), [
-			(T('Change Password'), False, URL('faculty', 'changepassword')),
-			(T('Manage Students'), False, URL('faculty', 'manage_students')),
-			(T('Manage Faculty'), False, URL('faculty', 'manage_faculty')),
-		]),
+            (T('Change Password'), False, URL('faculty', 'changepassword')),
+            (T('Manage Students'), False, URL('faculty', 'manage_students')),
+            (T('Manage Faculty'), False, URL('faculty', 'manage_faculty')),
+        ]),
     (SPAN('Import', _class='highlighted'), False, URL('import', 'index'), [
             (T('Import Students'), False, URL('import', 'student_pick_excel')),
             (T('Import Faculty'), False, URL('import', 'faculty_pick_excel'))
@@ -46,25 +46,26 @@ response.menu = [
     (SPAN('Admin', _class='highlighted'), False, URL('admin', 'index'), [
             (T('Change Password'), False, URL('admin', 'changepassword')),
             (T('Configure App'), False, URL('admin', 'config'), [
-				(T('App Settings'), False, URL('admin', 'config_app_settings')),
-				(T('Active Directory Settings'), False, URL('admin', 'config_ad_settings')),
-				(T('File Server Settings'), False, URL('admin', 'config_file_settings')),
-				(T('Faculty Settings'), False, URL('admin', 'config_faculty_settings')),
-				(T('Student Settings'), False, URL('admin', 'config_student_settings')),
-				(T('Canvas Settings'), False, URL('admin', 'config_canvas_settings')),
+                (T('App Settings'), False, URL('admin', 'config_app_settings')),
+                (T('Active Directory Settings'), False, URL('admin', 'config_ad_settings')),
+                (T('File Server Settings'), False, URL('admin', 'config_file_settings')),
+                (T('Faculty Settings'), False, URL('admin', 'config_faculty_settings')),
+                (T('Student Settings'), False, URL('admin', 'config_student_settings')),
+                (T('Canvas Settings'), False, URL('admin', 'config_canvas_settings')),
                 (T('ZFS Settings'), False, URL('admin', 'config_zfs_settings')),
-				(T('Verify Settings'), False, URL('admin', 'config_verify')),
-				(T('Verify Settings (auto create)'), False, URL('admin', 'config_verify_auto')),
-			 ]),
-            #(T('Manage Users'), False, URL('admin', 'users')),
-			(T('Switch Mode'), False, URL('admin', 'switchmode')),
-			(T('Switch AD Quota'), False, URL('admin', 'switchquota')),
-			(T('Reset SMC'), False, URL('admin', 'reset_smc')),
+                (T('Verify Settings'), False, URL('admin', 'config_verify')),
+                (T('Verify Settings (auto create)'), False, URL('admin', 'config_verify_auto')),
+            ]),
+            # (T('Manage Users'), False, URL('admin', 'users')),
+            # (T('Switch Mode'), False, URL('admin', 'switchmode')),
+            (T('Switch AD Quota'), False, URL('admin', 'switchquota')),
+            (T('Reset SMC'), False, URL('admin', 'reset_smc')),
             (T('OPE Project'), False, URL('admin', 'ope'), [
-                (T('Laptop Firewall'), False, URL('admin', 'laptop_firewall')),
+                (T('Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
+                # (T('Laptop Firewall'), False, URL('admin', 'laptop_firewall')),
             ])
         ]),
-    #(SPAN('Documentation', _class='highlighted'), False, URL('docs', 'index'), [
+    # (SPAN('Documentation', _class='highlighted'), False, URL('docs', 'index'), [
     #        (T('Getting Started'), False, URL('docs', 'index'))
     #   ])
 ]
@@ -74,6 +75,7 @@ DEVELOPMENT_MENU = False
 #########################################################################
 ## provide shortcuts for development. remove in production
 #########################################################################
+
 
 def _():
     # shortcuts
@@ -186,6 +188,9 @@ def _():
                 ]
          )]
          """
+
+
 if DEVELOPMENT_MENU: _()
 
-if "auth" in locals(): auth.wikimenu()
+if "auth" in locals():
+    auth.wikimenu()

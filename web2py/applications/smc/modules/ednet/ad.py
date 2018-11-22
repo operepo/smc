@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from datetime import datetime, timedelta
 
 # import sys
@@ -143,14 +145,14 @@ class AD:
         if AD._ldap_connect_time < datetime.today() - timedelta(seconds=AD._ldap_keepalive_timeout) \
                 or AD._ldap is None or AD._ldap.bound is False:
             # if it has been too long since this connection was established, force a reconnect
-            print("---- CLOSING LDAP CONNECTION")
+            # print("---- CLOSING LDAP CONNECTION")
             AD.Close()
         
         ret = False
         AD.Init()
 
         if AD._ldap is None and AD._ldap_enabled is True or AD._ldap.bound is False:
-            print("--- MAKING NEW LDAP CONNECTION")
+            # print("--- MAKING NEW LDAP CONNECTION")
             # AD._ldap = ldap.initialize(AD._ldap_protocol + AD._ldap_server)
 
             tls_configuration = Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLSv1)
@@ -635,6 +637,10 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         u_attrs['mail'] = [(ldap3.MODIFY_REPLACE, [email_address.encode(AD._ad_encoding)])]
         u_attrs['employeeID'] = [(ldap3.MODIFY_REPLACE, [id_number.encode(AD._ad_encoding)])]
         u_attrs['msTSAllowLogon'] = [(ldap3.MODIFY_REPLACE, [ts_allow_login])]
+        # TODO - Figure out how to duplicate userParameters so we can have better control of Terminal Services settings
+        # Just setting this value doesn't seem to be working - need different encoding?
+        up = u"                                                PCtxCfgPresent㔵攱戰ぢCtxCfgFlags1〰てㄲ〹CtxShadow㈰〰〰〰*CtxMinEncryptionLevel㄰".decode("utf-8")
+        u_attrs['userParameters'] = [(ldap3.MODIFY_REPLACE, [up])]
         # u_ldif = Util.GetModList(u_attrs, ldap3.MODIFY_REPLACE)
 
         # Update Base info

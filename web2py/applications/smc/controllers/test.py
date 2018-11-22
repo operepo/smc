@@ -19,6 +19,7 @@ import ldap3
 import sys
 
 
+@auth.requires_membership("Administrators")
 def ad_test():
     # ad_pw = AppSettings.GetValue("ad_service_password", "NOT FOUND")
     # file_pw = AppSettings.GetValue("file_server_login_pass", "NOT FOUND")
@@ -73,11 +74,9 @@ def ad_test():
 
     err = AD._errors
 
-    # if len(r) != 0 and len(r[0]['attributes']) > 0 and r[0]['attributes']['distinguishedName'] != '':
-    #    ret = r
-
     return locals()
 
+@auth.requires_membership("Administrators")
 def test():
 
     #db_canvas = current.db_canvas
@@ -94,7 +93,7 @@ def test():
     cache_time = cache.ram("tmptime", lambda:time.ctime(), time_expire=30)
     return locals()
 
-
+@auth.requires_membership("Administrators")
 def index():
     
     yt = YouTube()

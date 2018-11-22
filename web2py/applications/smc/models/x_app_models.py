@@ -199,15 +199,19 @@ db.define_table("my_app_settings",
                 Field("zpool_dest_dataset", "string", default="", requires=IS_IN_DB(db, db.zpool_datasets.name, zero=None, orderby="name")),
                 Field("zpool_sync_setting", "string", default="standard", requires=IS_IN_DB(db, db.zpool_sync.name, orderby="name")),
                 Field("zpool_server_address", default=""),
+                Field("laptop_admin_user", default="huskers"),
+                Field("laptop_admin_password", "password", default="", required=True),
                 )
 
 ## Enable encryption
-db.my_app_settings.ad_service_password.filter_in = lambda value : Util.encrypt(value)
-db.my_app_settings.ad_service_password.filter_out = lambda value : Util.decrypt(value)
-db.my_app_settings.file_server_login_pass.filter_in = lambda value : Util.encrypt(value)
-db.my_app_settings.file_server_login_pass.filter_out = lambda value : Util.decrypt(value)
-db.my_app_settings.zpool_login_password.filter_in = lambda value : Util.encrypt(value)
-db.my_app_settings.zpool_login_password.filter_out = lambda value : Util.decrypt(value)
+db.my_app_settings.ad_service_password.filter_in = lambda value: Util.encrypt(value)
+db.my_app_settings.ad_service_password.filter_out = lambda value: Util.decrypt(value)
+db.my_app_settings.file_server_login_pass.filter_in = lambda value: Util.encrypt(value)
+db.my_app_settings.file_server_login_pass.filter_out = lambda value: Util.decrypt(value)
+db.my_app_settings.zpool_login_password.filter_in = lambda value: Util.encrypt(value)
+db.my_app_settings.zpool_login_password.filter_out = lambda value: Util.decrypt(value)
+db.my_app_settings.laptop_admin_password.filter_in = lambda value: Util.encrypt(value)
+db.my_app_settings.laptop_admin_password.filter_out = lambda value: Util.decrypt(value)
 
 
 db.define_table("student_info",
@@ -372,7 +376,7 @@ db.define_table('media_file_import_queue',
                 Field('media_type', 'string', default='video', requires=IS_IN_SET(['video', 'song'])),
                 Field('category', 'string'),
                 Field('tags', 'list:string'),
-                Field('media_file', 'upload', length=128, autodelete=True, uploadseparate=True, requires=IS_NOT_EMPTY()),
+                Field('media_file', 'upload', length=64, autodelete=True, uploadseparate=True, requires=IS_NOT_EMPTY()),
                 Field('width', 'integer', default=0),
                 Field('height', 'integer', default=0),
                 Field('quality', 'string', default='normal', requires=IS_IN_SET(['normal', 'low', 'high'])),
@@ -412,7 +416,6 @@ db.define_table('playlist_items',
                 auth.signature
                 )
 
-#deprecated!
 db.define_table('wamap_questionset',
                 Field('wamap_id', 'integer'),
                 Field('extref_field', 'string'),
@@ -478,7 +481,6 @@ db.define_table('ope_laptop_firewall_rules',
                 Field('fw_security', 'string', default='notrequired', requires=IS_IN_SET(['authenticate', 'authenc', 'authdynenc', 'authnoencap', 'notrequired']), label="Security (ISec options - default notrequired)"),
                 Field('can_modify', 'boolean', default=True, writable=False, readable=False),
                 )
-
 
 
 # Adjust the app logo if it is set

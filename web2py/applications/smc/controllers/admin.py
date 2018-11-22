@@ -12,24 +12,45 @@ from ednet.ad import AD
 from ednet.canvas import Canvas
 from ednet.appsettings import AppSettings
 
+
+@auth.requires_membership("Administrators")
+def laptop_admin_credentials():
+    ensure_settings()
+
+    rows = db().select(db.my_app_settings.ALL)
+    form = SQLFORM(db.my_app_settings, rows[0], showid=False,
+                   fields=["laptop_admin_user", "laptop_admin_password"]).process()
+
+    if form.accepted:
+        # Saved
+        response.flash = "Settings Saved!"
+        pass
+    elif form.errors:
+        response.flash = "Error! " + str(form.errors)
+    return dict(form=form)
+
+
 @auth.requires_membership("Administrators")
 def index():
     response.view = 'generic.html'
     return dict(message="hello from admin.py")
 
+
 @auth.requires_membership("Administrators")
 def ensure_settings():
     # Check the settings table, there should be one row
-    if (db(db.my_app_settings).count() < 1):
+    if db(db.my_app_settings).count() < 1:
         # Add a row
         db.my_app_settings.insert()
     return True
+
 
 @auth.requires_membership("Administrators")
 def config():
     ensure_settings()
     
-    return dict() #test_form=None)
+    return dict()  # test_form=None)
+
 
 @auth.requires_membership("Administrators")
 def config_app_settings():
@@ -39,13 +60,14 @@ def config_app_settings():
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
                    fields=["app_name", "app_description", "app_logo"]).process()
     
-    if (form.accepted):
+    if form.accepted:
         # Saved
         response.flash = "Settings Saved!"
         pass
-    elif (form.errors):
+    elif form.errors:
         response.flash = "Error! " + str(form.errors)
     return dict(form=form)
+
 
 @auth.requires_membership("Administrators")
 def config_ad_settings():
@@ -53,16 +75,18 @@ def config_ad_settings():
     
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
-                   fields=["ad_import_enabled", "ad_service_user", "ad_service_password", "ad_server_protocol", "ad_server_address"]).process()
+                   fields=["ad_import_enabled", "ad_service_user", "ad_service_password", "ad_server_protocol",
+                           "ad_server_address"]).process()
     
-    if (form.accepted):
+    if form.accepted:
         # Saved
         response.flash = "Settings Saved!"
         AD.Close()
         pass
-    elif (form.errors):
+    elif form.errors:
         response.flash = "Error! " + str(form.errors)
     return dict(form=form)
+
 
 @auth.requires_membership("Administrators")
 def config_file_settings():
@@ -70,16 +94,18 @@ def config_file_settings():
     
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
-                   fields=["file_server_import_enabled", "file_server_login_user", "file_server_login_pass", "file_server_address", "file_server_quota_drive"]).process()
+                   fields=["file_server_import_enabled", "file_server_login_user", "file_server_login_pass",
+                           "file_server_address", "file_server_quota_drive"]).process()
     
-    if (form.accepted):
+    if form.accepted:
         # Saved
         response.flash = "Settings Saved!"
         AD.Close()
         pass
-    elif (form.errors):
+    elif form.errors:
         response.flash = "Error! " + str(form.errors)
     return dict(form=form)
+
 
 @auth.requires_membership("Administrators")
 def config_zfs_settings():
@@ -88,16 +114,18 @@ def config_zfs_settings():
     
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
-                   fields=["zpool_enabled", "zpool_server_address", "zpool_login_user", "zpool_login_password", "zpool_source_dataset", "zpool_dest_dataset", "zpool_sync_setting"]).process()
+                   fields=["zpool_enabled", "zpool_server_address", "zpool_login_user", "zpool_login_password",
+                           "zpool_source_dataset", "zpool_dest_dataset", "zpool_sync_setting"]).process()
     
-    if (form.accepted):
+    if form.accepted:
         # Saved
         response.flash = "Settings Saved!"
         AD.Close()
         pass
-    elif (form.errors):
+    elif form.errors:
         response.flash = "Error! " + str(form.errors)
     return dict(form=form, message=msg)    
+
 
 @auth.requires_membership("Administrators")
 def refresh_datasets():
@@ -110,7 +138,7 @@ def refresh_datasets():
     zfs_user = AppSettings.GetValue('zpool_login_user', 'root')
     zfs_pass = AppSettings.GetValue('zpool_login_password', '')
     
-    if (not zfs_enabled):
+    if not zfs_enabled:
         message = "ZFS Server Not Enabled - Check settings..."
         return dict(succeeded=succeeded, message=message)
     
@@ -125,14 +153,14 @@ def refresh_datasets():
         
         for line in lines:
             line = line.strip()
-            if (line == ""):
+            if line == "":
                 continue
             message += "\nFound Dataset: " + line
-            if ('.system' in line or 'freenas-boot' in line):
+            if '.system' in line or 'freenas-boot' in line:
                 message += " -- found system or boot dataset, skipping..."
             else:
                 # Try to add this to the database
-                if (db(db.zpool_datasets.name==line).count() < 1):
+                if db(db.zpool_datasets.name==line).count() < 1:
                     # Add it
                     db.zpool_datasets.insert(name=line)
                 else:
@@ -145,23 +173,28 @@ def refresh_datasets():
         message += "Error getting datasets: " + str(e)
     
     return dict(succeeded=succeeded, message=message)
-    
+
+
 @auth.requires_membership("Administrators")
 def config_faculty_settings():
     ensure_settings()
     
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
-                   fields=["faculty_id_pattern", "faculty_password_pattern", "faculty_email_pattern", "ad_faculty_cn", "ad_faculty_group_cn", "ad_faculty_home_directory", "ad_faculty_home_drive", "ad_faculty_profile_directory", "ad_faculty_login_script_path", "ad_faculty_home_directory_quota"]).process()
+                   fields=["faculty_id_pattern", "faculty_password_pattern", "faculty_email_pattern",
+                           "ad_faculty_cn", "ad_faculty_group_cn", "ad_faculty_home_directory",
+                           "ad_faculty_home_drive", "ad_faculty_profile_directory",
+                           "ad_faculty_login_script_path", "ad_faculty_home_directory_quota"]).process()
     
-    if (form.accepted):
+    if form.accepted:
         # Saved
         response.flash = "Settings Saved!"
         AD.Close()
         pass
-    elif (form.errors):
+    elif form.errors:
         response.flash = "Error! " + str(form.errors)
     return dict(form=form)
+
 
 @auth.requires_membership("Administrators")
 def config_student_settings():
@@ -169,14 +202,17 @@ def config_student_settings():
     
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
-                   fields=["student_id_pattern", "student_password_pattern", "student_email_pattern", "ad_student_cn", "ad_student_group_cn", "ad_student_home_directory", "ad_student_home_drive", "ad_student_profile_directory", "ad_student_login_script_path", "ad_student_home_directory_quota"]).process()
+                   fields=["student_id_pattern", "student_password_pattern", "student_email_pattern",
+                           "ad_student_cn", "ad_student_group_cn", "ad_student_home_directory",
+                           "ad_student_home_drive", "ad_student_profile_directory",
+                           "ad_student_login_script_path", "ad_student_home_directory_quota"]).process()
     
-    if (form.accepted):
+    if form.accepted:
         # Saved
         response.flash = "Settings Saved!"
         AD.Close()
         pass
-    elif (form.errors):
+    elif form.errors:
         response.flash = "Error! " + str(form.errors)
     return dict(form=form)
 
@@ -186,9 +222,10 @@ def config_canvas_settings():
     ensure_settings()
     msg = ""
 
-    auto_config_form = SQLFORM.factory(submit_button="OPE Auto Configure", _name="auto_config").process(formname="auto_config")
+    auto_config_form = SQLFORM.factory(submit_button="OPE Auto Configure",
+                                       _name="auto_config").process(formname="auto_config")
 
-    if (auto_config_form.accepted):
+    if auto_config_form.accepted:
         # Try to auto config
         access_token, msg1 = Canvas.EnsureAdminAccessToken()
         if access_token != "":
@@ -205,7 +242,7 @@ def config_canvas_settings():
             AppSettings.SetValue("canvas_import_enabled", True)
             response.flash = "Canvas integration auto configured and enabled"
         else:
-            resposne.flash = "Unable to auto configure canvas integration!"
+            response.flash = "Unable to auto configure canvas integration!"
 
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False, _name="canvas_config",
@@ -213,12 +250,12 @@ def config_canvas_settings():
                            "canvas_student_quota", "canvas_faculty_quota",
                            "canvas_auto_create_courses" ]).process(formname="canvas_config")
 
-    if (form.accepted):
+    if form.accepted:
         # Saved
         response.flash = "Settings Saved!"
         Canvas.Close()
         pass
-    elif (form.errors):
+    elif form.errors:
         response.flash = "Error! " + str(form.errors)
     return dict(form=form, auto_config_form=auto_config_form, msg=msg)
 
@@ -231,16 +268,17 @@ def switchmode():
     
     offline = SQLFORM.factory(submit_button="Set Offline Mode", _name="offline").process(formname="offline")
     
-    if (online.accepted):
+    if online.accepted:
         p = subprocess.Popen("/bin/set_bind_online", shell=True)
         ret = p.wait()
         response.flash = "Online Mode Set!" # + str(ret)
-    if (offline.accepted):
+    if offline.accepted:
         p = subprocess.Popen("/bin/set_bind_offline", shell=True)
         ret = p.wait()
         response.flash = "Offline Mode Set!" # + str(ret)
     
     return dict(switch_online=online, switch_offline=offline)
+
 
 @auth.requires_membership("Administrators")
 def switchquota():

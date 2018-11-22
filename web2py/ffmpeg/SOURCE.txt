@@ -1,0 +1,1 @@
+Source code of used FFmpeg and required libraries can be found from http://ffmpeg.zeranoe.com/builds/readme/win32/static/ffmpeg-2.1.3-win32-static-readme.txt
