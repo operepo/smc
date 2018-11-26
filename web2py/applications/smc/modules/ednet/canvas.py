@@ -2,20 +2,16 @@
 from gluon import *
 from gluon import current
 
-import urllib
+import requests
+from requests.exceptions import ConnectionError
+import urllib  # use for urllib.quote_plus
+# import urllib3
+# urllib3.disable_warnings()
+
 import time
+from datetime import datetime, timedelta
 import sys
 import json
-# from applications.smc.modules.requests import *
-# from ..requests import *
-# from .. import requests
-# from requests import requests
-import requests
-
-# from applications.smc.modules.requests.exceptions import ConnectionError
-# from ..requests.exceptions import ConnectionError
-from requests.exceptions import ConnectionError
-# import requests.exceptions.ConnectionError
 
 # from .appsettings import AppSettings
 from ednet.appsettings import AppSettings
@@ -26,6 +22,7 @@ import os
 import uuid
 import hashlib
 from Crypto.Hash import SHA, HMAC
+
 
 class Canvas:
     
@@ -87,17 +84,26 @@ class Canvas:
 
     @staticmethod
     def ConnectDB():
+        # Grab the environ pw firs, if that isn't set, then grab the admin pw
+        canvas_db_pw = AppSettings.GetValue('canvas_server_password', "<ENV>")
+        # canvas.ed, postgresql will also work in docker
+        pg_hostname = AppSettings.GetValue('canvas_server_url', 'canvas.ed')
         try:
-            canvas_db_pw = str(os.environ["IT_PW"]) + ""
+            if canvas_db_pw == "" or canvas_db_pw == "<ENV>":
+                canvas_db_pw = str(os.environ["IT_PW"]) + ""
         except KeyError as ex:
             # IT_PW not set?
-            canvas_db_pw = "<IT_PW_NOT_SET>"
+            canvas_db_pw = ""
+
         db_canvas = None
 
         try:
-            db_canvas = DAL('postgres://postgres:' + urllib.quote_plus(canvas_db_pw) + '@postgresql/canvas_production', decode_credentials=True, migrate=False)
+            db_canvas = DAL('postgres://postgres:' + urllib.quote_plus(canvas_db_pw)
+                            + '@' + pg_hostname + '/canvas_production',
+                            decode_credentials=True, migrate=False)
         except RuntimeError as ex:
             # Error connecting, move on and return None
+            print("Canvas DB Error: " + str(ex))
             db_canvas = None
         return db_canvas
 
@@ -221,6 +227,10 @@ class Canvas:
         # Connect to the canvas database
         db_canvas = Canvas.ConnectDB()
 
+        if db_canvas is None:
+            msg += " - Canvas DB Connection is None"
+            return "", msg, "", ""
+
         # Find the admin user
         sql = "SELECT user_id FROM pseudonyms WHERE unique_id='" + user_name + "'"
         rows = db_canvas.executesql(sql)
@@ -270,7 +280,6 @@ class Canvas:
 
         return access_token, msg, hash, student_name
 
-    
     @staticmethod
     def VerifyCanvasSettings():
         ret = False
@@ -279,11 +288,11 @@ class Canvas:
         con = Canvas.Connect()
         
         # Ensure that you can connect to canvas properly
-        if (Canvas._canvas_enabled != True):
+        if Canvas._canvas_enabled is not True:
             Canvas._errors.append("<B>Canvas Disabled - Checks skipped</B>")
             return True
         
-        if (con == True):
+        if con is True:
             Canvas._errors.append("<b>Canvas Connection Successful</b> " + Canvas._canvas_server_url + "<br />")
             Canvas._errors.append("<b>Dev Key Verified</b> <br />")
             ret = True
@@ -294,7 +303,7 @@ class Canvas:
     def CreateUser(user_name, password, first_name, last_name, email):
         ret = None
         
-        if (Canvas.Connect() != True):
+        if Canvas.Connect() is not True:
             return ret
         
         # See if the user exists
@@ -369,50 +378,65 @@ class Canvas:
 
     @staticmethod
     def SetPassword(user_name, new_password):
-        if (Canvas.Connect() != True):
+        if Canvas.Connect() is not True:
             return False
-        if (Canvas._canvas_enabled != True):
+        if Canvas._canvas_enabled is not True:
             return True
         
         # Loop through accounts and change passwords
         account_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/users/sis_user_id:" + user_name + "/logins")
         for account in account_list:
-            if ("account_id" in account):
+            if "account_id" in account:
                 q = dict()
                 q["login[unique_id]"] = user_name
                 q["login[password]"] = new_password
                 q["login[sis_user_id]"] = user_name
                 Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/" + str(account["account_id"]) + "/logins/" + str(account["id"]), method="PUT", params=q)
-                #Canvas._errors.append("Set Password for acct: [[" + str(account) + "]]")
+                # Canvas._errors.append("Set Password for acct: [[" + str(account) + "]]")
         
-        return True #True
+        return True  # True
     
     @staticmethod
     def GetCurrentClasses(user_name):
-        if (Canvas.Connect() != True):
+        if Canvas.Connect() is not True:
             return None
         # Get list of classes this faculty is enrolled in
-        current_enrollment = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/users/sis_user_id:" + user_name + "/enrollments")
-        #TODO check for errors
+        current_enrollment = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                            "/api/v1/users/sis_user_id:" + user_name + "/enrollments")
+        # TODO check for errors
         
         return current_enrollment
     
     @staticmethod
-    def CompleteAllClasses(user_name, faculty_delete=False):
-        if (Canvas.Connect() != True):
+    def CompleteAllClasses(user_name, faculty_delete=False, enrollment_days_timedelta=None):
+        if Canvas.Connect() is not True:
             return False
+
+        if enrollment_days_timedelta is None:
+            # Drop students if the enrollment update date is over this amount
+            enrollment_days_timedelta = timedelta(days=100)
         
         # Get the current list of classes
         current_enrollment = Canvas.GetCurrentClasses(user_name)
         
         for enrolled_class in current_enrollment:
-            if ('type' in enrolled_class and enrolled_class['type'] == "StudentEnrollment"):
-                # Students get marked as completed
-                q = dict()
-                q["task"] = "conclude"
-                api = "/api/v1/courses/" + str(enrolled_class["course_id"]) + "/enrollments/" + str(enrolled_class["id"])
-                Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, api, method="DELETE", params=q)
-            elif ('type' in enrolled_class and enrolled_class['type'] == "TeacherEnrollment" and faculty_delete == True):
+            if 'type' in enrolled_class and enrolled_class['type'] == "StudentEnrollment":
+                # See if it is time to mark student as completed
+                complete_before = datetime.now() - enrollment_days_timedelta
+                # 2018-11-22T06:35:51Z
+                e_time = datetime.strptime(enrolled_class['updated_at'], "%Y-%m-%dT%H:%M:%SZ")
+                if e_time < complete_before:
+                    # Students get marked as completed
+                    # print("Marking class as completed " + str(enrolled_class['course_id']))
+                    q = dict()
+                    q["task"] = "conclude"
+                    api = "/api/v1/courses/" + str(enrolled_class["course_id"]) + "/enrollments/" + str(enrolled_class["id"])
+                    Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, api, method="DELETE", params=q)
+                else:
+                    # print("Class is too new, not completing " + str(enrolled_class['course_id']) +
+                    #       "  " + str(e_time) + " / " + str(complete_before))
+                    continue
+            elif 'type' in enrolled_class and enrolled_class['type'] == "TeacherEnrollment" and faculty_delete is True:
                 # Delete faculty from a class
                 q = dict()
                 q["task"] = "delete"
@@ -422,17 +446,18 @@ class Canvas:
     
     @staticmethod
     def CreateCourse(course_name):
-        if (Canvas.Connect() != True):
+        if Canvas.Connect() is not True:
             return False
         
         ret = True
         
         # Get the course info
         course_info = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/courses/sis_course_id:" + str(course_name))
-        if ('account_id' not in course_info):
+        if 'account_id' not in course_info:
             # Course doesn't exist?!
-            if (Canvas._canvas_auto_create_courses != True):
-                Canvas._errors.append("<b>Course Doesn't Exist, and auto create disabled: </b>" + str(enroll_class) + "<br />")
+            if Canvas._canvas_auto_create_courses is not True:
+                Canvas._errors.append("<b>Course Doesn't Exist, and auto create disabled: </b>" +
+                                      str(course_name) + "<br />")
                 return True
             else:
                 q = dict()
@@ -441,32 +466,35 @@ class Canvas:
                 q["course[course_code]"] = course_name
                 q["course[sis_course_id]"] = course_name
                 q["offer"] = "true"
-                course_info = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/courses", method="POST", params=q);
-
+                course_info = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                             "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/courses",
+                                             method="POST", params=q)
         
         return ret
     
     @staticmethod
     def EnrollStudent(canvas_user, enroll_class):
-        if (Canvas.Connect() != True):
+        if Canvas.Connect() is not True:
             return False
         
         enroll_class = enroll_class.strip()
-        if (enroll_class == ""):
+        if enroll_class == "":
             return True
         
-        if (Canvas.CreateCourse(enroll_class) != True):
+        if Canvas.CreateCourse(enroll_class) is not True:
             Canvas._errors.append("<B>Error enrolling student!</b> <br/>")
             return False
         
         # Get the course info
-        course_info = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/courses/sis_course_id:" + str(enroll_class))
-        if ('account_id' not in course_info):
+        course_info = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                     "/api/v1/accounts/" + str(Canvas._admin_user["id"]) +
+                                     "/courses/sis_course_id:" + str(enroll_class))
+        if 'account_id' not in course_info:
             # Course doesn't exist?!
-            Canvas._errors.append("<b>Course Doesn't Exist, skipping enrollemnt: </b>" + str(enroll_class) + "<br />")
+            Canvas._errors.append("<b>Course Doesn't Exist, skipping enrollment: </b>" + str(enroll_class) + "<br />")
             return False
         
-        if ('id' in canvas_user):
+        if 'id' in canvas_user:
             # Do the enrollment
             q = dict()
             q["enrollment[user_id]"] = canvas_user["id"] # User id in the canvas system
@@ -474,35 +502,35 @@ class Canvas:
             q["enrollment[enrollment_state]"] = "active"  # active or invite
             q["enrollment[notify]"] = "0"
             res = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/courses/" + str(course_info["id"]) + "/enrollments", method="POST", params=q)
-            #log += "<b>Enrolled into couse: </b>" + str(course_info["id"]) + " " + str(enroll_class) + " - " + str(res) + "<br/>"
+            # log += "<b>Enrolled into course: </b>" + str(course_info["id"]) +
+            # " " + str(enroll_class) + " - " + str(res) + "<br/>"
         else:
             # Invalid canvas user object?
             Canvas._errors.append("<b>Invalid user object when enrolling into course: </b>" + enroll_class)
             return False
         return True
-    
-    
+
     @staticmethod
     def EnrollTeacher(canvas_user, enroll_class):
-        if (Canvas.Connect() != True):
+        if Canvas.Connect() is not True:
             return False
         
         enroll_class = enroll_class.strip()
-        if (enroll_class == ""):
+        if enroll_class == "":
             return True
         
-        if (Canvas.CreateCourse(enroll_class) != True):
+        if Canvas.CreateCourse(enroll_class) is not True:
             Canvas._errors.append("<B>Error enrolling teacher!</b> <br/>")
             return False
         
         # Get the course info
         course_info = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/courses/sis_course_id:" + str(enroll_class))
-        if ('account_id' not in course_info):
+        if 'account_id' not in course_info:
             # Course doesn't exist?!
-            Canvas._errors.append("<b>Course Doesn't Exist, skipping enrollemnt: </b>" + str(enroll_class) + "<br />")
+            Canvas._errors.append("<b>Course Doesn't Exist, skipping enrollment: </b>" + str(enroll_class) + "<br />")
             return False
         
-        if ('id' in canvas_user):
+        if 'id' in canvas_user:
             # Do the enrollment
             q = dict()
             q["enrollment[user_id]"] = canvas_user["id"] # User id in the canvas system
@@ -510,7 +538,8 @@ class Canvas:
             q["enrollment[enrollment_state]"] = "active"  # active or invite
             q["enrollment[notify]"] = "0"
             res = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/courses/" + str(course_info["id"]) + "/enrollments", method="POST", params=q)
-            #log += "<b>Enrolled into couse: </b>" + str(course_info["id"]) + " " + str(enroll_class) + " - " + str(res) + "<br/>"
+            # log += "<b>Enrolled into couse: </b>" + str(course_info["id"]) +
+            # " " + str(enroll_class) + " - " + str(res) + "<br/>"
         else:
             # Invalid canvas user object?
             Canvas._errors.append("<b>Invalid user object when enrolling into course: </b>" + enroll_class)
@@ -534,7 +563,7 @@ class Canvas:
         ret = False
 
         for c in current_enrollment :
-            if ('type' in c and c['type'] == "StudentEnrollment" and course_id == str(c['course_id']) ):
+            if 'type' in c and c['type'] == "StudentEnrollment" and course_id == str(c['course_id']):
                 ret = c['id']
         return ret
 
@@ -549,23 +578,23 @@ class Canvas:
 
         resp = None
         try:
-            if (method == "GET"):
+            if method == "GET":
                 resp = requests.get(canvas_url, headers=headers, data=params, verify=False)
-            elif (method == "POST"):
+            elif method == "POST":
                 resp = requests.post(canvas_url, headers=headers, data=params, verify=False, files=files)
-            elif (method == "DELETE"):
+            elif method == "DELETE":
                 resp = requests.delete(canvas_url, headers=headers, data=params, verify=False)
-            elif (method == "HEAD"):
+            elif method == "HEAD":
                 resp = requests.head(canvas_url, headers=headers, data=params, verify=False)
-            elif (method == "PUT"):
+            elif method == "PUT":
                 resp = requests.put(canvas_url, headers=headers, data=params, verify=False)
-            elif (method == "PATCH"):
+            elif method == "PATCH":
                 resp = requests.patch(canvas_url, headers=headers, data=params, verify=False)
         except ConnectionError as error_message:
             Canvas._errors.append("<b>Canvas API Error:</b> " + server + "/" + api_call + " - %s" % str(error_message))
             return None
         
-        if (resp != None):
+        if resp is not None:
             try:
                 ret = resp.json()
             except ValueError as error_message:
@@ -579,8 +608,8 @@ class Canvas:
 
         for key in params.keys():
             v = params[key];
-            if (v != ""):
-                if (ret != ""):
+            if v != "":
+                if ret != "":
                     ret += "&"
                 ret += key + "=" + v
 

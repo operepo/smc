@@ -5,6 +5,7 @@ from gluon import current
 # from .. import xlrd
 import xlrd
 import time
+from datetime import timedelta
 
 from ednet.util import Util
 from ednet.appsettings import AppSettings
@@ -614,7 +615,7 @@ class Student:
             return "Done! - Canvas Import Disabled"
 
         # Pop one off the queue
-        rows =  db(db.student_import_queue.id==db.student_canvas_import_queue.student_import_queue).select(orderby=db.student_import_queue.account_enabled|db.student_import_queue.student_name,limitby=(0,1))
+        rows = db(db.student_import_queue.id==db.student_canvas_import_queue.student_import_queue).select(orderby=db.student_import_queue.account_enabled|db.student_import_queue.student_name,limitby=(0,1))
         for row in rows:
             # remove item from the queue
             db(db.student_canvas_import_queue.id==row.student_canvas_import_queue.id).delete()
@@ -645,7 +646,13 @@ class Student:
             
             # Mark all current classes as complete
             if first_run is True:
-                Canvas.CompleteAllClasses(student_user_name)
+                enrollment_days_timedelta = timedelta(days=100)
+                if student_enabled is not True:
+                    # Disabled student, make sure to mark courses as completed
+                    enrollment_days_timedelta = timedelta(days=-1)
+                # print("Complete Classes " + student_user_name + " " + str(enrollment_days_timedelta))
+                Canvas.CompleteAllClasses(student_user_name,
+                                          enrollment_days_timedelta=enrollment_days_timedelta)
             
             # The list of classes from the import
             enroll_classes = row.student_import_queue.import_classes.split(',')

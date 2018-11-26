@@ -18,6 +18,16 @@ import ldap3
 
 import sys
 
+auth.settings.allow_basic_login = True
+
+
+@auth.requires_membership("Administrators")
+def basic_auth_test():
+    h = request.headers
+    b_auth = h["Authorization"]
+
+    return locals()
+
 
 @auth.requires_membership("Administrators")
 def ad_test():
@@ -34,20 +44,25 @@ def ad_test():
     dn = "cn=s777777,ou=cse,ou=students,dc=pencol,dc=local"
     container_dn = "ou=cse,ou=students,dc=pencol,dc=local"
 
-    create_user = AD.CreateUser(cn_name, container_dn)
-    Student.SetPassword("777777", "Sid777777!")
+    current_enrollment = Canvas.GetCurrentClasses(cn_name)
+    courses = {}
+    for e in current_enrollment:
+        courses[e['id']] = e['updated_at']
 
-    update_user = AD.UpdateUserInfo(dn, email_address="test@test", first_name="test", last_name="smith",
-                                    display_name="testing", description="this is a test", id_number="10",
-                                    home_drive_letter="W", home_directory="c:\home",
-                                    login_script="login_script", profile_path="pfpath",
-                                    ts_allow_login='FALSE')
+    # create_user = AD.CreateUser(cn_name, container_dn)
+    # Student.SetPassword("777777", "Sid777777!")
+
+    # update_user = AD.UpdateUserInfo(dn, email_address="test@test", first_name="test", last_name="smith",
+    #                                 display_name="testing", description="this is a test", id_number="10",
+    #                                 home_drive_letter="W", home_directory="c:\home",
+    #                                 login_script="login_script", profile_path="pfpath",
+    #                                 ts_allow_login='FALSE')
 
 
     # Test - Enable user
     # disable = AD.DisableUser(dn)
     # enable = AD.EnableUser(dn)
-    Student.EnableAccount("777777")
+    # Student.EnableAccount("777777")
 
     # r = AD._ldap.search(dn.encode(AD._ad_encoding),
     #                    "(name=" + str(cn_name).encode(AD._ad_encoding) + ")",
@@ -80,13 +95,9 @@ def ad_test():
 def test():
 
     #db_canvas = current.db_canvas
-
     #sql = "select * from users"
-
     #rows = db_canvas.executesql(sql)
-
     #test = Canvas.EnsureAdminAccessToken()
-
     #student_test = Canvas.EnsureStudentAccessToken("s777777")
 
     initial_run = cache.ram("startup", lambda:True, time_expire=3600)

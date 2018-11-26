@@ -8,4 +8,4 @@ pywinrm
 xlrd
 psutil
 pycryptodome
-
+urllib3

@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 
+# Track module changes - reload on change
+from gluon.custom_import import track_changes
+track_changes(True)
+
 # Make sure the appconfig.ini file exists
-import os, shutil
+import os
+import shutil
 app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ini_path = os.path.join(app_root, "private", "appconfig.ini")
 default_ini_path = os.path.join(app_root, "appconfig.ini.default")
 if not os.path.isfile(ini_path):
     # Copy the default file over
     shutil.copyfile(default_ini_path, ini_path)
-
-# Track module changes - reload on change
-from gluon.custom_import import track_changes
-track_changes(True)
 
 if request.global_settings.web2py_version < "2.14.1":
     raise HTTP(500, "Requires web2py 2.13.3 or newer")
@@ -29,17 +30,9 @@ if request.controller == 'default' and request.function == 'index' and request.e
     pass
 elif request.is_scheduler is True:
     pass
-#elif request.controller == 'media' and request.function == 'index':
-#    pass
-#elif request.controller == 'media' and request.function == 'player':
-#    pass
 else:
     # All other requests need https
     request.requires_https()
-
-# if request.is_scheduler is not True and request.is_local is not True:
-# request.requires_https()
-
 
 # -------------------------------------------------------------------------
 # app configuration made easy. Look inside private/appconfig.ini
@@ -59,30 +52,31 @@ migrate = True
 migrate_enabled = False
 
 tmp = request.vars.lazy_tables
-if (tmp):
-    if (tmp.lower() == "false"):
+if tmp:
+    if tmp.lower() == "false":
         lazy_tables = False
         migrate_enabled = True
 
 tmp = request.vars.fake_migrate
-if (tmp):
-    if(tmp.lower() == "true"):
+if tmp:
+    if tmp.lower() == "true":
         fake_migrate = True
         migrate = True
         migrate_enabled = True
 
 tmp = request.vars.fix
-if (tmp):
-    if tmp.lower() == "true":
+if tmp:
+    if tmp.lower() == "true" or tmp.lower() == "all":
         cache.ram("initial_run", lambda: True, time_expire=600)
-        #lazy_tables = False
-        #fake_migrate = True
+        # lazy_tables = False
+        # fake_migrate = True
         migrate = True
         migrate_enabled = True
 
 # On initial run since startup (runs every time app starts, set migrate=true&lazy_tables=false
-initial_run = cache.ram("initial_run", lambda: True, time_expire=600)
+initial_run = cache.ram("initial_run", lambda: True, time_expire=36000)
 if initial_run is True:
+    print("Startup - first run, force db migration")
     # Force db migrate on first run
     lazy_tables = False
     migrate = True
