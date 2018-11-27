@@ -5,8 +5,8 @@ from gluon import current
 import requests
 from requests.exceptions import ConnectionError
 import urllib  # use for urllib.quote_plus
-# import urllib3
-# urllib3.disable_warnings()
+import urllib3 as ul3
+ul3.disable_warnings()
 
 import time
 from datetime import datetime, timedelta
@@ -65,7 +65,7 @@ class Canvas:
         Canvas.Init()
         
         if Canvas._canvas_enabled is not True:
-            return True # Canvas disabled, not an error
+            return True  # Canvas disabled, not an error
         
         if Canvas._canvas_server_url == "" or Canvas._canvas_access_token == "":
             Canvas._errors.append("<b>Canvas not properly configured!</b>")
@@ -85,17 +85,21 @@ class Canvas:
     @staticmethod
     def ConnectDB():
         # Grab the environ pw firs, if that isn't set, then grab the admin pw
-        canvas_db_pw = AppSettings.GetValue('canvas_server_password', "<ENV>")
+        canvas_db_pw = AppSettings.GetValue('canvas_database_password', "<ENV>")
         # canvas.ed, postgresql will also work in docker
-        pg_hostname = AppSettings.GetValue('canvas_server_url', 'canvas.ed')
+        pg_hostname = AppSettings.GetValue('canvas_server_url', 'https://canvas.ed')
         try:
             if canvas_db_pw == "" or canvas_db_pw == "<ENV>":
                 canvas_db_pw = str(os.environ["IT_PW"]) + ""
         except KeyError as ex:
             # IT_PW not set?
-            canvas_db_pw = ""
+            canvas_db_pw = "<NOT SET>"
+            return None
 
         db_canvas = None
+
+        # Need to strip off http stuff from hostname
+        pg_hostname = pg_hostname.lower().replace("http://", "").replace("https://", "").replace("/", "")
 
         try:
             db_canvas = DAL('postgres://postgres:' + urllib.quote_plus(canvas_db_pw)

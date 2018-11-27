@@ -75,8 +75,9 @@ if tmp:
 
 # On initial run since startup (runs every time app starts, set migrate=true&lazy_tables=false
 initial_run = cache.ram("initial_run", lambda: True, time_expire=36000)
-if initial_run is True:
-    print("Startup - first run, force db migration")
+if initial_run is True:  # and request.is_scheduler is not None and request.is_schedule is not True:
+    print("Startup - first run, force db migration - is scheduler / local: "
+          + str(request.is_scheduler) + "/" + str(request.is_local))
     # Force db migrate on first run
     lazy_tables = False
     migrate = True
@@ -102,13 +103,15 @@ w2py_folder = os.path.dirname(w2py_folder)
 
 if not request.env.web2py_runtime_gae:
     # if NOT running on Google App Engine use SQLite or other DB
-    # db = DAL('sqlite://storage.sqlite',pool_size=1,check_reserved=['all'], lazy_tables=lazy_tables, fake_migrate_all=fake_migrate ) # lazy_tables=True   , fake_migrate_all=True
-    #db = DAL(myconf.get('db.uri'),
+    # db = DAL('sqlite://storage.sqlite',pool_size=1,check_reserved=['all'], lazy_tables=lazy_tables,
+    #  fake_migrate_all=fake_migrate ) # lazy_tables=True   , fake_migrate_all=True
+    # db = DAL(myconf.get('db.uri'),
     #         pool_size=myconf.get('db.pool_size'),
     #         migrate_enabled=myconf.get('db.migrate'),
     #         check_reserved=['all'])
     
-    db = DAL(myconf.get('db.uri'), pool_size=myconf.get('db.pool_size'), check_reserved=['all'], migrate_enabled=migrate_enabled,
+    db = DAL(myconf.get('db.uri'), pool_size=myconf.get('db.pool_size'), check_reserved=['all'],
+             migrate_enabled=migrate_enabled,
              lazy_tables=lazy_tables, fake_migrate=fake_migrate, fake_migrate_all=fake_migrate_all,
              migrate=migrate )  # fake_migrate_all=True
     db.executesql('PRAGMA journal_mode=WAL')

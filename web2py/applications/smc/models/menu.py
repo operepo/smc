@@ -55,15 +55,16 @@ response.menu = [
                 (T('ZFS Settings'), False, URL('admin', 'config_zfs_settings')),
                 (T('Verify Settings'), False, URL('admin', 'config_verify')),
                 (T('Verify Settings (auto create)'), False, URL('admin', 'config_verify_auto')),
+                (T('Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
             ]),
             # (T('Manage Users'), False, URL('admin', 'users')),
             # (T('Switch Mode'), False, URL('admin', 'switchmode')),
             (T('Switch AD Quota'), False, URL('admin', 'switchquota')),
             (T('Reset SMC'), False, URL('admin', 'reset_smc')),
-            (T('OPE Project'), False, URL('admin', 'ope'), [
-                (T('Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
-                # (T('Laptop Firewall'), False, URL('admin', 'laptop_firewall')),
-            ])
+            # (T('OPE Project'), False, URL('admin', 'ope'), [
+            #    (T('Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
+            #    # (T('Laptop Firewall'), False, URL('admin', 'laptop_firewall')),
+            # ])
         ]),
     # (SPAN('Documentation', _class='highlighted'), False, URL('docs', 'index'), [
     #        (T('Getting Started'), False, URL('docs', 'index'))

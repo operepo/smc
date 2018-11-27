@@ -187,7 +187,7 @@ db.define_table("my_app_settings",
                 Field("canvas_import_enabled", "boolean", default="False"),
                 Field("canvas_access_token", 'string', default=""),
                 Field("canvas_secret", 'string', default="<ENV>"),
-                Field("canvas_server_password", 'password', default='<ENV>'),
+                Field("canvas_database_password", 'password', default='<ENV>'),
                 Field("canvas_server_url", default="https://canvas.ed"),
                 Field("canvas_student_quota", "bigint", default="1048576", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
                 Field("canvas_faculty_quota", "bigint", default="1048576", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
@@ -202,6 +202,7 @@ db.define_table("my_app_settings",
                 Field("zpool_server_address", default=""),
                 Field("laptop_admin_user", default="huskers"),
                 Field("laptop_admin_password", "password", default="", required=True),
+
                 )
 
 ## Enable encryption
@@ -213,8 +214,8 @@ db.my_app_settings.zpool_login_password.filter_in = lambda value: Util.encrypt(v
 db.my_app_settings.zpool_login_password.filter_out = lambda value: Util.decrypt(value)
 db.my_app_settings.laptop_admin_password.filter_in = lambda value: Util.encrypt(value)
 db.my_app_settings.laptop_admin_password.filter_out = lambda value: Util.decrypt(value)
-db.my_app_settings.canvas_server_password.filter_in = lambda value: Util.encrypt(value)
-db.my_app_settings.canvas_server_password.filter_out = lambda value: Util.decrypt(value)
+db.my_app_settings.canvas_database_password.filter_in = lambda value: Util.encrypt(value)
+db.my_app_settings.canvas_database_password.filter_out = lambda value: Util.decrypt(value)
 
 
 db.define_table("student_info",
