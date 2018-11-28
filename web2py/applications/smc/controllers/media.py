@@ -342,13 +342,13 @@ def wmplay():
     description=""
     tags = ""
     autoplay = "false"
-    if (request.vars.autoplay == "true"):
+    if request.vars.autoplay == "true":
         autoplay = "true"
     
     is_mobile = request.vars.get('m', 'false')
     
     movie_id = request.args(0)
-    if (movie_id != None):
+    if movie_id is not None:
         # Load the movie from the database
         source_mp4 = URL('static', 'media/wamap/wamap_' + str(movie_id) + ".mp4")
     else:
@@ -365,11 +365,12 @@ def wamap_import():
     download_wamap = SQLFORM.factory(submit_button="Run WAMAP Import Tool", _name="download_wamap").process(formname="download_wamap")
     
     result=None
-    if (download_wamap.accepted):
-        result = find_wamap_videos() # wamap_import_run()
-        response.flash = "WAMAP download started - videos being processed." # + str(ret)
+    if download_wamap.accepted:
+        result = find_wamap_videos()  # wamap_import_run()
+        response.flash = "WAMAP download started - videos being processed."  # + str(ret)
     
     return dict(download_wamap=download_wamap, wamap_rows=new_vids)
+
 
 def fix_previous_wamap_import_video_links():
     # Put previous wamap import video links back
@@ -394,16 +395,17 @@ def fix_previous_wamap_import_video_links():
     
     return changed
 
-def find_wamap_videos():    
+
+def find_wamap_videos():
     # Make sure we put old links back
     ret = fix_previous_wamap_import_video_links()
-    ret = [] # Clear so we don't return changed array
+    ret = []  # Clear so we don't return changed array
     
     # Check for videos that have already been downloaded and make sure the links are added in the
     # database
-    #Starts in the Controllers folder
+    # Starts in the Controllers folder
     w2py_folder = os.path.abspath(__file__)
-    #print "Running File: " + app_folder
+    # print "Running File: " + app_folder
     w2py_folder = os.path.dirname(w2py_folder)
     # app folder
     w2py_folder = os.path.dirname(w2py_folder)
@@ -412,7 +414,7 @@ def find_wamap_videos():
     w2py_folder = os.path.dirname(w2py_folder)
     # Root folder
     w2py_folder = os.path.dirname(w2py_folder)
-    #print "W2Py Folder: " + w2py_folder
+    # print "W2Py Folder: " + w2py_folder
     
     # Ensure the wamap folder exists
     wamap_folder = os.path.join(app_folder, "static")
@@ -420,9 +422,9 @@ def find_wamap_videos():
     wamap_folder = os.path.join(wamap_folder, "wamap")
     pdfs_folder = os.path.join(wamap_folder, "pdfs")
     
-    if (os.path.isdir(wamap_folder) != True):
+    if os.path.isdir(wamap_folder) is not True:
         os.mkdir(wamap_folder)
-    if (os.path.isdir(pdfs_folder) != True):
+    if os.path.isdir(pdfs_folder) is not True:
         os.mkdir(pdfs_folder)
     
     # Get a list of link files
@@ -439,7 +441,7 @@ def find_wamap_videos():
             json_data = open(p).read()
             dat = loads(json_data)
             v = db(db.wamap_videos.source_url==dat["yt_url"]).select().first()
-            if (v == None):
+            if v is None:
                 db.wamap_videos.insert(source_url=dat["yt_url"], media_guid=dat["media_guid"], new_url='')
                 offline_update_vids_imported += 1
                 offline_update_ret += " Link inserted: " + dat["yt_url"]
@@ -463,10 +465,10 @@ def find_wamap_videos():
     # Fix a few links that are incorrect
     # youtube link w out the http:// in imas_questionset.extref
     db_wamap.executesql("UPDATE imas_questionset SET `extref`=REPLACE(`extref`, 'video!!www.yout', 'video!!http://www.yout') WHERE `extref` like '%video!!www.yout%' ")
-    
-    
+
     # Adjust IFrame links in some places so they match up better with videos
-    # <iframe src="https://admin.correctionsed.com/media/wmplay/45390ef384be4107a7bf2c2da31ce79a" width="560" height="315">
+    # <iframe src="https://admin.correctionsed.com/media/wmplay/45390ef384be4107a7bf2c2da31ce79a"
+    #  width="560" height="315">
     # Change out 560x315 and 420x315 for ---> 655x410
     # fix iframe src w // instad of http://
     # imas_inlinetext.text
@@ -528,7 +530,7 @@ def find_wamap_videos():
             json_data=open(p).read()
             dat = loads(json_data)
             v = db(db.wamap_pdfs.source_url==dat["source_url"]).select().first()
-            if (v == None):
+            if v is None:
                 db.wamap_pdfs.insert(source_url=dat["source_url"], media_guid=dat["media_guid"], new_url='')
                 offline_update_pdfs_imported += 1
                 offline_pdf_update_ret += " Link inserted: " + dat["source_url"]
@@ -542,8 +544,7 @@ def find_wamap_videos():
             pass
     
     db.commit()
-    
-    
+
     # Pull PDF links
     pdf_url_list = []
     # Pull pdfs from imas_questionset.extref
@@ -593,7 +594,7 @@ def find_wamap_videos():
     pdf_duplicates = 0
     for u in pdf_url_list:
         v = db(db.wamap_pdfs.source_url==u).select().first()
-        if (v == None):
+        if v is None:
             new_pdfs += 1
             db.wamap_pdfs.insert(source_url=u, media_guid=str(uuid.uuid4()).replace('-', ''), new_url='')
         else:
@@ -645,15 +646,14 @@ def find_wamap_videos():
     for row in rows:
         urls = getURLS(row[1])
         url_list.extend(urls)
-    
-    
+
     vid_count = len(url_list)
     
     # Get qimages entries so we can download them
     rows = db_wamap.executesql("select id, qsetid, var, filename, alttext from `imas_qimages`")
     for row in rows:
         qi = db(db.wamap_qimages.source_id==row[0]).select().first()
-        if (qi == None):
+        if qi is None:
             # Entry isn't there, insert it
             db.wamap_qimages.insert(source_id=row[0],
                 source_qsetid=row[1],
@@ -675,16 +675,16 @@ def find_wamap_videos():
     
     db_wamap.close()
     
-     # Start the task to download the qimages
-    result = scheduler.queue_task('download_wamap_qimages', timeout=18000, repeats=1, period=0, immediate=True, sync_output=5, group_name="wamap_videos")
-    
-    
+    # Start the task to download the qimages
+    result = scheduler.queue_task('download_wamap_qimages', timeout=18000, repeats=1, period=0, immediate=True,
+                                  sync_output=5, group_name="wamap_videos")
+
     new_vids = 0
     
     # Add the videos into our wamap_videos table if they don't already exist
     for u in url_list:
         v = db(db.wamap_videos.source_url==u).select().first()
-        if (v == None):
+        if v is None:
             new_vids += 1
             db.wamap_videos.insert(source_url=u, media_guid=str(uuid.uuid4()).replace('-', ''), new_url='')
         else:
@@ -693,14 +693,16 @@ def find_wamap_videos():
     db(db.wamap_videos).update(downloaded=False)
         
     # Start the task to download youtube videos and update links
-    result = scheduler.queue_task('process_wamap_video_links', timeout=18000, repeats=(db(db.wamap_videos).count()/50)+1, period=0, immediate=True, sync_output=5, group_name="wamap_videos")
+    result = scheduler.queue_task('process_wamap_video_links', timeout=18000,
+                                  repeats=(db(db.wamap_videos).count()/50)+1, period=0, immediate=True,
+                                  sync_output=5, group_name="wamap_videos")
     
     db.commit()
     
     # Start the scheduler process
     start_wamap_videos()
     
-    url_list = []  #Clear so we don't see debug info
+    url_list = []  # Clear so we don't see debug info
     
     return locals()
 
@@ -710,30 +712,32 @@ def getURLS(txt):
     ret = []
     # pat = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
     pat = re.compile(
-    'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-    )
+                     'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+                    )
     res = pat.findall(txt)
     for r in res:
-        if ('youtu' in r):
+        if 'youtu' in r:
             ret.append(r)
     return ret
+
 
 def getPDFURLS(txt):
     # Extract the list of urls from the string
     ret = []
     # pat = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
     pat = re.compile(
-    'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-    )
+                     'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+                    )
     res = pat.findall(txt)
     # pdf, swf, png, doc, ?
     for r in res:
-        if ('pdf' in r):
+        if 'pdf' in r:
             ret.append(r)
     return ret
 
+
 def wamap_import_run():
-    result = find_wamap_videos() # wamap_import_run()
+    result = find_wamap_videos()  # wamap_import_run()
     return True
     
     # DEPRECATED - use find_wamap_videos
@@ -746,7 +750,7 @@ def wamap_import_run():
     for row in rows:
         # Add each of these rows to the wamap videos queue
         v = db(db.wamap_questionset.wamap_id==row[0]).select().first()
-        if (v == None):
+        if v is None:
             # Doesn't exist yet
             new_vids += 1
             db.wamap_questionset.insert(wamap_id=row[0], extref_field=row[1])
@@ -758,6 +762,7 @@ def wamap_import_run():
         
     return dict(new_vids=new_vids)
 
+
 def wamap_import_status():
     # Number of new vids found
     new_vids = 0
@@ -766,62 +771,67 @@ def wamap_import_status():
     total_vids = db(db.wamap_videos).count()
     process_status = str(processed_vids) + " of " + str(total_vids) + " videos processed."
     return dict(process_status=process_status)
-   
+
+
 def start_process_queue():
     return "Deprecated"
     # Start the worker process
     cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_scheduler.py') + " > /dev/null 2>&1 &"
     p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
-    #ret = p.wait()
-    #ret = p.communicate()[0]
-    #p.wait()
-    #time.sleep(2)
-    #p.kill()
-    #ret = ""
+    # ret = p.wait()
+    # ret = p.communicate()[0]
+    # p.wait()
+    # time.sleep(2)
+    # p.kill()
+    # ret = ""
     return ret
+
 
 def start_process_queue_wamap_delete():
     # Start the worker process
-    #cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_wamap_delete_scheduler.py') + " > /dev/null 2>&1 &"
-    #p = subprocess.Popen(cmd, shell=True, close_fds=True)
+    # cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_wamap_delete_scheduler.py') + " > /dev/null 2>&1 &"
+    # p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
-    #ret = p.wait()
-    #ret = p.communicate()[0]
-    #p.wait()
-    #time.sleep(2)
-    #p.kill()
-    #ret = ""
+    # ret = p.wait()
+    # ret = p.communicate()[0]
+    # p.wait()
+    # time.sleep(2)
+    # p.kill()
+    # ret = ""
     return ret
+
 
 def start_process_videos():
     # Start the worker process
-    #cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_process_video_scheduler.py') + " > /dev/null 2>&1 &"
-    #p = subprocess.Popen(cmd, shell=True, close_fds=True)
+    # cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_process_video_scheduler.py') + " > /dev/null 2>&1 &"
+    # p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
-    #ret = p.wait()
-    #ret = p.communicate()[0]
-    #p.wait()
-    #time.sleep(2)
-    #p.kill()
-    #ret = ""
+    # ret = p.wait()
+    # ret = p.communicate()[0]
+    # p.wait()
+    # time.sleep(2)
+    # p.kill()
+    # ret = ""
     return ret
+
 
 def start_wamap_videos():
     # Start the worker process
-    #cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_wamap_videos_scheduler.py') + " > /dev/null 2>&1 &"
-    #p = subprocess.Popen(cmd, shell=True, close_fds=True)
+    # cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_wamap_videos_scheduler.py') + " > /dev/null 2>&1 &"
+    # p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
-    #ret = p.wait()
-    #ret = p.communicate()[0]
-    #p.wait()
-    #time.sleep(2)
-    #p.kill()
-    #ret = ""
+    # ret = p.wait()
+    # ret = p.communicate()[0]
+    # p.wait()
+    # time.sleep(2)
+    # p.kill()
+    # ret = ""
     return ret
 
+
 def getMediaThumb(media_guid):
-    if (media_guid == None or media_guid ==""):
+    if media_guid is None or media_guid =="":
         return ""
     prefix = media_guid[0:2]
     url = URL('static', 'media/' + prefix + '/' + media_guid + '.thumb.png')
@@ -830,12 +840,13 @@ def getMediaThumb(media_guid):
     thumb = os.path.join(thumb, prefix)
     thumb = os.path.join(thumb, media_guid)
     thumb += '.thumb.png'
-    if (os.path.exists(thumb) != True):
+    if os.path.exists(thumb) is not True:
         url = URL('static', 'images/media_file.png')
     return url
 
+
 def getMediaPoster(media_guid):
-    if (media_guid == None or media_guid ==""):
+    if media_guid is None or media_guid =="":
         return ""
     prefix = media_guid[0:2]
     url = URL('static', 'media/' + prefix + '/' + media_guid + '.poster.png')
@@ -844,7 +855,7 @@ def getMediaPoster(media_guid):
     thumb = os.path.join(thumb, prefix)
     thumb = os.path.join(thumb, media_guid)
     thumb += '.thumb.png'
-    if (os.path.exists(thumb) != True):
+    if os.path.exists(thumb) is not True:
         url = URL('static', 'images/media_file.png')
     return url
 
@@ -854,9 +865,10 @@ def getTaskStatus(media_id):
     q2 = '{"media_id": ' + str(media_id) + '}'
     task = db_scheduler((db_scheduler.scheduler_task.vars==q1) | (db_scheduler.scheduler_task.vars==q2)).select(orderby=db_scheduler.scheduler_task.last_run_time).first()
     ret = "<not run>"
-    if (task != None):
+    if task is not None:
         ret = str(task.status) + " (" + str(task.last_run_time) + ")"
     return ret
+
 
 def getTaskProgress(media_id):
     ret = ""
@@ -865,7 +877,7 @@ def getTaskProgress(media_id):
     q2 = '{"media_id": ' + str(media_id) + '}'
     task = db_scheduler((db_scheduler.scheduler_task.vars==q1) | (db_scheduler.scheduler_task.vars==q2)).select(join=db_scheduler.scheduler_run.on(db_scheduler.scheduler_task.id==db_scheduler.scheduler_run.task_id), orderby=db_scheduler.scheduler_task.last_run_time).first()
     ret = ""
-    if (task != None):
+    if task is not None:
         # Get the output from the run record
         ret = str(task.scheduler_run.run_output)
     

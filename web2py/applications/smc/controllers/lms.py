@@ -20,23 +20,25 @@ auth.settings.allow_basic_login = True
 
 @auth.requires_membership("Administrators")
 def test():
-    #pw = "Sid777777!"
-    #enc_pw = "_6tCszfjuGddHJocWIdjR3CXVLU2l0BvgPqbkUaIqVs="
-    #enc_pw = Util.encrypt("_6tCszfjuGddHJocWIdjR3CXVLU2l0BvgPqbkUaIqVs=")
-    #txt_pw = Util.decrypt(enc_pw,"3e7911db9b4c39309d3d41d393ef861efd8e56f21d257ec8a5d507cc")
+    # pw = "Sid777777!"
+    # enc_pw = "_6tCszfjuGddHJocWIdjR3CXVLU2l0BvgPqbkUaIqVs="
+    # enc_pw = Util.encrypt("_6tCszfjuGddHJocWIdjR3CXVLU2l0BvgPqbkUaIqVs=")
+    # txt_pw = Util.decrypt(enc_pw,"3e7911db9b4c39309d3d41d393ef861efd8e56f21d257ec8a5d507cc")
     # key = Util.aes_key
     return locals()
 
 
 @auth.requires_membership("Administrators")
-def check_for_student():
+def verify_ope_account_in_smc():
     response.view = 'generic.json'
     db = current.db
-    full_name = ""
+    student_full_name = ""
     msg = ""
     user_name = None
+    laptop_admin_user = ""
+    laptop_admin_password = ""
 
-    # Get the user in question
+    # Get the student user in question
     if len(request.args) > 0:
         user_name = request.args[0]
     else:
@@ -52,13 +54,19 @@ def check_for_student():
         for row in rows:
             user_exists = True
         if user_exists is True:
-            full_name = str(row["last_name"]) + ", " + str(row["first_name"])
+            student_full_name = str(row["last_name"]) + ", " + str(row["first_name"])
             msg = "Found"
         else:
             # User doesn't exit!
             msg = "Invalid User!"
 
-    return dict(msg=msg, full_name=full_name)
+    if msg == "Found":
+        # Pull the laptop admin info
+        laptop_admin_user = AppSettings.GetValue("laptop_admin_user", "")
+        laptop_admin_password = AppSettings.GetValue("laptop_admin_password", "")
+
+    return dict(msg=msg, student_full_name=student_full_name,
+                laptop_admin_user=laptop_admin_user, laptop_admin_password=laptop_admin_password)
 
 
 @auth.requires_membership("Administrators")

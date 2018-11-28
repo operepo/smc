@@ -14,124 +14,124 @@ db.define_table("quota_sizes",
 # db(db.quota_sizes).delete()
 if db(db.quota_sizes).count() < 1:
         # Add a row
-        db.quota_sizes.insert(int_size= '0',
-                              display_size= '0 Meg',
+        db.quota_sizes.insert(int_size='0',
+                              display_size='0 Meg',
                               sort_order="1")
         
-        db.quota_sizes.insert(int_size= '1048576',
-                              display_size= '1 Meg',
+        db.quota_sizes.insert(int_size='1048576',
+                              display_size='1 Meg',
                               sort_order="2")
         
-        db.quota_sizes.insert(int_size= '5242880',
-                              display_size= '5 Meg',
+        db.quota_sizes.insert(int_size='5242880',
+                              display_size='5 Meg',
                               sort_order="3")
         
-        db.quota_sizes.insert(int_size= '10485760',
-                              display_size= '10 Meg',
+        db.quota_sizes.insert(int_size='10485760',
+                              display_size='10 Meg',
                               sort_order="4")
         
-        db.quota_sizes.insert(int_size= '31457280',
-                              display_size= '30 Meg',
+        db.quota_sizes.insert(int_size='31457280',
+                              display_size='30 Meg',
                               sort_order="5")
         
-        db.quota_sizes.insert(int_size= '52428800',
-                              display_size= '50 Meg',
+        db.quota_sizes.insert(int_size='52428800',
+                              display_size='50 Meg',
                               sort_order="6")
         
-        db.quota_sizes.insert(int_size= '78643200',
-                              display_size= '75 Meg',
+        db.quota_sizes.insert(int_size='78643200',
+                              display_size='75 Meg',
                               sort_order="7")
         
-        db.quota_sizes.insert(int_size= '104857600',
-                              display_size= '100 Meg',
+        db.quota_sizes.insert(int_size='104857600',
+                              display_size='100 Meg',
                               sort_order="8")
         
-        db.quota_sizes.insert(int_size= '314572800',
-                              display_size= '300 Meg',
+        db.quota_sizes.insert(int_size='314572800',
+                              display_size='300 Meg',
                               sort_order="9")
         
-        db.quota_sizes.insert(int_size= '524288000',
-                              display_size= '500 Meg',
+        db.quota_sizes.insert(int_size='524288000',
+                              display_size='500 Meg',
                               sort_order="10")
         
-        db.quota_sizes.insert(int_size= '786432000',
-                              display_size= '750 Meg',
+        db.quota_sizes.insert(int_size='786432000',
+                              display_size='750 Meg',
                               sort_order="11")
         
-        db.quota_sizes.insert(int_size= '1048576000',
-                              display_size= '1 Gig',
+        db.quota_sizes.insert(int_size='1048576000',
+                              display_size='1 Gig',
                               sort_order="12")
         
-        db.quota_sizes.insert(int_size= '5242880000',
-                              display_size= '5 Gig',
+        db.quota_sizes.insert(int_size='5242880000',
+                              display_size='5 Gig',
                               sort_order="13")
         
-        db.quota_sizes.insert(int_size= '10485760000',
-                              display_size= '10 Gig',
+        db.quota_sizes.insert(int_size='10485760000',
+                              display_size='10 Gig',
                               sort_order="14")
         
-        db.quota_sizes.insert(int_size= '31457280000',
-                              display_size= '30 Gig',
+        db.quota_sizes.insert(int_size='31457280000',
+                              display_size='30 Gig',
                               sort_order="15")
         
-        db.quota_sizes.insert(int_size= '52428800000',
-                              display_size= '50 Gig',
+        db.quota_sizes.insert(int_size='52428800000',
+                              display_size='50 Gig',
                               sort_order="16")
         
-        db.quota_sizes.insert(int_size= '104857600000',
-                              display_size= '100 Gig',
+        db.quota_sizes.insert(int_size='104857600000',
+                              display_size='100 Gig',
                               sort_order="17")
         
-        db.quota_sizes.insert(int_size= '314572800000',
-                              display_size= '300 Gig',
+        db.quota_sizes.insert(int_size='314572800000',
+                              display_size='300 Gig',
                               sort_order="18")
         
-        db.quota_sizes.insert(int_size= '524288000000',
-                              display_size= '500 Gig',
+        db.quota_sizes.insert(int_size='524288000000',
+                              display_size='500 Gig',
                               sort_order="19")
         
-        db.quota_sizes.insert(int_size= '786432000000',
-                              display_size= '750 Gig',
+        db.quota_sizes.insert(int_size='786432000000',
+                              display_size='750 Gig',
                               sort_order="20")
         
-        db.quota_sizes.insert(int_size= '1048576000000',
-                              display_size= '1 TB',
+        db.quota_sizes.insert(int_size='1048576000000',
+                              display_size='1 TB',
                               sort_order="21")
         
-        db.quota_sizes.insert(int_size= '5242880000000',
-                              display_size= '5 TB',
+        db.quota_sizes.insert(int_size='5242880000000',
+                              display_size='5 TB',
                               sort_order="22")
         
-        db.quota_sizes.insert(int_size= '10485760000000',
-                              display_size= '10 TB',
+        db.quota_sizes.insert(int_size='10485760000000',
+                              display_size='10 TB',
                               sort_order="23")
         
-        db.quota_sizes.insert(int_size= '31457280000000',
-                              display_size= '30 TB',
+        db.quota_sizes.insert(int_size='31457280000000',
+                              display_size='30 TB',
                               sort_order="24")
         
-        db.quota_sizes.insert(int_size= '52428800000000',
-                              display_size= '50 TB',
+        db.quota_sizes.insert(int_size='52428800000000',
+                              display_size='50 TB',
                               sort_order="25")
         
-        db.quota_sizes.insert(int_size= '104857600000000',
-                              display_size= '100 TB',
+        db.quota_sizes.insert(int_size='104857600000000',
+                              display_size='100 TB',
                               sort_order="26")
         
-        db.quota_sizes.insert(int_size= '314572800000000',
-                              display_size= '300 TB',
+        db.quota_sizes.insert(int_size='314572800000000',
+                              display_size='300 TB',
                               sort_order="27")
         
-        db.quota_sizes.insert(int_size= '524288000000000',
-                              display_size= '500 TB',
+        db.quota_sizes.insert(int_size='524288000000000',
+                              display_size='500 TB',
                               sort_order="28")
         
-        db.quota_sizes.insert(int_size= '786432000000000',
-                              display_size= '750 TB',
+        db.quota_sizes.insert(int_size='786432000000000',
+                              display_size='750 TB',
                               sort_order="29")
         
-        db.quota_sizes.insert(int_size= '1048576000000000',
-                              display_size= '1 PB',
+        db.quota_sizes.insert(int_size='1048576000000000',
+                              display_size='1 PB',
                               sort_order="30")
 
 
@@ -151,17 +151,22 @@ if db(db.zpool_sync).count() < 1:
 
 db.define_table("my_app_settings",
                 Field("app_name", default="SMC"),
-                Field("app_description", default="Student Management Console - Import/Enrollment for Active Directory and Canvas"),
+                Field("app_description",
+                      default="Student Management Console - Import/Enrollment for Active Directory and Canvas"),
                 Field("app_logo", "upload", length=128, autodelete=True),
                 
                 Field("ad_import_enabled", "boolean", default="False"),
                 Field("file_server_import_enabled", "boolean", default="False"),
                 Field("ad_service_user", default="Administrator"),
                 Field("ad_service_password", "password", default="super secret password"),
-                Field("ad_server_protocol", default="LDAPS://", requires=IS_IN_SET(["LDAPS://", "LDAP://", "WinNT://"], zero=None)), # LDAP:// LDAPS:// WinNT://
+                Field("ad_server_protocol", default="LDAPS://",
+                      requires=IS_IN_SET(["LDAPS://", "LDAP://", "WinNT://"], zero=None)),  # LDAP:// LDAPS:// WinNT://
                 Field("ad_server_address", default="AD.CORRECTIONSED.COM"),
                 Field("file_server_address", default="FILES.CORRECTIONSED.COM"),
-                Field("file_server_quota_drive", default="", requires=IS_IN_SET(["", "C:", "D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:", "L:", "M:", "N:", "O:", "P:", "Q:", "R:", "S:", "T:", "U:", "V:", "W:", "X:", "Y:", "Z:" ], zero=None)),
+                Field("file_server_quota_drive", default="",
+                      requires=IS_IN_SET(["", "C:", "D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:", "L:", "M:",
+                                          "N:", "O:", "P:", "Q:", "R:", "S:", "T:", "U:", "V:", "W:", "X:", "Y:",
+                                          "Z:"], zero=None)),
                 Field("file_server_login_user", default="Administrator"),
                 Field("file_server_login_pass", "password", default="super secret password"),
                 Field("student_id_pattern", default="s<user_id>"),
@@ -170,42 +175,59 @@ db.define_table("my_app_settings",
                 Field("ad_student_cn", default="OU=<program>,OU=Students,DC=ad,DC=correctionsed,DC=com"),
                 Field("ad_student_group_cn", default="OU=StudentGroups,DC=ad,DC=correctionsed,DC=com"),
                 Field("ad_student_home_directory", default="\\\\files\\students\\%username%"),
-                Field("ad_student_home_drive", default="", requires=IS_IN_SET(["", "C:", "D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:", "L:", "M:", "N:", "O:", "P:", "Q:", "R:", "S:", "T:", "U:", "V:", "W:", "X:", "Y:", "Z:" ], zero=None)),
+                Field("ad_student_home_drive", default="",
+                      requires=IS_IN_SET(["", "C:", "D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:", "L:", "M:",
+                                          "N:", "O:", "P:", "Q:", "R:", "S:", "T:", "U:", "V:", "W:", "X:", "Y:",
+                                          "Z:"], zero=None)),
                 Field("ad_student_profile_directory", default=""),
                 Field("ad_student_login_script_path", default=""),
-                Field("ad_student_home_directory_quota", "bigint", default="52428800", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
+                Field("ad_student_home_directory_quota", "bigint", default="52428800",
+                      requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s',
+                                        zero=None, orderby="sort_order")),
                 Field("faculty_id_pattern", default="<user_id>"),
                 Field("faculty_password_pattern", default="Fid<user_id>#"),
                 Field("faculty_email_pattern", default="<user_name>@correctionsed.com"),
                 Field("ad_faculty_cn", default="OU=<program>,OU=Faculty,DC=ad,DC=correctionsed,DC=com"),
                 Field("ad_faculty_group_cn", default="OU=FacultyGroups,DC=ad,DC=correctionsed,DC=com"),
                 Field("ad_faculty_home_directory", default="\\\\files\\faculty\\%username%"),
-                Field("ad_faculty_home_drive", default="", requires=IS_IN_SET(["", "C:", "D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:", "L:", "M:", "N:", "O:", "P:", "Q:", "R:", "S:", "T:", "U:", "V:", "W:", "X:", "Y:", "Z:" ], zero=None)),
+                Field("ad_faculty_home_drive", default="",
+                      requires=IS_IN_SET(["", "C:", "D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:", "L:", "M:", "N:",
+                                          "O:", "P:", "Q:", "R:", "S:", "T:", "U:", "V:", "W:", "X:", "Y:",
+                                          "Z:"], zero=None)),
                 Field("ad_faculty_profile_directory", default=""),
                 Field("ad_faculty_login_script_path", default=""),
-                Field("ad_faculty_home_directory_quota", "bigint", default="52428800000", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
+                Field("ad_faculty_home_directory_quota", "bigint", default="52428800000",
+                      requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None,
+                                        orderby="sort_order")),
                 Field("canvas_import_enabled", "boolean", default="False"),
                 Field("canvas_access_token", 'string', default=""),
                 Field("canvas_secret", 'string', default="<ENV>"),
                 Field("canvas_database_password", 'password', default='<ENV>'),
                 Field("canvas_server_url", default="https://canvas.ed"),
-                Field("canvas_student_quota", "bigint", default="1048576", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
-                Field("canvas_faculty_quota", "bigint", default="1048576", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
+                Field("canvas_student_quota", "bigint", default="1048576",
+                      requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s',
+                                        zero=None, orderby="sort_order")),
+                Field("canvas_faculty_quota", "bigint", default="1048576",
+                      requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s',
+                                        zero=None, orderby="sort_order")),
                 Field("canvas_auto_create_courses", 'boolean', default=True),
                 auth.signature,
                 Field("zpool_enabled", "boolean", default="False"),
                 Field("zpool_login_user", default="root"),
                 Field("zpool_login_password", "password", default=""),
-                Field("zpool_source_dataset", "string", default="", requires=IS_IN_DB(db, db.zpool_datasets.name, zero=None, orderby="name")),
-                Field("zpool_dest_dataset", "string", default="", requires=IS_IN_DB(db, db.zpool_datasets.name, zero=None, orderby="name")),
-                Field("zpool_sync_setting", "string", default="standard", requires=IS_IN_DB(db, db.zpool_sync.name, orderby="name")),
+                Field("zpool_source_dataset", "string", default="",
+                      requires=IS_IN_DB(db, db.zpool_datasets.name, zero=None, orderby="name")),
+                Field("zpool_dest_dataset", "string", default="",
+                      requires=IS_IN_DB(db, db.zpool_datasets.name, zero=None, orderby="name")),
+                Field("zpool_sync_setting", "string", default="standard",
+                      requires=IS_IN_DB(db, db.zpool_sync.name, orderby="name")),
                 Field("zpool_server_address", default=""),
                 Field("laptop_admin_user", default="huskers"),
                 Field("laptop_admin_password", "password", default="", required=True),
 
                 )
 
-## Enable encryption
+# Enable encryption
 db.my_app_settings.ad_service_password.filter_in = lambda value: Util.encrypt(value)
 db.my_app_settings.ad_service_password.filter_out = lambda value: Util.decrypt(value)
 db.my_app_settings.file_server_login_pass.filter_in = lambda value: Util.encrypt(value)
@@ -231,8 +253,12 @@ db.define_table("student_info",
                 Field("account_enabled", "boolean", default="True"),
                 Field("account_added_on"),
                 Field("account_updated_on"),
-                Field("student_ad_quota", "bigint", default="52428800", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
-                Field("student_canvas_quota", "bigint", default="1048576", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
+                Field("student_ad_quota", "bigint", default="52428800",
+                      requires=IS_IN_DB(db, db.quota_sizes.int_size,
+                                        '%(display_size)s', zero=None, orderby="sort_order")),
+                Field("student_canvas_quota", "bigint", default="1048576",
+                      requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s',
+                                        zero=None, orderby="sort_order")),
                 auth.signature,
                 Field("ad_last_login", type="datetime", default=None),
                 Field("canvas_auth_token", default="")
@@ -269,7 +295,7 @@ db.define_table("student_import_queue",
                 auth.signature
                 )
 
-## Enable encryption
+# Enable encryption
 db.student_import_queue.student_password.filter_in = lambda value : Util.encrypt(value)
 db.student_import_queue.student_password.filter_out = lambda value : Util.decrypt(value)
 
@@ -294,7 +320,7 @@ db.define_table("student_canvas_import_queue",
                 Field("student_import_queue", "reference student_import_queue")
                 )
 
-#### Faculty Tables
+# Faculty Tables
 db.define_table("faculty_info",
                 Field("account_id", "reference auth_user"),
                 Field("user_id"),
@@ -308,18 +334,22 @@ db.define_table("faculty_info",
                 Field("account_enabled", "boolean", default="True"),
                 Field("account_added_on"),
                 Field("account_updated_on"),
-                Field("faculty_ad_quota", "bigint", default="52428800000", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
-                Field("faculty_canvas_quota", "bigint", default="1048576", requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None, orderby="sort_order")),
+                Field("faculty_ad_quota", "bigint", default="52428800000",
+                      requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None,
+                                        orderby="sort_order")),
+                Field("faculty_canvas_quota", "bigint", default="1048576",
+                      requires=IS_IN_DB(db, db.quota_sizes.int_size, '%(display_size)s', zero=None,
+                                        orderby="sort_order")),
                 auth.signature,
                 Field("ad_last_login", type="datetime", default=None),
                 Field("canvas_auth_token", default="")
                 )
 
-## Enable encryption
+# Enable encryption
 db.faculty_info.faculty_password.filter_in = lambda value : Util.encrypt(value)
 db.faculty_info.faculty_password.filter_out = lambda value : Util.decrypt(value)
 
-## Indexes
+# Indexes
 db.executesql('CREATE INDEX IF NOT EXISTS account_id_idx ON faculty_info (account_id);')
 db.executesql('CREATE INDEX IF NOT EXISTS user_id_idx ON faculty_info (user_id);')
 
@@ -346,9 +376,9 @@ db.define_table("faculty_import_queue",
                 auth.signature
                 )
 
-## Enable encryption
-db.faculty_import_queue.faculty_password.filter_in = lambda value : Util.encrypt(value)
-db.faculty_import_queue.faculty_password.filter_out = lambda value : Util.decrypt(value)
+# Enable encryption
+db.faculty_import_queue.faculty_password.filter_in = lambda value: Util.encrypt(value)
+db.faculty_import_queue.faculty_password.filter_out = lambda value: Util.decrypt(value)
 
 db.define_table("faculty_ad_import_status",
                 Field("user_id")
@@ -403,7 +433,7 @@ db.define_table('media_files',
                 auth.signature
                 )
 
-## Indexes
+# Indexes
 db.executesql('CREATE INDEX IF NOT EXISTS media_guid_idx ON media_files (media_guid);')
 
 db.define_table('playlist',
@@ -475,9 +505,9 @@ db.define_table('ope_laptop_firewall_rules',
                 Field('profile', 'string', default='any', requires=IS_IN_SET(['any', 'public', 'private', 'domain'])),
                 Field('localip', 'string', default=''),
                 Field('remoteip', 'string', default=''),
-                Field('localport', 'string', default='any'), # , requires=[IS_IN_SET(['any', 'rpc', 'rpc-epmap', 'iphttps', 'teredo'], IS_INT_IN_RANGE(1, 65535))], label="Local Port (port number or any, rpc, rpc-epmap, iphttps, toredo)"),
-                Field('remoteport', 'string', default='any'), # , requires=[IS_IN_SET(['any'], IS_INT_IN_RANGE(1, 65535))], label="Remote Port (port number or any, rpc, rpc-epmap, iphttps, toredo)"),
-                Field('protocol', 'string', default='tcp'), # , requires=[IS_IN_SET(['any', 'icmpv4', 'icmpv6', 'tcp', 'udp'], IS_INT_IN_RANGE(1, 65535))], label="Protocol (protocl number or any, icmpv4, icmpv6, tcp, udp)"),
+                Field('localport', 'string', default='any'),  # , requires=[IS_IN_SET(['any', 'rpc', 'rpc-epmap', 'iphttps', 'teredo'], IS_INT_IN_RANGE(1, 65535))], label="Local Port (port number or any, rpc, rpc-epmap, iphttps, toredo)"),
+                Field('remoteport', 'string', default='any'),  # , requires=[IS_IN_SET(['any'], IS_INT_IN_RANGE(1, 65535))], label="Remote Port (port number or any, rpc, rpc-epmap, iphttps, toredo)"),
+                Field('protocol', 'string', default='tcp'),  # , requires=[IS_IN_SET(['any', 'icmpv4', 'icmpv6', 'tcp', 'udp'], IS_INT_IN_RANGE(1, 65535))], label="Protocol (protocl number or any, icmpv4, icmpv6, tcp, udp)"),
                 Field('interfacetype', 'string', default='any', requires=IS_IN_SET(['any', 'wireless', 'lan', 'ras'])),
                 Field('rmtcomputergrp', 'string', default='', label="Rmtcomputergrp (SDDLString - see netsh advfirewall for more info)"),
                 Field('rmtusrgrp', 'string', default='', label="Rmtusrgrp (same as Rmtcomputergrp)"),
@@ -489,11 +519,12 @@ db.define_table('ope_laptop_firewall_rules',
 
 # Adjust the app logo if it is set
 app_logo = AppSettings.GetValue('app_logo', '<none>')
-if (app_logo != "<none>"):
+if app_logo != "<none>":
     app_logo = IMG(_src=URL('download', app_logo), _alt="App Logo", _class="brand",_style="height: 30px;")
 else:
     app_logo = IMG(_src=URL('static','images/pc_logo.png'), _alt="App Logo", _class="brand",_style="height: 30px;")
 
 response.logo = app_logo
 response.title = AppSettings.GetValue('app_name', request.application.replace('_',' ').title())
-response.subtitle = AppSettings.GetValue('app_description', 'Student Management Console - Import/Enrollment for Active Directory and Canvas')
+response.subtitle = AppSettings.GetValue('app_description',
+                                    'Student Management Console - Import/Enrollment for Active Directory and Canvas')
