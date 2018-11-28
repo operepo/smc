@@ -125,9 +125,10 @@ def player():
     title=""
     description=""
     tags = ""
-    autoplay = "true"
-    if (request.vars.autoplay == "false"):
-        autoplay = "false"
+    # default to off
+    autoplay = "false"
+    if (request.vars.autoplay == "true"):
+        autoplay = "true"
     
     is_mobile = request.vars.get('m', 'false')
     

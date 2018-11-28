@@ -142,6 +142,10 @@ class AD:
 
     @staticmethod
     def ConnectAD():
+        if AD._ldap_enabled is not True:
+            # LDap isn't on - skip this part
+            return False
+
         if AD._ldap_connect_time < datetime.today() - timedelta(seconds=AD._ldap_keepalive_timeout) \
                 or AD._ldap is None or AD._ldap.bound is False:
             # if it has been too long since this connection was established, force a reconnect
@@ -151,7 +155,7 @@ class AD:
         ret = False
         AD.Init()
 
-        if AD._ldap is None and AD._ldap_enabled is True or AD._ldap.bound is False:
+        if AD._ldap is None or AD._ldap.bound is False:
             # print("--- MAKING NEW LDAP CONNECTION")
             # AD._ldap = ldap.initialize(AD._ldap_protocol + AD._ldap_server)
 

@@ -32,6 +32,8 @@ def laptop_admin_credentials():
 
 @auth.requires_membership("Administrators")
 def index():
+    ensure_settings()
+
     response.view = 'generic.html'
     return dict(message="hello from admin.py")
 
@@ -42,6 +44,9 @@ def ensure_settings():
     if db(db.my_app_settings).count() < 1:
         # Add a row
         db.my_app_settings.insert()
+
+    # Make sure LDAP is reset after reloading settings
+    AD.Close()
     return True
 
 
@@ -75,7 +80,8 @@ def config_ad_settings():
     
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
-                   fields=["ad_import_enabled", "ad_service_user", "ad_service_password", "ad_server_protocol",
+                   fields=["ad_import_enabled", "ad_service_user", "ad_service_password",
+                           "ad_server_protocol",
                            "ad_server_address"]).process()
     
     if form.accepted:
@@ -94,7 +100,8 @@ def config_file_settings():
     
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
-                   fields=["file_server_import_enabled", "file_server_login_user", "file_server_login_pass",
+                   fields=["file_server_import_enabled", "file_server_login_user",
+                           "file_server_login_pass",
                            "file_server_address", "file_server_quota_drive"]).process()
     
     if form.accepted:
@@ -114,7 +121,8 @@ def config_zfs_settings():
     
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
-                   fields=["zpool_enabled", "zpool_server_address", "zpool_login_user", "zpool_login_password",
+                   fields=["zpool_enabled", "zpool_server_address", "zpool_login_user",
+                           "zpool_login_password",
                            "zpool_source_dataset", "zpool_dest_dataset", "zpool_sync_setting"]).process()
     
     if form.accepted:
@@ -130,6 +138,7 @@ def config_zfs_settings():
 @auth.requires_membership("Administrators")
 def refresh_datasets():
     ensure_settings()
+
     message = ""
     succeeded = False
     
@@ -312,11 +321,13 @@ def switchquota():
 
 @auth.requires_membership("Administrators")
 def verify_settings():
-    session.forget(response) # Don't need the session so don't block on it
+    ensure_settings()
+
+    session.forget(response)  # Don't need the session so don't block on it
     auto_create = False
     ret = ""
     auto = request.vars.get('auto', '')
-    if (auto == "true"):
+    if auto == "true":
         auto_create = True
     
     ret += "<h4>Active Directory Settings</h4><div style='font-size: 10px;'>"
@@ -342,16 +353,22 @@ def verify_settings():
 
 @auth.requires_membership("Administrators")
 def config_verify():
+    ensure_settings()
+
     return dict()
 
 
 @auth.requires_membership("Administrators")
 def config_verify_auto():
+    ensure_settings()
+
     return dict()
 
 
 @auth.requires_membership("Administrators")
 def changepassword():
+    ensure_settings()
+
     form = SQLFORM.factory(
     #Field('old_password', 'password'),
     Field('new_password', 'password', requires=[IS_NOT_EMPTY(),IS_STRONG(min=6, special=1, upper=1,
@@ -380,6 +397,8 @@ def changepassword():
 
 @auth.requires_membership("Administrators")
 def reset_smc():
+    ensure_settings()
+
     reset_smc_form = SQLFORM.factory(submit_button="Reset SMC App", _name="reset_smc_form").process(formname="reset_smc_form")
     
     kill_scheduler = SQLFORM.factory(submit_button="Kill Scheduler Process", _name="kill_scheduler").process(formname="kill_scheduler")
