@@ -8,12 +8,13 @@ from gluon.contrib.simplejson import loads, dumps
 
 from pytube import YouTube
 
+
 def index():
     ret = start_process_videos()
     
     query = (db.media_files)
     links = []
-    if (auth.has_membership('Faculty') or auth.has_membership('Administrators')):
+    if auth.has_membership('Faculty') or auth.has_membership('Administrators'):
         links.append(dict(header=T(''),body=lambda row: A('[Delete]', _style='font-size: 10px; color: red;', _href=URL('media', 'delete_media', args=[row.media_guid], user_signature=True)) ) )
     links.append(dict(header=T(''),body=lambda row: A(IMG(_src=getMediaThumb(row.media_guid), _style="width: 128px;"), _href=URL('media', 'player', args=[row.media_guid], user_signature=True)) ) )
     fields = [db.media_files.id, db.media_files.title, db.media_files.tags, db.media_files.description, db.media_files.media_guid, db.media_files.category] #[db.media_files.title]
@@ -28,8 +29,7 @@ def index():
     db.media_files.media_type.readable=False
     db.media_files.quality.readable=False
     
-    
-    #rows = db(query).select()
+    # rows = db(query).select()
     media_grid = SQLFORM.grid(query,editable=False, create=False, deletable=False,
                               csv=False, details=False,
                               searchable=True, orderby=[~db.media_files.modified_on],
@@ -39,13 +39,14 @@ def index():
     
     return dict(media_grid=media_grid)
 
+
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def playlists():
     
     query = (db.playlist.created_by==auth.user.id)
     fields = [db.playlist.title, db.playlist.id, db.playlist.playlist_guid, db.playlist.created_by]
     links = []
-    #links = [(dict(header=T(''),body=lambda row: A('Re-Queue', _href=URL('media', 'reset_queued_item', args=[row.id], user_signature=True)) ) ),
+    # links = [(dict(header=T(''),body=lambda row: A('Re-Queue', _href=URL('media', 'reset_queued_item', args=[row.id], user_signature=True)) ) ),
     #         (dict(header=T('Task Status'),body=lambda row: getTaskStatus(row.id) ) ), ]
     
     db.playlist.id.readable=False
@@ -53,19 +54,19 @@ def playlists():
     db.playlist.playlist_guid.writable=False
     db.playlist._singular="Playlist"
     db.playlist._plural="Playlist"
-    #db.playlist_items._singular="Playlist Item"
-    #db.playlist_items._plural="Playlist Items"
+    # db.playlist_items._singular="Playlist Item"
+    # db.playlist_items._plural="Playlist Items"
     
-    headers = {} #{'media_file_import_queue.modified_on':'Queued On' }
-    #rows = db(query).select()
+    headers = {}  # {'media_file_import_queue.modified_on':'Queued On' }
+    # rows = db(query).select()
     playlist_grid = SQLFORM.grid(query,
                                               editable=True, create=dict(parent=False, child=True),
                                               deletable=True,csv=False,links=links,links_in_grid=True,
                                               details=False,searchable=False,
                                               orderby=[db.playlist.title], fields=fields, headers=headers)
-    
-    
+
     return dict(playlist_grid=playlist_grid)
+
 
 def dl_media():
     message = ""
