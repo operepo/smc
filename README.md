@@ -4,8 +4,17 @@ Student Management Console - Easy student management and enrollment for educatio
 
 # Requires
 
-pycrypto
-python-ldap
+requests
+ldap3 # python-ldap
+paramiko
+ecdsa
+isodate
+pytube
+pywinrm
+xlrd
+psutil
+pycryptodome
+urllib3
 
 # Test Cert Files
 test.crt and test.key are for development purposes only. Do not use in production.

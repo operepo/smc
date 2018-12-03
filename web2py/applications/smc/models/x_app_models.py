@@ -17,123 +17,93 @@ if db(db.quota_sizes).count() < 1:
         db.quota_sizes.insert(int_size='0',
                               display_size='0 Meg',
                               sort_order="1")
-        
         db.quota_sizes.insert(int_size='1048576',
                               display_size='1 Meg',
                               sort_order="2")
-        
         db.quota_sizes.insert(int_size='5242880',
                               display_size='5 Meg',
                               sort_order="3")
-        
         db.quota_sizes.insert(int_size='10485760',
                               display_size='10 Meg',
                               sort_order="4")
-        
         db.quota_sizes.insert(int_size='31457280',
                               display_size='30 Meg',
                               sort_order="5")
-        
         db.quota_sizes.insert(int_size='52428800',
                               display_size='50 Meg',
                               sort_order="6")
-        
         db.quota_sizes.insert(int_size='78643200',
                               display_size='75 Meg',
                               sort_order="7")
-        
         db.quota_sizes.insert(int_size='104857600',
                               display_size='100 Meg',
                               sort_order="8")
-        
         db.quota_sizes.insert(int_size='314572800',
                               display_size='300 Meg',
                               sort_order="9")
-        
         db.quota_sizes.insert(int_size='524288000',
                               display_size='500 Meg',
                               sort_order="10")
-        
         db.quota_sizes.insert(int_size='786432000',
                               display_size='750 Meg',
                               sort_order="11")
-        
         db.quota_sizes.insert(int_size='1048576000',
                               display_size='1 Gig',
                               sort_order="12")
-        
         db.quota_sizes.insert(int_size='5242880000',
                               display_size='5 Gig',
                               sort_order="13")
-        
         db.quota_sizes.insert(int_size='10485760000',
                               display_size='10 Gig',
                               sort_order="14")
-        
         db.quota_sizes.insert(int_size='31457280000',
                               display_size='30 Gig',
                               sort_order="15")
-        
         db.quota_sizes.insert(int_size='52428800000',
                               display_size='50 Gig',
                               sort_order="16")
-        
         db.quota_sizes.insert(int_size='104857600000',
                               display_size='100 Gig',
                               sort_order="17")
-        
         db.quota_sizes.insert(int_size='314572800000',
                               display_size='300 Gig',
                               sort_order="18")
-        
         db.quota_sizes.insert(int_size='524288000000',
                               display_size='500 Gig',
                               sort_order="19")
-        
         db.quota_sizes.insert(int_size='786432000000',
                               display_size='750 Gig',
                               sort_order="20")
-        
         db.quota_sizes.insert(int_size='1048576000000',
                               display_size='1 TB',
                               sort_order="21")
-        
         db.quota_sizes.insert(int_size='5242880000000',
                               display_size='5 TB',
                               sort_order="22")
-        
         db.quota_sizes.insert(int_size='10485760000000',
                               display_size='10 TB',
                               sort_order="23")
-        
         db.quota_sizes.insert(int_size='31457280000000',
                               display_size='30 TB',
                               sort_order="24")
-        
         db.quota_sizes.insert(int_size='52428800000000',
                               display_size='50 TB',
                               sort_order="25")
-        
         db.quota_sizes.insert(int_size='104857600000000',
                               display_size='100 TB',
                               sort_order="26")
-        
         db.quota_sizes.insert(int_size='314572800000000',
                               display_size='300 TB',
                               sort_order="27")
-        
         db.quota_sizes.insert(int_size='524288000000000',
                               display_size='500 TB',
                               sort_order="28")
-        
         db.quota_sizes.insert(int_size='786432000000000',
                               display_size='750 TB',
                               sort_order="29")
-        
         db.quota_sizes.insert(int_size='1048576000000000',
                               display_size='1 PB',
                               sort_order="30")
-
 
 db.define_table("zpool_datasets",
                 Field("name"),
@@ -296,8 +266,8 @@ db.define_table("student_import_queue",
                 )
 
 # Enable encryption
-db.student_import_queue.student_password.filter_in = lambda value : Util.encrypt(value)
-db.student_import_queue.student_password.filter_out = lambda value : Util.decrypt(value)
+db.student_import_queue.student_password.filter_in = lambda value: Util.encrypt(value)
+db.student_import_queue.student_password.filter_out = lambda value: Util.decrypt(value)
 
 db.define_table("student_ad_import_status",
                 Field("user_id")
@@ -389,7 +359,7 @@ db.define_table("faculty_canvas_import_status",
                 )
 
 db.define_table("faculty_excel_uploads",
-                Field("excel_file",'upload', length=128, autodelete=True),
+                Field("excel_file", 'upload', length=128, autodelete=True),
                 auth.signature
                 )
 
@@ -410,11 +380,13 @@ db.define_table('media_file_import_queue',
                 Field('media_type', 'string', default='video', requires=IS_IN_SET(['video', 'song'])),
                 Field('category', 'string'),
                 Field('tags', 'list:string'),
-                Field('media_file', 'upload', length=64, autodelete=True, uploadseparate=True, requires=IS_NOT_EMPTY()),
+                Field('media_file', 'upload', length=64, autodelete=True, uploadseparate=True,
+                      requires=IS_NOT_EMPTY()),
                 Field('width', 'integer', default=0),
                 Field('height', 'integer', default=0),
                 Field('quality', 'string', default='normal', requires=IS_IN_SET(['normal', 'low', 'high'])),
-                Field('status', 'string', default='queued', requires=IS_IN_SET(['queued', 'processing', 'done'])),
+                Field('status', 'string', default='queued',
+                      requires=IS_IN_SET(['queued', 'processing', 'done'])),
                 auth.signature
                 )
 
@@ -432,9 +404,39 @@ db.define_table('media_files',
                 Field('views', 'integer', default=0),
                 auth.signature
                 )
-
 # Indexes
 db.executesql('CREATE INDEX IF NOT EXISTS media_guid_idx ON media_files (media_guid);')
+
+
+db.define_table('document_import_queue',
+                Field('document_guid', 'string', default=str(uuid.uuid4()).replace('-', '')),
+                Field('title', 'string', requires=IS_NOT_EMPTY()),
+                Field('description', 'string'),
+                Field('original_file_name', 'string'),
+                Field('media_type', 'string', default='document', requires=IS_IN_SET(['document'])),
+                Field('category', 'string'),
+                Field('tags', 'list:string'),
+                Field('document_file', 'upload', length=64, autodelete=True, uploadseparate=True,
+                      requires=IS_NOT_EMPTY()),
+                Field('status', 'string', default='queued',
+                      requires=IS_IN_SET(['queued', 'processing', 'done'])),
+                auth.signature
+                )
+
+db.define_table('document_files',
+                Field('document_guid', 'string', default=str(uuid.uuid4()).replace('-', '')),
+                Field('title', 'string', requires=IS_NOT_EMPTY()),
+                Field('description', 'string'),
+                Field('original_file_name', 'string'),
+                Field('media_type', 'string', default='document', requires=IS_IN_SET(['document'])),
+                Field('category', 'string'),
+                Field('tags', 'list:string'),
+                Field('views', 'integer', default=0),
+                auth.signature
+                )
+# Indexes
+db.executesql('CREATE INDEX IF NOT EXISTS document_guid_idx ON document_files (document_guid);')
+
 
 db.define_table('playlist',
                 Field('playlist_guid', 'string', default=str(uuid.uuid4()).replace('-', '')),
@@ -501,7 +503,8 @@ db.define_table('ope_laptop_firewall_rules',
                 Field('program', 'string', default='', label="Program (path to exe or blank)"),
                 Field('service', 'string', default='', label="Service (short name or blank)"),
                 Field('description', 'string', default=''),
-                Field('fw_enable', 'string', default='yes', requires=IS_IN_SET(['yes', 'no']), label="Enable (yes or no)"),
+                Field('fw_enable', 'string', default='yes', requires=IS_IN_SET(['yes', 'no']),
+                      label="Enable (yes or no)"),
                 Field('profile', 'string', default='any', requires=IS_IN_SET(['any', 'public', 'private', 'domain'])),
                 Field('localip', 'string', default=''),
                 Field('remoteip', 'string', default=''),
@@ -509,10 +512,13 @@ db.define_table('ope_laptop_firewall_rules',
                 Field('remoteport', 'string', default='any'),  # , requires=[IS_IN_SET(['any'], IS_INT_IN_RANGE(1, 65535))], label="Remote Port (port number or any, rpc, rpc-epmap, iphttps, toredo)"),
                 Field('protocol', 'string', default='tcp'),  # , requires=[IS_IN_SET(['any', 'icmpv4', 'icmpv6', 'tcp', 'udp'], IS_INT_IN_RANGE(1, 65535))], label="Protocol (protocl number or any, icmpv4, icmpv6, tcp, udp)"),
                 Field('interfacetype', 'string', default='any', requires=IS_IN_SET(['any', 'wireless', 'lan', 'ras'])),
-                Field('rmtcomputergrp', 'string', default='', label="Rmtcomputergrp (SDDLString - see netsh advfirewall for more info)"),
+                Field('rmtcomputergrp', 'string', default='',
+                      label="Rmtcomputergrp (SDDLString - see netsh advfirewall for more info)"),
                 Field('rmtusrgrp', 'string', default='', label="Rmtusrgrp (same as Rmtcomputergrp)"),
                 Field('edge', 'string', default='no', requires=IS_IN_SET(['yes', 'deferapp', 'deferuser', 'no'])),
-                Field('fw_security', 'string', default='notrequired', requires=IS_IN_SET(['authenticate', 'authenc', 'authdynenc', 'authnoencap', 'notrequired']), label="Security (ISec options - default notrequired)"),
+                Field('fw_security', 'string', default='notrequired',
+                      requires=IS_IN_SET(['authenticate', 'authenc', 'authdynenc', 'authnoencap', 'notrequired']),
+                      label="Security (ISec options - default notrequired)"),
                 Field('can_modify', 'boolean', default=True, writable=False, readable=False),
                 )
 

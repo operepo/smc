@@ -60,10 +60,10 @@ def playlists():
     headers = {}  # {'media_file_import_queue.modified_on':'Queued On' }
     # rows = db(query).select()
     playlist_grid = SQLFORM.grid(query,
-                                              editable=True, create=dict(parent=False, child=True),
-                                              deletable=True,csv=False,links=links,links_in_grid=True,
-                                              details=False,searchable=False,
-                                              orderby=[db.playlist.title], fields=fields, headers=headers)
+                                 editable=True, create=dict(parent=False, child=True),
+                                 deletable=True,csv=False,links=links,links_in_grid=True,
+                                 details=False,searchable=False,
+                                 orderby=[db.playlist.title], fields=fields, headers=headers)
 
     return dict(playlist_grid=playlist_grid)
 
@@ -72,7 +72,7 @@ def dl_media():
     message = ""
     movie_id = request.args(0)
     media_type = request.args(1)
-    if (movie_id != None):
+    if movie_id is not None:
         movie_id = movie_id.strip()
         # Load the movie from the database
         prefix = movie_id[0:2]
@@ -84,7 +84,7 @@ def dl_media():
         source_webm = URL('static', 'media' + "/" + prefix + "/" + movie_id + ".webm")
         
         media_file = db(db.media_files.media_guid==movie_id).select().first()
-        if (media_file != None):
+        if media_file is not None:
             title = media_file.title
             description = media_file.description
             tags = ",".join(media_file.tags)
@@ -92,14 +92,15 @@ def dl_media():
         pass
         
         target_folder = os.path.join(request.folder, 'static')
-        #target_folder='static'
+        # target_folder='static'
         target_folder = os.path.join(target_folder, 'media')
         target_folder = os.path.join(target_folder, prefix)
         fname = os.path.join(target_folder, movie_id + "." +  media_type)
         save_fname = title + "." + media_type
         message = "Downloading " + fname
         try:
-            return response.stream(open(fname, 'rb'), chunk_size=10**6, request=request, attachment=True, filename=save_fname) #, headers=None)
+            return response.stream(open(fname, 'rb'), chunk_size=10**6, request=request,
+                                   attachment=True, filename=save_fname)  # , headers=None)
         except Exception as ex:
             message = "Invalid File " + fname + " " + str(ex)
             pass
@@ -107,6 +108,7 @@ def dl_media():
         movie_id = ""
     
     return dict(message=message)
+
 
 def player():
     ret = start_process_videos()
@@ -117,30 +119,30 @@ def player():
     source_mobile_mp4 = URL('static', 'projekktor-1.3.09') + '/media/intro.mp4'
     source_webm = URL('static', 'projekktor-1.3.09') + '/media/intro.webm'
     
-    width = '640' #'720' ,'640'
-    height = '385' #'433' ,'385'
-    iframe_width = '650' #'650'
-    iframe_height = '405' #'405'
-    views=0
+    width = '640'  # '720' ,'640'
+    height = '385'  # '433' ,'385'
+    iframe_width = '650'  # '650'
+    iframe_height = '405'  # '405'
+    views = 0
     
-    title=""
-    description=""
+    title = ""
+    description = ""
     tags = ""
     # default to off
     autoplay = "false"
-    if (request.vars.autoplay == "true"):
+    if request.vars.autoplay == "true":
         autoplay = "true"
     
     is_mobile = request.vars.get('m', 'false')
     
     movie_id = request.args(0)
-    if (movie_id != None):
+    if movie_id is not None:
         movie_id = movie_id.strip()
         # Load the movie from the database
         prefix = movie_id[0:2]
         poster = getMediaPoster(movie_id) # URL('static', 'media' + "/" + prefix + "/" + movie_id + ".poster.png")
         source_ogg = URL('static', 'media' + "/" + prefix + "/" + movie_id + ".ogv")
-        if (is_mobile == "true"):
+        if is_mobile == "true":
             source_mp4 = URL('static', 'media' + "/" + prefix + "/" + movie_id + ".mobile.mp4")
         else:
             source_mp4 = URL('static', 'media' + "/" + prefix + "/" + movie_id + ".mp4")
@@ -148,19 +150,23 @@ def player():
         source_webm = URL('static', 'media' + "/" + prefix + "/" + movie_id + ".webm")
         
         media_file = db(db.media_files.media_guid==movie_id).select().first()
-        if (media_file != None):
+        if media_file is not None:
             title = media_file.title
             description = media_file.description
             tags = ",".join(media_file.tags)
             views = media_file.views
-            if (views == None):
+            if views is None:
                 views = 0
             db(db.media_files.media_guid==movie_id).update(views=views+1)
         pass
     else:
         movie_id = ""
     
-    return dict(poster=poster, source_ogg=source_ogg, source_mp4=source_mp4, source_mobile_mp4=source_mobile_mp4, source_webm=source_webm, movie_id=movie_id, width=width, height=height, title=title,description=description, tags=tags, autoplay=autoplay, iframe_width=iframe_width, iframe_height=iframe_height, views=views)
+    return dict(poster=poster, source_ogg=source_ogg, source_mp4=source_mp4,
+                source_mobile_mp4=source_mobile_mp4, source_webm=source_webm,
+                movie_id=movie_id, width=width, height=height, title=title,
+                description=description, tags=tags, autoplay=autoplay,
+                iframe_width=iframe_width, iframe_height=iframe_height, views=views)
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
@@ -169,7 +175,8 @@ def upload_media():
     
     # rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.media_file_import_queue, showid=False,
-                   fields=['title', 'description', 'category', 'tags', 'media_file'], _name="queue_media").process(formname="queue_media")
+                   fields=['title', 'description', 'category', 'tags', 'media_file'],
+                   _name="queue_media").process(formname="queue_media")
     
     import_form = SQLFORM.factory(submit_button="Import Videos", _name="import_videos").process(formname="import_videos")
     if import_form.accepted:
@@ -195,38 +202,126 @@ def upload_media():
     return dict(form=form, ret=ret, import_form=import_form)
 
 
+@auth.requires(
+    auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
+def upload_document():
+    w2py_folder = request.env.web2py_path
+    app_folder = os.path.join(w2py_folder, "applications", "smc")
+
+    form = SQLFORM(db.document_import_queue, showid=False,
+                   fields=['title', 'description', 'category', 'tags', 'document_file'],
+                   _name="queue_document").process(formname="queue_document")
+
+    if form.accepted:
+        # Saved
+        new_id = form.vars.id
+        original_file_name = form.vars.document_file
+        db(db.document_import_queue.id == new_id).update(original_file_name=original_file_name)
+        db.commit()
+        document_file = db(db.document_import_queue.id == new_id).select().first()
+
+        # Copy the file to the documents folder
+        tmp_path = db.document_import_queue.document_file.retrieve_file_properties(
+            db.document_import_queue(new_id).document_file)['path']
+        # NOTE Has stupid databases/../uploads in the path, replace databases/../ with nothing
+        tmp_path = tmp_path.replace("\\", "/").replace('databases/../', '')
+        uploads_folder = os.path.join(w2py_folder, tmp_path)
+        input_file = os.path.join(uploads_folder, document_file.document_file).replace("\\", "/")
+
+        file_guid = document_file.document_guid.replace('-', '')
+
+        target_folder = os.path.join(app_folder, 'static')
+
+        target_folder = os.path.join(target_folder, 'documents')
+
+        file_prefix = file_guid[0:2]
+
+        target_folder = os.path.join(target_folder, file_prefix)
+        target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
+
+        try:
+            os.makedirs(target_folder)
+        except OSError as message:
+            pass
+
+        # Copy the file
+        try:
+            shutil.copyfile(input_file, target_file)
+        except Exception as ex:
+            err = "ERROR COPYING FILE! " + str(ex)
+
+        db.document_files.insert(title=document_file.title,
+                                 document_guid=document_file.document_guid.replace('-', ''),
+                                 description=document_file.description,
+                                 original_file_name=document_file.original_file_name,
+                                 media_type=document_file.media_type,
+                                 category=document_file.category,
+                                 tags=document_file.tags,
+                                 )
+
+        # media_file.update(status='done')
+        db(db.document_import_queue.id == new_id).delete()
+
+        db.commit()
+
+        # Dump meta data to the folder along side the files
+        # This can be used for export/import
+        meta = {'title': document_file.title, 'document_guid': document_file.document_guid.replace('-', ''),
+                'description': document_file.description, 'original_file_name': document_file.original_file_name,
+                'media_type': document_file.media_type, 'category': document_file.category,
+                'tags': dumps(document_file.tags)}
+
+        meta_json = dumps(meta)
+        f = os.open(target_file + ".json", os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+        os.write(f, meta_json)
+        os.close(f)
+
+        response.flash = "Document Uploaded"  # + str(result)
+        pass
+    elif form.errors:
+        response.flash = "Error! "  # + str(form.errors)
+    else:
+        # response.flash = "Process Queue: " + str(ret)
+        pass
+
+    ret = ""
+    return locals()  # dict(form=form, ret=ret)
+
+
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
 def multi_upload_media():
     ret = start_process_videos()
     
-    #rows = db().select(db.my_app_settings.ALL)
+    # rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.media_file_import_queue, showid=False,
-                   fields=['title', 'description', 'category', 'tags', 'media_file'], _name="queue_media").process(formname="queue_media")
-    
-    
-    if (form.accepted):
+                   fields=['title', 'description', 'category', 'tags', 'media_file'],
+                   _name="queue_media").process(formname="queue_media")
+
+    if form.accepted:
         # Saved
         new_id = form.vars.id
         original_file_name = form.vars.media_file
         db(db.media_file_import_queue.id==new_id).update(original_file_name=original_file_name)
         db.commit()
-        result = scheduler.queue_task('process_media_file', pvars=dict(media_id=new_id), timeout=18000, immediate=True, sync_output=5, group_name="process_videos")
-        response.flash = "Media File Queued!" # + str(result)
+        result = scheduler.queue_task('process_media_file', pvars=dict(media_id=new_id),
+                                      timeout=18000, immediate=True, sync_output=5, group_name="process_videos")
+        response.flash = "Media File Queued!"  # + str(result)
         pass
-    elif (form.errors):
-        response.flash = "Error! " #+ str(form.errors)
+    elif form.errors:
+        response.flash = "Error! "  # + str(form.errors)
     else:
-        #response.flash = "Process Queue: " + str(ret)
+        # response.flash = "Process Queue: " + str(ret)
         pass
-    
-    
+
     ret = ""
     return dict(form=form, ret=ret)
+
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))    
 def upload_ajax_callback():
     return response.json({ 'success': 'true'})
-    
+
+
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
 def process_queue():
     ret = start_process_videos()
@@ -250,39 +345,46 @@ def process_queue():
     
     maxtextlengths = {'media_file_import_queue.title': '80', 'media_file_import_queue.media_guid': '80'}
     
-    #rows = db(query).select()
-    process_grid = SQLFORM.grid(query,editable=False, create=False, deletable=True,csv=False,links=links,links_in_grid=True,details=False,searchable=False,orderby=[~db.media_file_import_queue.modified_on], fields=fields, headers=headers, maxtextlengths=maxtextlengths)
+    # rows = db(query).select()
+    process_grid = SQLFORM.grid(query, editable=False, create=False, deletable=True, csv=False,
+                                links=links, links_in_grid=True, details=False, searchable=False,
+                                orderby=[~db.media_file_import_queue.modified_on], fields=fields,
+                                headers=headers, maxtextlengths=maxtextlengths)
     return dict(process_grid=process_grid)
+
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
 def reset_queued_item():
     ret = start_process_queue()
     media_id = request.args(0)
     
-    if (media_id > 0):
+    if media_id > 0:
         # Kill any existing tasks
         q1 = '{"media_id": "' + str(media_id) + '"}'
         q2 = '{"media_id": ' + str(media_id) + '}'
         db_scheduler((db_scheduler.scheduler_task.vars==q1) | (db_scheduler.scheduler_task.vars==q2)).delete()
         # Start a new task
-        result = scheduler.queue_task('process_media_file', pvars=dict(media_id=media_id), timeout=18000, immediate=True, sync_output=5, group_name="process_videos")
-        response.flash = "Media File Queued!" #+ str(result)
+        result = scheduler.queue_task('process_media_file', pvars=dict(media_id=media_id),
+                                      timeout=18000, immediate=True, sync_output=5, group_name="process_videos")
+        response.flash = "Media File Queued!"  # + str(result)
     redirect(URL('media', 'upload_media.html'))
-    
+
+
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def delete_media():
     media_guid = request.args(0)
-    if (media_guid == None):
+    if media_guid is None:
         redirect(URL('media', 'index'))
         return None
     media_file = db(db.media_files.media_guid==media_guid).select().first()
-    if (media_file == None):
+    if media_file is None:
         redirect(URL('media', 'index'))
         return None
     media_title = media_file.title
-    delete_button = SQLFORM.factory(submit_button="Delete Media File", _name="delete_media_file").process(formname="delete_media_file")
+    delete_button = SQLFORM.factory(submit_button="Delete Media File",
+                                    _name="delete_media_file").process(formname="delete_media_file")
     
-    if (delete_button.accepted):
+    if delete_button.accepted:
         # Delete DB entries
         db(db.media_files.media_guid==media_guid).delete()
         # Remove files
@@ -326,21 +428,22 @@ def delete_media():
     
     return dict(media_title=media_title, delete_button=delete_button)
 
+
 def wmplay():    
-    poster = "" # URL('static', 'projekktor-1.3.09') + '/media/intro.png'
+    poster = ""  # URL('static', 'projekktor-1.3.09') + '/media/intro.png'
     source_ogg = URL('static', 'projekktor-1.3.09') + '/media/intro.ogv'
     source_mp4 = URL('static', 'projekktor-1.3.09') + '/media/intro.mp4'
     source_mobile_mp4 = URL('static', 'projekktor-1.3.09') + '/media/intro.mp4'
     source_webm = URL('static', 'projekktor-1.3.09') + '/media/intro.webm'
     
-    width = '640' #'720' ,'640'
-    height = '385' #'433' ,'385'
-    iframe_width = '650' #'650'
-    iframe_height = '405' #'405'
-    views=0
+    width = '640'  # '720' ,'640'
+    height = '385'  # '433' ,'385'
+    iframe_width = '650'  # '650'
+    iframe_height = '405'  # '405'
+    views = 0
     
-    title=""
-    description=""
+    title = ""
+    description = ""
     tags = ""
     autoplay = "false"
     if request.vars.autoplay == "true":
@@ -363,9 +466,10 @@ def wamap_import():
     # Number of new vids found
     new_vids = 0
     
-    download_wamap = SQLFORM.factory(submit_button="Run WAMAP Import Tool", _name="download_wamap").process(formname="download_wamap")
+    download_wamap = SQLFORM.factory(submit_button="Run WAMAP Import Tool",
+                                     _name="download_wamap").process(formname="download_wamap")
     
-    result=None
+    result = None
     if download_wamap.accepted:
         result = find_wamap_videos()  # wamap_import_run()
         response.flash = "WAMAP download started - videos being processed."  # + str(ret)
@@ -389,7 +493,8 @@ def fix_previous_wamap_import_video_links():
     db_wamap.close()
     
     # Run a delete scheduler so that it removes the old files
-    result = scheduler.queue_task('remove_old_wamap_video_files', timeout=18000, repeats=1, period=0, immediate=True, sync_output=5, group_name="wamap_delete")
+    result = scheduler.queue_task('remove_old_wamap_video_files', timeout=18000, repeats=1,
+                                  period=0, immediate=True, sync_output=5, group_name="wamap_delete")
     
     # Start the scheduler process
     ret = start_process_queue_wamap_delete()

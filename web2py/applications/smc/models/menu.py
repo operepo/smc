@@ -26,11 +26,13 @@ response.google_analytics_id = None
 response.menu = [
     (T('Home'), False, URL('default', 'index'), []),
     (T('Media'), False, URL('media', 'index'), [
-            (T('Media Library'), False, URL('media','index')),
-            # (T('Playlists'), False, URL('media','playlists')),
-            (T('Upload Media'), False, URL('media','upload_media')),
-            (T('WAMAP Import'), False, URL('media','wamap_import')),
-        ]),
+        (T('Media Library'), False, URL('media', 'index')),
+        (T('Document Library'), False, URL('media', 'documents')),
+        # (T('Playlists'), False, URL('media','playlists')),
+        (T('Upload Media'), False, URL('media', 'upload_media')),
+        (T('Upload Document'), False, URL('media', 'upload_document')),
+        (T('WAMAP Import'), False, URL('media', 'wamap_import')),
+    ]),
     (SPAN('Students', _class='highlighted'), False, URL('student', 'index'), [
             (T('Change Password'), False, URL('student','changepassword'))
         ]),
