@@ -1,0 +1,47 @@
+{{extend 'layout.html'}}
+
+<a href="javascript: history.back();" style="font-size: 10px; ">&lt;-- Back to document library</a>
+
+        <br /><br />
+<IMG src="{{=poster}}" />
+<h1>{{=title}}</h1>
+
+<b>Tags:</b> {{=tags}}  <br />
+<b>Description:</b> {{=description}}  <br />
+<b>Views:</b> {{=views}} <br />
+<b>Embed This Movie (Minimal Player - Recommended): </b>
+<div class='well'>
+	&lt;iframe width="{{=iframe_width}}" height="{{=iframe_height}}" src="{{=URL('media', 'player.load'+"/"+document_id, host=True)}}" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;
+</div>
+
+<b>Embed This Movie w auto play (Minimal Player): </b>
+<div class='well'>
+	&lt;iframe width="{{=iframe_width}}" height="{{=iframe_height}}" src="{{=URL('media', 'player.load'+"/"+document_id, host=True)}}?autoplay=true" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;
+</div>
+
+<b>Link to This Movie (Minimal - Recommended): </b>
+<div class='well'>
+	{{=URL('media', 'player.load'+"/" + document_id, host=True)}}
+</div>
+
+<b>Link to This Movie w autoplay (Minimal): </b>
+<div class='well'>
+	{{=URL('media', 'player.load'+"/"+document_id, host=True)}}?autoplay=true
+</div>
+
+<b>Link to This Movie (Player with Details): </b>
+<div class='well'>
+	{{=URL('media', 'player'+"/"+document_id, host=True)}}
+</div>
+
+<b>Embed This Movie (Player With Details): </b>
+<div class='well'>
+	&lt;iframe width="{{=iframe_width}}" height="{{=iframe_height}}" src="{{=URL('media', 'player'+"/"+document_id, host=True)}}" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;
+</div>
+
+
+<script type="text/javascript">
+    $(document).ready(function() {
+
+    });
+    </script>

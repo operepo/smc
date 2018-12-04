@@ -40,6 +40,43 @@ def index():
     return dict(media_grid=media_grid)
 
 
+def documents():
+
+    query = (db.document_files)
+    links = []
+    if auth.has_membership('Faculty') or auth.has_membership('Administrators'):
+        links.append(dict(header=T(''), body=lambda row: A('[Delete]', _style='font-size: 10px; color: red;',
+                                                    _href=URL('media', 'delete_document', args=[row.document_guid],
+                                                    user_signature=True))))
+    links.append(dict(header=T(''), body=lambda row: A(TABLE(TR(
+                                                TD(IMG(_src=getDocumentThumb(row.document_guid), _style="width: 24px;"),
+                                                   _width=26),
+                                                TD(LABEL(row.title), _align="left")
+                                                )),
+                                                _href=URL('media', 'view_document', args=[row.document_guid],
+                                                user_signature=True))))
+    fields = [db.document_files.id, db.document_files.title, db.document_files.tags, db.document_files.description,
+              db.document_files.document_guid, db.document_files.category]  # [db.document_files.title]
+    maxtextlengths = {'document_files.title': '150', 'document_files.tags': '50', 'document_files.description': '150'}
+
+    # Hide columns
+    db.document_files.id.readable = False
+    db.document_files.title.readable = False
+    db.document_files.document_guid.readable = False
+    db.document_files.original_file_name.readable = False
+    db.document_files.media_type.readable = False
+
+    # rows = db(query).select()
+    document_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False,
+                              csv=False, details=False,
+                              searchable=True, orderby=[~db.document_files.modified_on],
+                              fields=fields, paginate=15,
+                              links=links, links_placement='left', links_in_grid=True,
+                              maxtextlengths=maxtextlengths)
+
+    return dict(document_grid=document_grid)
+
+
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def playlists():
     
@@ -157,7 +194,7 @@ def player():
             views = media_file.views
             if views is None:
                 views = 0
-            db(db.media_files.media_guid==movie_id).update(views=views+1)
+            db(db.media_files.media_guid == movie_id).update(views=views+1)
         pass
     else:
         movie_id = ""
@@ -166,6 +203,46 @@ def player():
                 source_mobile_mp4=source_mobile_mp4, source_webm=source_webm,
                 movie_id=movie_id, width=width, height=height, title=title,
                 description=description, tags=tags, autoplay=autoplay,
+                iframe_width=iframe_width, iframe_height=iframe_height, views=views)
+
+
+def view_document():
+
+    width = '640'  # '720' ,'640'
+    height = '385'  # '433' ,'385'
+    iframe_width = '650'  # '650'
+    iframe_height = '405'  # '405'
+    views = 0
+
+    title = ""
+    description = ""
+    tags = ""
+    # default to off
+
+    document_id = request.args(0)
+    if document_id is not None:
+        document_id = document_id.strip()
+        # Load the doc from the database
+        prefix = document_id[0:2]
+        poster = getDocumentThumb(document_id)  # URL('static', 'media' + "/" + prefix + "/" + movie_id + ".poster.png")
+        source_doc = URL('static', 'documents/' + prefix + "/" + document_id)
+
+        document_file = db(db.document_files.document_guid == document_id).select().first()
+        if document_file is not None:
+            title = document_file.title
+            description = document_file.description
+            tags = ",".join(document_file.tags)
+            views = document_file.views
+            if views is None:
+                views = 0
+            db(db.document_files.document_guid == document_id).update(views=views + 1)
+        pass
+    else:
+        document_id = ""
+
+    return dict(source_doc=source_doc, poster=poster,
+                document_id=document_id, width=width, height=height, title=title,
+                description=description, tags=tags,
                 iframe_width=iframe_width, iframe_height=iframe_height, views=views)
 
 
@@ -427,6 +504,49 @@ def delete_media():
         return None
     
     return dict(media_title=media_title, delete_button=delete_button)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def delete_document():
+    document_guid = request.args(0)
+    if document_guid is None:
+        redirect(URL('media', 'documents'))
+        return None
+    document_file = db(db.document_files.document_guid == document_guid).select().first()
+    if document_file is None:
+        redirect(URL('media', 'documents'))
+        return None
+    document_title = document_file.title
+    delete_button = SQLFORM.factory(submit_button="Delete Document",
+                                    _name="delete_document_file").process(formname="delete_document_file")
+
+    if delete_button.accepted:
+        # Delete DB entries
+        db(db.document_files.document_guid == document_guid).delete()
+        # Remove files
+        file_prefix = document_guid[0:2]
+        target_folder = os.path.join(request.folder, 'static')
+        target_folder = os.path.join(target_folder, 'documents')
+        target_folder = os.path.join(target_folder, file_prefix)
+
+        try:
+            os.remove(os.path.join(target_folder, document_guid))
+        except OSError:
+            pass
+        try:
+            os.remove(os.path.join(target_folder, document_guid + ".json"))
+        except:
+            pass
+        try:
+            os.remove(os.path.join(target_folder, document_guid + ".thumb.png"))
+        except:
+            pass
+
+        response.flash = "Document File Deleted"  # + str(ret)
+        redirect(URL('media', 'documents'))
+        return None
+
+    return dict(document_title=document_title, delete_button=delete_button)
 
 
 def wmplay():    
@@ -948,6 +1068,21 @@ def getMediaThumb(media_guid):
     thumb += '.thumb.png'
     if os.path.exists(thumb) is not True:
         url = URL('static', 'images/media_file.png')
+    return url
+
+
+def getDocumentThumb(document_guid):
+    if document_guid is None or document_guid == "":
+        return ""
+    prefix = document_guid[0:2]
+    url = URL('static', 'documents/' + prefix + '/' + document_guid + '.thumb.png')
+    thumb = os.path.join(request.folder, 'static')
+    thumb = os.path.join(thumb, 'documents')
+    thumb = os.path.join(thumb, prefix)
+    thumb = os.path.join(thumb, document_guid)
+    thumb += '.thumb.png'
+    if os.path.exists(thumb) is not True:
+        url = URL('static', 'images/document_file.png')
     return url
 
 
