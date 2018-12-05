@@ -4,6 +4,7 @@ import time
 import uuid
 import re
 import glob
+import mimetypes
 from gluon.contrib.simplejson import loads, dumps
 
 from pytube import YouTube
@@ -147,6 +148,54 @@ def dl_media():
     return dict(message=message)
 
 
+def dl_document():
+    message = ""
+    document_id = request.args(0)
+    if document_id is not None:
+        document_id = document_id.strip()
+        # Load the document from the database
+        prefix = document_id[0:2]
+
+        title = ""
+        source_url = URL('static', 'documents' + "/" + prefix + "/" + document_id)
+
+        document_file = db(db.document_files.document_guid == document_id).select().first()
+        media_type = ""
+        if document_file is not None:
+            title = document_file.title
+            description = document_file.description
+            tags = ",".join(document_file.tags)
+            views = document_file.views
+            original_file_name = document_file.original_file_name
+        pass
+        p, media_type = os.path.splitext(original_file_name)
+        mimetypes.init()
+        try:
+            content_type = mimetypes.types_map[media_type]
+        except Exception as ex:
+            content_type = "text/plain; err " + str(ex)
+        media_type = media_type.replace(".", "")
+
+        target_folder = os.path.join(request.folder, 'static')
+        # target_folder='static'
+        target_folder = os.path.join(target_folder, 'documents')
+        target_folder = os.path.join(target_folder, prefix)
+        fname = os.path.join(target_folder, document_id)
+        save_fname = title + "." + media_type
+        message = "Downloading " + fname
+        response.headers['Content-Type'] = content_type
+        try:
+            return response.stream(open(fname, 'rb'), chunk_size=10 ** 6, request=request,
+                                   attachment=True, filename=save_fname)  # , headers=None)
+        except Exception as ex:
+            message = "Invalid File " + fname + " " + str(ex)
+            pass
+    else:
+        document_id = ""
+
+    return dict(message=message)
+
+
 def player():
     ret = start_process_videos()
     
@@ -208,10 +257,10 @@ def player():
 
 def view_document():
 
-    width = '640'  # '720' ,'640'
-    height = '385'  # '433' ,'385'
-    iframe_width = '650'  # '650'
-    iframe_height = '405'  # '405'
+    width = '724'  # '640'  # '720' ,'640'
+    height = '600'  # '385'  # '433' ,'385'
+    iframe_width = '734'  # '650'
+    iframe_height = '620'  # '405'
     views = 0
 
     title = ""
@@ -225,7 +274,8 @@ def view_document():
         # Load the doc from the database
         prefix = document_id[0:2]
         poster = getDocumentThumb(document_id)  # URL('static', 'media' + "/" + prefix + "/" + movie_id + ".poster.png")
-        source_doc = URL('static', 'documents/' + prefix + "/" + document_id)
+        # source_doc = URL('static', 'documents/' + prefix + "/" + document_id)
+        source_doc = URL('media', 'dl_document/' + document_id)
 
         document_file = db(db.document_files.document_guid == document_id).select().first()
         if document_file is not None:
