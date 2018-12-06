@@ -266,6 +266,7 @@ def view_document():
     title = ""
     description = ""
     tags = ""
+    original_file_name = ""
     # default to off
 
     document_id = request.args(0)
@@ -282,6 +283,7 @@ def view_document():
             title = document_file.title
             description = document_file.description
             tags = ",".join(document_file.tags)
+            original_file_name = document_file.original_file_name
             views = document_file.views
             if views is None:
                 views = 0
@@ -290,10 +292,25 @@ def view_document():
     else:
         document_id = ""
 
+    can_preview = False
+    is_image = False
+    dl_link = A('Download', _href=URL('media','dl_document', args=[document_id]))
+    preview_extensions = ["pdf", "odt", "fodt", "ott", "odp", "fodp", "otp", "ods", "fods", "ots"]
+    image_extensions = ["jpg", "png", "gif"]
+
+    p, media_type = os.path.splitext(original_file_name)
+    media_type = media_type.replace(".", "").lower()
+
+    if media_type in preview_extensions:
+        can_preview = True
+    if media_type in image_extensions:
+        is_image = True
+
     return dict(source_doc=source_doc, poster=poster,
                 document_id=document_id, width=width, height=height, title=title,
                 description=description, tags=tags,
-                iframe_width=iframe_width, iframe_height=iframe_height, views=views)
+                iframe_width=iframe_width, iframe_height=iframe_height, views=views,
+                can_preview=can_preview, is_image=is_image, dl_link=dl_link)
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
@@ -332,6 +349,7 @@ def upload_media():
 @auth.requires(
     auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
 def upload_document():
+    last_doc = ""
     w2py_folder = request.env.web2py_path
     app_folder = os.path.join(w2py_folder, "applications", "smc")
 
@@ -403,6 +421,8 @@ def upload_document():
         os.write(f, meta_json)
         os.close(f)
 
+        last_doc = A(document_file.title, _href=URL('media', 'view_document', args=[file_guid]))
+
         response.flash = "Document Uploaded"  # + str(result)
         pass
     elif form.errors:
@@ -412,7 +432,7 @@ def upload_document():
         pass
 
     ret = ""
-    return locals()  # dict(form=form, ret=ret)
+    return dict(form=form, ret=ret, last_doc=last_doc)
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
