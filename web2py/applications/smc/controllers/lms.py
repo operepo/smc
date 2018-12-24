@@ -79,6 +79,7 @@ def credential_student():
     hash = ""
     user_name = None
     full_name = ""
+    canvas_url = AppSettings.GetValue('canvas_server_url', 'https://canvas.ed')
     # Get the user in question
     if len(request.args) > 0:
         user_name = request.args[0]
@@ -94,7 +95,7 @@ def credential_student():
         else:
             # User doesn't exit!
             msg = "Invalid User!"
-    return dict(key=key, msg=msg, hash=hash, full_name=full_name)
+    return dict(key=key, msg=msg, hash=hash, full_name=full_name, canvas_url=canvas_url)
 
 
 def get_firewall_list():
