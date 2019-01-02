@@ -256,6 +256,7 @@ def config_canvas_settings():
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False, _name="canvas_config",
                    fields=["canvas_import_enabled", "canvas_access_token", "canvas_secret",
+                           "canvas_database_server_url",
                            "canvas_database_password", "canvas_server_url",
                            "canvas_student_quota", "canvas_faculty_quota",
                            "canvas_auto_create_courses"]).process(formname="canvas_config")

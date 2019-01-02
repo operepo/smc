@@ -87,7 +87,7 @@ class Canvas:
         # Grab the environ pw firs, if that isn't set, then grab the admin pw
         canvas_db_pw = AppSettings.GetValue('canvas_database_password', "<ENV>")
         # canvas.ed, postgresql will also work in docker
-        pg_hostname = AppSettings.GetValue('canvas_server_url', 'https://canvas.ed')
+        pg_hostname = AppSettings.GetValue('canvas_database_server_url', 'postgresql')
         try:
             if canvas_db_pw == "" or canvas_db_pw == "<ENV>":
                 canvas_db_pw = str(os.environ["IT_PW"]) + ""
