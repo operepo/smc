@@ -142,19 +142,22 @@ class AD:
 
     @staticmethod
     def ConnectAD():
+        AD.Init()
+    
         if AD._ldap_enabled is not True:
             # LDap isn't on - skip this part
+            AD._errors.append("----- LDAP DISABLED")
             return False
 
         if AD._ldap_connect_time < datetime.today() - timedelta(seconds=AD._ldap_keepalive_timeout) \
                 or AD._ldap is None or AD._ldap.bound is False:
             # if it has been too long since this connection was established, force a reconnect
             # print("---- CLOSING LDAP CONNECTION")
+            AD._errors.append("----- CLOSING LDAP CONNECTION")
             AD.Close()
         
         ret = False
-        AD.Init()
-
+        
         if AD._ldap is None or AD._ldap.bound is False:
             # print("--- MAKING NEW LDAP CONNECTION")
             # AD._ldap = ldap.initialize(AD._ldap_protocol + AD._ldap_server)
@@ -184,10 +187,13 @@ class AD:
                 #  AD._ldap_login_pass.encode(AD._ad_encoding))
                 AD._ldap = Connection(AD._ldap_session, AD._ldap_login_user.encode(AD._ad_encoding),
                                       AD._ldap_login_pass.encode(AD._ad_encoding),
-                                      authentication=NTLM,
+                                      authentication=ldap3.NTLM,
                                       auto_bind=True,
                                       raise_exceptions=True,
                                       auto_referrals=False,
+                                      client_strategy=ldap3.RESTARTABLE,
+                                      #receive_timeout=60,
+                                      
                                       )
                 ret = True
                 AD._ldap_connect_time = datetime.today()
@@ -759,7 +765,13 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             AD._errors.append("<B>User not found - setting password aborted:</b> " + str(user_dn))
             return ret
 
-        unicode_pw = ('\"' + password + '\"').encode('utf-16-le')  # unicode('\"' + password + '\"', 'iso-8859-1')
+        try:
+            unicode_pw = ('\"' + password + '\"').encode('utf-16-le', 'replace')  # unicode('\"' + password + '\"', 'iso-8859-1')
+        except:
+            # Error - probly encryption key changed? Reset pw back to default
+            new_pw = AppSettings.GetValue('student_password_pattern', 'SID<user_id>!')
+            new_pw = new_pw.replace('<user_id>', user_dn)
+            unicode_pw = ('\"' + new_pw + '\"').encode('utf-16-le', 'ignore')  # unicode('\"' + password + '\"', 'iso-8859-1')
         # password_value = unicode_pw.encode('utf-16-le')
         # add_pass = [(ldap.MOD_REPLACE, 'unicodePwd', [unicode_pw])]
         add_pass = {'unicodePwd': [(ldap3.MODIFY_REPLACE, [unicode_pw])]}

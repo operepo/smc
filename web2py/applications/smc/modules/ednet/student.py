@@ -591,7 +591,7 @@ class Student:
                 ret += " - <span style='color: red; font-weight: bolder;'>Disabled</span>"
 
         # Finished importing, clean up after AD
-        AD.Close()
+        #AD.Close()
         
         if ret == "":
             ret = "Done!"
