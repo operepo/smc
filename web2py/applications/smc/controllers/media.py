@@ -7,6 +7,8 @@ import glob
 import mimetypes
 from gluon.contrib.simplejson import loads, dumps
 
+from ednet.canvas import Canvas
+
 from pytube import YouTube
 
 
@@ -435,7 +437,9 @@ def upload_document():
     return dict(form=form, ret=ret, last_doc=last_doc)
 
 
-@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
+@auth.requires(auth.has_membership('Faculty') or
+               auth.has_membership('Administrators') or
+               auth.has_membership('Media Upload'))
 def multi_upload_media():
     ret = start_process_videos()
     
@@ -464,31 +468,40 @@ def multi_upload_media():
     return dict(form=form, ret=ret)
 
 
-@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))    
+@auth.requires(auth.has_membership('Faculty') or
+               auth.has_membership('Administrators') or
+               auth.has_membership('Media Upload'))
 def upload_ajax_callback():
-    return response.json({ 'success': 'true'})
+    return response.json({'success': 'true'})
 
 
-@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
+@auth.requires(auth.has_membership('Faculty') or
+               auth.has_membership('Administrators') or
+               auth.has_membership('Media Upload'))
 def process_queue():
     ret = start_process_videos()
     
     query = (db.media_file_import_queue)
-    fields = [db.media_file_import_queue.title, db.media_file_import_queue.status, db.media_file_import_queue.modified_on,  db.media_file_import_queue.id, db.media_file_import_queue.media_guid]
+    fields = [db.media_file_import_queue.title, db.media_file_import_queue.status,
+              db.media_file_import_queue.modified_on,  db.media_file_import_queue.id,
+              db.media_file_import_queue.media_guid]
     links = [
-            (dict(header=T('Title'), body=lambda row: A(row.title, _href=(URL('media', 'player', extension=False) + "/" + row.media_guid) , _target='blank'  ) ) ),
-            (dict(header=T('Status'),body=lambda row: DIV( getTaskStatus(row.id), BR(), A('Re-Queue', _href=URL('media', 'reset_queued_item', args=[row.id], user_signature=True)) ) ) ),
-            (dict(header=T('Queued On'), body=lambda row: row.modified_on  ) ),
-            (dict(header=T('Progress'), body=lambda row: getTaskProgress(row.id) ) ),
+            (dict(header=T('Title'), body=lambda row: A(row.title,
+                                                        _href=(URL('media', 'player', extension=False) + "/"
+                                                               + row.media_guid), _target='blank'))),
+            (dict(header=T('Status'), body=lambda row: DIV(getTaskStatus(row.id), BR(), A('Re-Queue',
+                _href=URL('media', 'reset_queued_item', args=[row.id], user_signature=True))))),
+            (dict(header=T('Queued On'), body=lambda row: row.modified_on)),
+            (dict(header=T('Progress'), body=lambda row: getTaskProgress(row.id))),
             ]
     
-    db.media_file_import_queue.id.readable=False
-    db.media_file_import_queue.media_guid.readable=False
-    db.media_file_import_queue.modified_on.readable=True
-    db.media_file_import_queue.status.readable=False
-    db.media_file_import_queue.title.readable=False
-    db.media_file_import_queue.modified_on.readable=False    
-    headers = {'media_file_import_queue.modified_on':'Queued On' }
+    db.media_file_import_queue.id.readable = False
+    db.media_file_import_queue.media_guid.readable = False
+    db.media_file_import_queue.modified_on.readable = True
+    db.media_file_import_queue.status.readable = False
+    db.media_file_import_queue.title.readable = False
+    db.media_file_import_queue.modified_on.readable = False
+    headers = {'media_file_import_queue.modified_on': 'Queued On'}
     
     maxtextlengths = {'media_file_import_queue.title': '80', 'media_file_import_queue.media_guid': '80'}
     
@@ -569,7 +582,7 @@ def delete_media():
         except:
             pass
         
-        response.flash = "Media File Deleted" # + str(ret)
+        response.flash = "Media File Deleted"  # + str(ret)
         redirect(URL('media', 'index'))
         return None
     
@@ -648,7 +661,10 @@ def wmplay():
     else:
         movie_id = ""
     
-    return dict(poster=poster, source_ogg=source_ogg, source_mp4=source_mp4, source_mobile_mp4=source_mobile_mp4, source_webm=source_webm, movie_id=movie_id, width=width, height=height, title=title,description=description, tags=tags, autoplay=autoplay, iframe_width=iframe_width, iframe_height=iframe_height)
+    return dict(poster=poster, source_ogg=source_ogg, source_mp4=source_mp4, source_mobile_mp4=source_mobile_mp4,
+                source_webm=source_webm, movie_id=movie_id, width=width, height=height, title=title,
+                description=description, tags=tags, autoplay=autoplay, iframe_width=iframe_width,
+                iframe_height=iframe_height)
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
@@ -676,7 +692,8 @@ def fix_previous_wamap_import_video_links():
     rows = db(db.wamap_questionset).select()
     for row in rows:
         # Update extref fields back to original if they contain admin.correctionsed.com/wamap/
-        sql = "UPDATE imas_questionset SET extref='" + row.extref_field + "' WHERE id='" + str(row.wamap_id) + "' and extref LIKE '%admin.correctionsed.com/media/wamap/%'"
+        sql = "UPDATE imas_questionset SET extref='" + row.extref_field + "' WHERE id='" + \
+              str(row.wamap_id) + "' and extref LIKE '%admin.correctionsed.com/media/wamap/%'"
         db_wamap.executesql(sql)
         changed.append(sql)
     
@@ -760,7 +777,9 @@ def find_wamap_videos():
     
     # Fix a few links that are incorrect
     # youtube link w out the http:// in imas_questionset.extref
-    db_wamap.executesql("UPDATE imas_questionset SET `extref`=REPLACE(`extref`, 'video!!www.yout', 'video!!http://www.yout') WHERE `extref` like '%video!!www.yout%' ")
+    db_wamap.executesql("UPDATE imas_questionset SET " +
+                        "`extref`=REPLACE(`extref`, 'video!!www.yout', 'video!!http://www.yout') " +
+                        " WHERE `extref` like '%video!!www.yout%' ")
 
     # Adjust IFrame links in some places so they match up better with videos
     # <iframe src="https://admin.correctionsed.com/media/wmplay/45390ef384be4107a7bf2c2da31ce79a"
@@ -770,45 +789,87 @@ def find_wamap_videos():
     # imas_inlinetext.text
     table_name = "imas_inlinetext"
     col_name = "text"
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"560\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"420\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name + "` like '%src=\"//www.yout%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"560\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"420\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name +
+                        "` like '%src=\"//www.yout%' ")
     # imas_questionset.qtext
     table_name = "imas_questionset"
     col_name = "qtext"
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"560\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"420\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name + "` like '%src=\"//www.yout%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"560\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"420\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name +
+                        "` like '%src=\"//www.yout%' ")
     # imas_questionset.extref
     table_name = "imas_questionset"
     col_name = "extref"
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"560\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"420\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name + "` like '%src=\"//www.yout%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"560\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"420\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name +
+                        "` like '%src=\"//www.yout%' ")
     # imas_questionset.control
     table_name = "imas_questionset"
     col_name = "control"
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"560\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"420\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name + "` like '%src=\"//www.yout%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"560\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"420\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name +
+                        "` like '%src=\"//www.yout%' ")
     # imas_assessments.intro
     table_name = "imas_assessments"
     col_name = "intro"
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"560\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"420\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name + "` like '%src=\"//www.yout%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"560\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"420\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name +
+                        "` like '%src=\"//www.yout%' ")
     # imas_linkedtext.summary
     table_name = "imas_linkedtext"
     col_name = "summary"
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"560\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"420\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name + "` like '%src=\"//www.yout%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"560\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"420\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name +
+                        "` like '%src=\"//www.yout%' ")
     # imas_linkedtext.text
     table_name = "imas_linkedtext"
     col_name = "text"
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"560\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name + "` like '%width=\"420\" height=\"315\"%' ")
-    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name + "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name + "` like '%src=\"//www.yout%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"560\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"560\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'width=\"420\" height=\"315\"', 'width=\"655\" height=\"410\"') WHERE `" + col_name +
+                        "` like '%width=\"420\" height=\"315\"%' ")
+    db_wamap.executesql("UPDATE " + table_name + " SET `" + col_name + "`=REPLACE(`" + col_name +
+                        "`, 'src=\"//www.yout', 'src=\"http://www.yout') WHERE `" + col_name +
+                        "` like '%src=\"//www.yout%' ")
     
     db_wamap.commit()
     
@@ -952,11 +1013,11 @@ def find_wamap_videos():
         if qi is None:
             # Entry isn't there, insert it
             db.wamap_qimages.insert(source_id=row[0],
-                source_qsetid=row[1],
-                source_var=row[2],
-                source_filename=row[3],
-                source_alttext=row[4],
-                downloaded=False
+                                    source_qsetid=row[1],
+                                    source_var=row[2],
+                                    source_filename=row[3],
+                                    source_alttext=row[4],
+                                    downloaded=False
                 )
         else:
             # Entry is there, update it
@@ -1054,7 +1115,8 @@ def wamap_import_run():
     
     # Start the task to download youtube videos
     db(db.wamap_questionset).update(processed=False)
-    result = scheduler.queue_task('process_wamap_video_links', timeout=18000, repeats=(db(db.wamap_questionset).count()/50), period=0, immediate=True)
+    result = scheduler.queue_task('process_wamap_video_links', timeout=18000,
+                                  repeats=(db(db.wamap_questionset).count()/50), period=0, immediate=True)
         
     return dict(new_vids=new_vids)
 
@@ -1072,7 +1134,8 @@ def wamap_import_status():
 def start_process_queue():
     return "Deprecated"
     # Start the worker process
-    cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_scheduler.py') + " > /dev/null 2>&1 &"
+    cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_scheduler.py') + \
+          " > /dev/null 2>&1 &"
     p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     # ret = p.wait()
@@ -1086,7 +1149,8 @@ def start_process_queue():
 
 def start_process_queue_wamap_delete():
     # Start the worker process
-    # cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_wamap_delete_scheduler.py') + " > /dev/null 2>&1 &"
+    # cmd = "/usr/bin/nohup /usr/bin/python " + \
+    # os.path.join(request.folder, 'static/scheduler/start_wamap_delete_scheduler.py') + " > /dev/null 2>&1 &"
     # p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     # ret = p.wait()
@@ -1100,7 +1164,8 @@ def start_process_queue_wamap_delete():
 
 def start_process_videos():
     # Start the worker process
-    # cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_process_video_scheduler.py') + " > /dev/null 2>&1 &"
+    # cmd = "/usr/bin/nohup /usr/bin/python " + \
+    # os.path.join(request.folder, 'static/scheduler/start_process_video_scheduler.py') + " > /dev/null 2>&1 &"
     # p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     # ret = p.wait()
@@ -1114,7 +1179,8 @@ def start_process_videos():
 
 def start_wamap_videos():
     # Start the worker process
-    # cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_wamap_videos_scheduler.py') + " > /dev/null 2>&1 &"
+    # cmd = "/usr/bin/nohup /usr/bin/python " + \
+    # os.path.join(request.folder, 'static/scheduler/start_wamap_videos_scheduler.py') + " > /dev/null 2>&1 &"
     # p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     # ret = p.wait()
@@ -1174,7 +1240,9 @@ def getMediaPoster(media_guid):
 def getTaskStatus(media_id):
     q1 = '{"media_id": "' + str(media_id) + '"}'
     q2 = '{"media_id": ' + str(media_id) + '}'
-    task = db_scheduler((db_scheduler.scheduler_task.vars==q1) | (db_scheduler.scheduler_task.vars==q2)).select(orderby=db_scheduler.scheduler_task.last_run_time).first()
+    task = db_scheduler((db_scheduler.scheduler_task.vars==q1) |
+                        (db_scheduler.scheduler_task.vars==q2)).select(
+                        orderby=db_scheduler.scheduler_task.last_run_time).first()
     ret = "<not run>"
     if task is not None:
         ret = str(task.status) + " (" + str(task.last_run_time) + ")"
@@ -1186,10 +1254,38 @@ def getTaskProgress(media_id):
     
     q1 = '{"media_id": "' + str(media_id) + '"}'
     q2 = '{"media_id": ' + str(media_id) + '}'
-    task = db_scheduler((db_scheduler.scheduler_task.vars==q1) | (db_scheduler.scheduler_task.vars==q2)).select(join=db_scheduler.scheduler_run.on(db_scheduler.scheduler_task.id==db_scheduler.scheduler_run.task_id), orderby=db_scheduler.scheduler_task.last_run_time).first()
+    task = db_scheduler((db_scheduler.scheduler_task.vars==q1) |
+                        (db_scheduler.scheduler_task.vars==q2)).select(join=db_scheduler.scheduler_run.on(
+                         db_scheduler.scheduler_task.id==db_scheduler.scheduler_run.task_id),
+                         orderby=db_scheduler.scheduler_task.last_run_time).first()
     ret = ""
     if task is not None:
         # Get the output from the run record
         ret = str(task.scheduler_run.run_output)
     
     return ret
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def conversion():
+
+    return dict(message='Tools for converting canvas courses for offline use')
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace():
+
+    course_list = []
+
+    courses = Canvas.get_courses_for_faculty(auth.user.username)
+
+    for c in courses:
+        course_list.append(OPTION(c["name"], _value=c['id']))
+
+    course_select = SELECT(course_list, _id="course_select")
+
+    find_replace_form = course_select
+    server_url = Canvas._canvas_server_url
+
+    return dict(find_replace_form=find_replace_form, server_url=server_url)
+

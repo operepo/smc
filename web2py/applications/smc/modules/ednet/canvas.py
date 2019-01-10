@@ -73,10 +73,13 @@ class Canvas:
         
         if Canvas._connect_run is not True:
             # Get the admin user to see if things are working
-            Canvas._admin_user = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/self")
+            Canvas._admin_user = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                                "/api/v1/accounts/self")
             if Canvas._admin_user is None or Canvas._admin_user.get('id', None) is None:
                 # Invalid user
-                Canvas._errors.append("<b>Canvas Error</b> - Check that your server url and DEV key is properly configured (" + str(Canvas._canvas_server_url) + ")")
+                Canvas._errors.append(
+                    "<b>Canvas Error</b> - Check that your server url and DEV key is properly configured (" +
+                    str(Canvas._canvas_server_url) + ")")
                 return False
             # Canvas._errors.append("Result: " + str(Canvas._admin_user))
         
@@ -209,7 +212,9 @@ class Canvas:
         sql = "DELETE FROM access_tokens WHERE purpose='OPEAdminIntegration'"
         db_canvas.executesql(sql)
         hm_token = HMAC.new(canvas_secret, access_token, SHA).hexdigest()
-        sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint, created_at, updated_at ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + "', 'OPEAdminIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now());"
+        sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint," + \
+              " created_at, updated_at ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + \
+              "', 'OPEAdminIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now());"
         db_canvas.executesql(sql)
         db_canvas.commit()
         # msg += "   RAN SQL: " + sql
@@ -256,7 +261,9 @@ class Canvas:
         for row in rows:
             # Have the auth user, lookup the student info
             account_id = row["id"]
-            si_rows = db(db.student_info.account_id == account_id).select(db.student_info.canvas_auth_token, db.student_info.student_password, db.student_info.student_name)
+            si_rows = db(db.student_info.account_id == account_id).select(db.student_info.canvas_auth_token,
+                                                                          db.student_info.student_password,
+                                                                          db.student_info.student_name)
             for si_row in si_rows:
                 access_token = si_row["canvas_auth_token"]
                 student_pw = si_row["student_password"]
@@ -274,7 +281,9 @@ class Canvas:
         sql = "DELETE FROM access_tokens WHERE purpose='OPEStudentIntegration' and user_id='" + str(user_id) + "'"
         db_canvas.executesql(sql)
         hm_token = HMAC.new(canvas_secret, access_token, SHA).hexdigest()
-        sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint, created_at, updated_at ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + "', 'OPEStudentIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now() );"
+        sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint," + \
+              " created_at, updated_at ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + \
+              "', 'OPEStudentIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now() );"
         db_canvas.executesql(sql)
         db_canvas.commit()
         # msg += "   RAN SQL: " + sql
@@ -311,28 +320,35 @@ class Canvas:
             return ret
         
         # See if the user exists
-        canvas_user = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/users/sis_user_id:" + user_name + "/profile")
+        canvas_user = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                     "/api/v1/users/sis_user_id:" + user_name + "/profile")
         if 'sis_user_id' not in canvas_user:
             # Key does not exist, so no user, need to create it.
             # ret += "<b>Creating new canvas user: </b>" + user_name + "<br />"
-            ### Try creating user with the API, fall back to SIS Import if needed (SIS Import handles deleted users too)
+            # Try creating user with the API, fall back to SIS Import if needed (SIS Import handles deleted users too)
             p = dict()
             p["user[name]"] = str.encode(last_name + ", " + first_name + " (" + user_name + ")").encode('utf-8')
             p["user[short_name]"] = str.encode(last_name + ", " + first_name + " (" + user_name + ")").encode('utf-8')
-            p["user[sortable_name]"] = str.encode(last_name + ", " + first_name + " (" + user_name + ")").encode('utf-8')
+            p["user[sortable_name]"] = str.encode(last_name + ", " + first_name + " (" +
+                                                  user_name + ")").encode('utf-8')
             p["pseudonym[unique_id]"] = str.encode(user_name).encode('utf-8')
             p["pseudonym[password]"] = str.encode(password).encode('utf-8')
             p["pseudonym[sis_user_id]"] = str.encode(user_name).encode('utf-8')
             p["pseudonym[send_confirmation]"] = 0
             
-            r = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/self/users", method="POST", params=p)
+            r = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/self/users",
+                               method="POST", params=p)
             
             # See if it worked
-            canvas_user = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/users/sis_user_id:" + user_name + "/profile")
+            canvas_user = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                         "/api/v1/users/sis_user_id:" + user_name + "/profile")
             if 'sis_user_id' not in canvas_user:
-                ##### Didn't work, could be deleted, do SIS import
+                # Didn't work, could be deleted, do SIS import
                 import_str = "user_id,login_id,password,full_name,sortable_name,short_name,email,status\n"
-                parts = [ str(user_name), str(user_name), str(password), str(last_name) + ", " + str(first_name) + " (" + str(user_name) + ")", str(last_name) + ", " + str(first_name) + " (" + str(user_name) + ")", str(last_name) + ", " + str(first_name) + " (" + str(user_name) + ")", email, "active" ]
+                parts = [str(user_name), str(user_name), str(password), str(last_name) + ", " + str(first_name) +
+                         " (" + str(user_name) + ")", str(last_name) + ", " + str(first_name) + " (" +
+                         str(user_name) + ")", str(last_name) + ", " + str(first_name) + " (" + str(user_name) + ")",
+                         email, "active"]
 
                 tmp_str = "\",\"".join(parts)
                 import_str += "\"" + tmp_str + "\"\n"
@@ -347,9 +363,11 @@ class Canvas:
                 p["attachment"] = "users.csv"
 
                 # Set header for file
-                files = { 'attachment': ('users.csv', import_str, 'text/csv') }
+                files = {'attachment': ('users.csv', import_str, 'text/csv')}
                 h = dict()
-                r = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/sis_imports", method="POST", params=p, files=files, headers=h)
+                r = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                   "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/sis_imports",
+                                   method="POST", params=p, files=files, headers=h)
                 # ret += "IMPORT STATUS: " + str(r) + "<br />"
 
                 # Wait a touch to let this job finish as it runs async
@@ -359,13 +377,16 @@ class Canvas:
                 if 'id' in r:
                     while tries < max_tries:
                         time.sleep(0.5)
-                        progress = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/sis_imports/" + str(r["id"]))
+                        progress = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                                  "/api/v1/accounts/" + str(Canvas._admin_user["id"]) +
+                                                  "/sis_imports/" + str(r["id"]))
                         # ret += "<b>Import Job:</b>" + str(tries) + " " + str(progress) + "<br/>"
                         tries += 1
                         if "progress" in progress and progress["progress"] == 100:
                             break
                     if tries >= max_tries:
-                        Canvas._errors.append("<B>Error creating user! CSV Import Error - timeout waiting for import job</b> <br/>")
+                        Canvas._errors.append(
+                            "<B>Error creating user! CSV Import Error - timeout waiting for import job</b> <br/>")
                         return None
                     pass
 
@@ -374,7 +395,8 @@ class Canvas:
         p["user[name]"] = last_name + ", " + first_name + " (" + user_name + ")"
         p["user[short_name]"] = last_name + ", " + first_name + " (" + user_name + ")"
         p["user[sortable_name]"] = last_name + ", " + first_name + " (" + user_name + ")"
-        canvas_user = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/users/sis_user_id:" + user_name, method="PUT", params=p)
+        canvas_user = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                     "/api/v1/users/sis_user_id:" + user_name, method="PUT", params=p)
         
         Canvas.SetPassword(user_name, password)
         
@@ -388,14 +410,17 @@ class Canvas:
             return True
         
         # Loop through accounts and change passwords
-        account_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/users/sis_user_id:" + user_name + "/logins")
+        account_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                      "/api/v1/users/sis_user_id:" + user_name + "/logins")
         for account in account_list:
             if "account_id" in account:
                 q = dict()
                 q["login[unique_id]"] = user_name
                 q["login[password]"] = new_password
                 q["login[sis_user_id]"] = user_name
-                Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/" + str(account["account_id"]) + "/logins/" + str(account["id"]), method="PUT", params=q)
+                Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                               "/api/v1/accounts/" + str(account["account_id"]) + "/logins/" + str(account["id"]),
+                               method="PUT", params=q)
                 # Canvas._errors.append("Set Password for acct: [[" + str(account) + "]]")
         
         return True  # True
@@ -434,8 +459,10 @@ class Canvas:
                     # print("Marking class as completed " + str(enrolled_class['course_id']))
                     q = dict()
                     q["task"] = "conclude"
-                    api = "/api/v1/courses/" + str(enrolled_class["course_id"]) + "/enrollments/" + str(enrolled_class["id"])
-                    Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, api, method="DELETE", params=q)
+                    api = "/api/v1/courses/" + str(enrolled_class["course_id"]) + "/enrollments/" + \
+                          str(enrolled_class["id"])
+                    Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                   api, method="DELETE", params=q)
                 else:
                     # print("Class is too new, not completing " + str(enrolled_class['course_id']) +
                     #       "  " + str(e_time) + " / " + str(complete_before))
@@ -444,7 +471,8 @@ class Canvas:
                 # Delete faculty from a class
                 q = dict()
                 q["task"] = "delete"
-                api = "/api/v1/courses/" + str(enrolled_class["course_id"]) + "/enrollments/" + str(enrolled_class["id"])
+                api = "/api/v1/courses/" + str(enrolled_class["course_id"]) + "/enrollments/" + \
+                      str(enrolled_class["id"])
                 Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, api, method="DELETE", params=q)
         return True
     
@@ -456,7 +484,9 @@ class Canvas:
         ret = True
         
         # Get the course info
-        course_info = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/courses/sis_course_id:" + str(course_name))
+        course_info = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                     "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/courses/sis_course_id:" +
+                                     str(course_name))
         if 'account_id' not in course_info:
             # Course doesn't exist?!
             if Canvas._canvas_auto_create_courses is not True:
@@ -501,11 +531,12 @@ class Canvas:
         if 'id' in canvas_user:
             # Do the enrollment
             q = dict()
-            q["enrollment[user_id]"] = canvas_user["id"] # User id in the canvas system
+            q["enrollment[user_id]"] = canvas_user["id"]  # User id in the canvas system
             q["enrollment[type]"] = "StudentEnrollment"
             q["enrollment[enrollment_state]"] = "active"  # active or invite
             q["enrollment[notify]"] = "0"
-            res = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/courses/" + str(course_info["id"]) + "/enrollments", method="POST", params=q)
+            res = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/courses/" +
+                                 str(course_info["id"]) + "/enrollments", method="POST", params=q)
             # log += "<b>Enrolled into course: </b>" + str(course_info["id"]) +
             # " " + str(enroll_class) + " - " + str(res) + "<br/>"
         else:
@@ -528,7 +559,9 @@ class Canvas:
             return False
         
         # Get the course info
-        course_info = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/courses/sis_course_id:" + str(enroll_class))
+        course_info = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                     "/api/v1/accounts/" + str(Canvas._admin_user["id"]) + "/courses/sis_course_id:" +
+                                     str(enroll_class))
         if 'account_id' not in course_info:
             # Course doesn't exist?!
             Canvas._errors.append("<b>Course Doesn't Exist, skipping enrollment: </b>" + str(enroll_class) + "<br />")
@@ -541,7 +574,8 @@ class Canvas:
             q["enrollment[type]"] = "TeacherEnrollment"
             q["enrollment[enrollment_state]"] = "active"  # active or invite
             q["enrollment[notify]"] = "0"
-            res = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/courses/" + str(course_info["id"]) + "/enrollments", method="POST", params=q)
+            res = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                 "/api/v1/courses/" + str(course_info["id"]) + "/enrollments", method="POST", params=q)
             # log += "<b>Enrolled into couse: </b>" + str(course_info["id"]) +
             # " " + str(enroll_class) + " - " + str(res) + "<br/>"
         else:
@@ -572,8 +606,12 @@ class Canvas:
         return ret
 
     @staticmethod
-    def APICall(server, dev_key, api_call, method="GET", params=dict(), files=None, headers=dict()):
+    def APICall(server, dev_key, api_call, method="GET", params=None, files=None, headers=None):
         ret = dict()
+        if params is None:
+            params = dict()
+        if headers is None:
+            headers = dict()
         response_items = dict()
 
         canvas_url = server + api_call
@@ -607,8 +645,10 @@ class Canvas:
         return ret
 
     @staticmethod
-    def GetQueryStringFromDictionary(params=dict()):
+    def GetQueryStringFromDictionary(params=None):
         ret = ""
+        if params is None:
+            params = dict()
 
         for key in params.keys():
             v = params[key];
@@ -618,6 +658,22 @@ class Canvas:
                 ret += key + "=" + v
 
         return ret
+
+    @staticmethod
+    def get_courses_for_faculty(faculty):
+        Canvas.Init()
+        # if faculty is 'admin', then get all courses
+        api = "/api/v1/users/sis_user_id:" + faculty + "/courses"
+        if faculty == 'admin':
+            api = "/api/v1/accounts/1/courses"
+
+        p = dict()
+        p["per_page"] = 200000
+
+        current_enrollment = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                            api, params=p)
+
+        return current_enrollment
 
 
 ###### End CanvasAPIClass

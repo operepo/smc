@@ -31,6 +31,9 @@ response.menu = [
         # (T('Playlists'), False, URL('media','playlists')),
         (T('Upload Media'), False, URL('media', 'upload_media')),
         (T('Upload Document'), False, URL('media', 'upload_document')),
+        (T('Offline Conversion'), False, URL('media', 'conversion'), [
+            (T('Find/Replace'), False, URL('media', 'find_replace')),
+         ]),
         (T('WAMAP Import'), False, URL('media', 'wamap_import')),
     ]),
     (SPAN('Students', _class='highlighted'), False, URL('student', 'index'), [
