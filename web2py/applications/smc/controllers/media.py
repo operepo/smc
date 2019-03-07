@@ -259,10 +259,10 @@ def player():
 
 def view_document():
 
-    width = '724'  # '640'  # '720' ,'640'
-    height = '600'  # '385'  # '433' ,'385'
-    iframe_width = '734'  # '650'
-    iframe_height = '620'  # '405'
+    width = '100%' # '724'  # '640'  # '720' ,'640'
+    height = '700'  # '385'  # '433' ,'385'
+    iframe_width = '100%' # '734'  # '650'
+    iframe_height = '720'  # '405'
     views = 0
 
     title = ""
