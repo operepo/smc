@@ -9,3 +9,5 @@ xlrd
 psutil
 pycryptodome
 urllib3
+psycopg2
+PyMySQL
