@@ -769,7 +769,7 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             unicode_pw = ('\"' + password + '\"').encode('utf-16-le', 'replace')  # unicode('\"' + password + '\"', 'iso-8859-1')
         except:
             # Error - probly encryption key changed? Reset pw back to default
-            new_pw = AppSettings.GetValue('student_password_pattern', 'SID<user_id>!')
+            new_pw = AppSettings.GetValue('student_password_pattern', 'Sid<user_id>!')
             new_pw = new_pw.replace('<user_id>', user_dn)
             unicode_pw = ('\"' + new_pw + '\"').encode('utf-16-le', 'ignore')  # unicode('\"' + password + '\"', 'iso-8859-1')
         # password_value = unicode_pw.encode('utf-16-le')

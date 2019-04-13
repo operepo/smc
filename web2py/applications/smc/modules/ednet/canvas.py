@@ -256,6 +256,7 @@ class Canvas:
         hash = ""
         student_name = ""
         student_pw = ""
+		uid = ""
         account_id = 0
         rows = db(db.auth_user.username == user_name).select(db.auth_user.id)
         for row in rows:
@@ -263,11 +264,22 @@ class Canvas:
             account_id = row["id"]
             si_rows = db(db.student_info.account_id == account_id).select(db.student_info.canvas_auth_token,
                                                                           db.student_info.student_password,
-                                                                          db.student_info.student_name)
+                                                                          db.student_info.student_name,
+																		  db.student_info.user_id)
             for si_row in si_rows:
                 access_token = si_row["canvas_auth_token"]
                 student_pw = si_row["student_password"]
                 student_name = si_row["student_name"]
+                uid = si_row["user_id"]
+                
+                # Deal w password if it is scrambled (bug in encryption left some passwords scrambled)
+            try:
+                # If pw ok, this works and we just move on
+                unicode_pw = ('\"' + student_pw + '\"').encode('utf-16-le', 'replace')
+            except:
+                # If scrambled pw, encoding w unicode will throw an error, setup the default pw.
+                new_pw = AppSettings.GetValue('student_password_pattern', 'Sid<user_id>!')
+                student_pw = new_pw.replace('<user_id>', uid)
         if access_token == "" or access_token == "<ENV>":
             # None present, make a new one
             access_token = hashlib.sha224(str(uuid.uuid4()).replace('-', '').encode('utf-8')).hexdigest()
