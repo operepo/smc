@@ -256,7 +256,7 @@ class Canvas:
         hash = ""
         student_name = ""
         student_pw = ""
-		uid = ""
+        uid = ""
         account_id = 0
         rows = db(db.auth_user.username == user_name).select(db.auth_user.id)
         for row in rows:
@@ -265,7 +265,7 @@ class Canvas:
             si_rows = db(db.student_info.account_id == account_id).select(db.student_info.canvas_auth_token,
                                                                           db.student_info.student_password,
                                                                           db.student_info.student_name,
-																		  db.student_info.user_id)
+                                                                          db.student_info.user_id)
             for si_row in si_rows:
                 access_token = si_row["canvas_auth_token"]
                 student_pw = si_row["student_password"]
