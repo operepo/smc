@@ -1274,18 +1274,55 @@ def conversion():
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace():
+    server_url = Canvas._canvas_server_url
 
+    # TODO - Force module reload so we don't have to kill python process
+    #import module_reload
+    reload_str = ""
+    #reload_str = module_reload.ReloadModules()
+    # Make sure we init the module
+    #Canvas.Init()
+
+    return dict(server_url=server_url)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_step_1():
     course_list = []
+    course_dict = dict()
 
     courses = Canvas.get_courses_for_faculty(auth.user.username)
 
     for c in courses:
+        course_dict[str(c['id'])] = c["name"]
         course_list.append(OPTION(c["name"], _value=c['id']))
 
-    course_select = SELECT(course_list, _id="course_select")
+    course_select = SELECT(course_list, _name="current_course", _id="current_course")
 
-    find_replace_form = course_select
+    form = FORM(TABLE(TR("Choose A Course: ", course_select),
+                      TR("", INPUT(_type="submit", _value="Next")))).process()
+
+    if form.accepts(request.vars):
+        cname = course_dict[str(form.vars.current_course)]
+        cid = form.vars.current_course
+        redirect(URL("find_replace_step_2.load", vars=dict(current_course=cid,
+                                                           current_course_name=cname)))
+        # reload_str = form.vars.current_course
+
+    return dict(form=form)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_step_2():
     server_url = Canvas._canvas_server_url
 
-    return dict(find_replace_form=find_replace_form, server_url=server_url)
+    current_course = request.vars["current_course"]
+    current_course_name = request.vars["current_course_name"]
 
+    if current_course is None:
+        redirect(URL("find_replace"))
+
+    form = None
+
+    return dict(form=form, current_course=current_course, current_course_name=current_course_name,
+                server_url=server_url)
