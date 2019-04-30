@@ -32,9 +32,14 @@ response.menu = [
         (T('Upload Media'), False, URL('media', 'upload_media')),
         (T('Upload Document'), False, URL('media', 'upload_document')),
         (T('Offline Conversion'), False, URL('media', 'conversion'), [
+            (T('Pull From YouTube'), False, URL('media', 'pull_from_youtube')),
             (T('Find/Replace'), False, URL('media', 'find_replace')),
          ]),
-        (T('WAMAP Import'), False, URL('media', 'wamap_import')),
+        (T('Media Utilities'), False, URL('media', 'utilities'), [
+            (T('Scan Media Files'), False, URL('media', 'scan_media_files')),
+            (T('WAMAP Import'), False, URL('media', 'wamap_import')),
+        ]),
+
     ]),
     (SPAN('Students', _class='highlighted'), False, URL('student', 'index'), [
             (T('Change Password'), False, URL('student','changepassword'))

@@ -1,0 +1,42 @@
+
+<script>
+$(function() {
+		//GetProcessQueue();
+		//window.setInterval(function() {GetProcessQueue();}, 500);
+		//window.setTimeout(GetProcessQueue, 500);
+    });
+
+	function GetProcessQueue() {
+		web2py_component('{{=URL('media', 'find_replace_step_youtube_progress.load')}}',
+                         target='process_queue_view');
+
+        // See if finished message is present
+        if ($("#yt_progress_status").length) {
+            if ($("#yt_progress_status").text().includes("Finished!")) {
+                // If we see finished, return without continuing to run
+                return;
+            }
+        }
+
+        // Schedule this to run again soon.
+        //window.setTimeout(GetProcessQueue, 500);
+	}
+</script>
+
+<h4>YouTube Link Finder</h4>
+<div>
+Finding YouTube links, downloading them and switching links for local SMC links.
+</div>
+
+<hr />
+<div>
+    <b>Using Course: {{=current_course_name + " (" + current_course + ")"}}</b>
+</div>
+
+<div id="process_queue" class='well'>
+	<div id="process_queue_view">
+		<img id="process_queue_progress_img" src="{{=URL('static', 'images/progress.gif') }}" />
+		{{=LOAD('media', 'find_replace_step_youtube_progress.load', ajax=True, user_signature=True)}}
+	</div>
+</div>
+

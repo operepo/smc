@@ -1,9 +1,9 @@
 
 <div>
-    Using Course: {{=current_course_name + " (" + current_course + ")"}}
+    <b>Using Course: {{=current_course_name + " (" + current_course + ")"}}</b>
 </div>
 
 <div>
-    {{=form}}
+    {{=form2}}
 </div>
 

@@ -1,11 +1,9 @@
 {{extend 'layout.html'}}
 
-<h1>Offline Course Conversion Tools - Find/Replace</h1>
+<h1>Offline Course Conversion Tools</h1>
+
 <div>
-	Find links in canvas courses and replace them with offline versions.
+    <b>Canvas Server: {{=server_url}}</b>
 </div>
-<h4>
-    Canvas Server: {{=server_url}}
-</h4>
 
 {{=LOAD('media', 'find_replace_step_1.load', ajax=True)}}

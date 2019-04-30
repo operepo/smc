@@ -687,5 +687,70 @@ class Canvas:
 
         return current_enrollment
 
+    @staticmethod
+    def get_page_list_for_course(course_id):
+        Canvas.Init()
 
+        api = "/api/v1/courses/" + str(course_id) + "/pages"
+
+        p = dict()
+        p["per_page"] = 20000
+
+        page_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                   api, params=p)
+
+        # Should be a list of pages, now get individual page bodies
+        page_bodies = dict()
+        for p in page_list:
+            # Need to make an API call to get the page body
+            page = Canvas.get_page_for_course(course_id, p['url'])
+
+            page_bodies[p['url']] = page["body"]
+
+        return page_bodies
+
+    @staticmethod
+    def get_page_for_course(course_id, page_url):
+        Canvas.Init()
+
+        api = "/api/v1/courses/" + str(course_id) + "/pages/" + page_url
+
+        p = dict()
+        p["per_page"] = 20000
+
+        page = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                   api, params=p)
+
+        return page
+
+    @staticmethod
+    def update_page_for_course(course_id, page_url, page):
+        # Post page to course
+        res = False
+
+        Canvas.Init()
+
+        api = "/api/v1/courses/" + str(course_id) + "/pages/" + page_url
+
+        p = dict()
+        # p["per_page"] = 20000
+        p = page
+
+        page = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                              api, params=p, method="PUT")
+
+        return res
+
+    @staticmethod
+    def replace_value_in_course_page(course_id, page_url, find_value, replace_value):
+        # First - get the original page info
+        page = Canvas.get_page_for_course(course_id, page_url)
+
+        new_page = dict()
+        new_page["wiki_page[body]"] = page["body"].replace(find_value, replace_value)
+
+        # Now submit page back to canvas
+        Canvas.update_page_for_course(course_id, page_url, new_page)
+
+        pass
 ###### End CanvasAPIClass

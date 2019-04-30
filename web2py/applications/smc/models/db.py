@@ -76,8 +76,8 @@ if tmp:
 # On initial run since startup (runs every time app starts, set migrate=true&lazy_tables=false
 initial_run = cache.ram("initial_run", lambda: True, time_expire=36000)
 if initial_run is True:  # and request.is_scheduler is not None and request.is_schedule is not True:
-    print("Startup - first run, force db migration - is scheduler / local: "
-          + str(request.is_scheduler) + "/" + str(request.is_local))
+    # print("Startup - first run, force db migration - is scheduler / local: "
+    #      + str(request.is_scheduler) + "/" + str(request.is_local))
     # Force db migrate on first run
     lazy_tables = False
     migrate = True

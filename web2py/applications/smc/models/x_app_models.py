@@ -403,6 +403,8 @@ db.define_table('media_files',
                 Field('height', 'integer', default=0),
                 Field('quality', 'string', default='normal', requires=IS_IN_SET(['normal', 'low', 'high'])),
                 Field('views', 'integer', default=0),
+                Field('youtube_url', 'string', default=''),
+                Field('needs_downloading', 'boolean', default=False),
                 auth.signature
                 )
 # Indexes

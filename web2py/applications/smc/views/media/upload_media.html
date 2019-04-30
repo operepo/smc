@@ -20,6 +20,9 @@ $(function() {
 <p>
 	It may take several minutes to an hour for media files to process. Larger files will take longer. When they finish they will dissapear from the processing queue below and show up in the media library.
 </p>
+<p>
+    To pull videos strait from YouTube, use the <a href="{{=URL('media', 'pull_from_youtube')}}">Offline Conversion -> Pull From YouTube</a> tool.
+</p>
 {{ =form }}
 
 <hr />
@@ -35,9 +38,9 @@ $(function() {
 	</div>
 	<!--LOAD('media', 'process_queue.load',content=DIV(IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='float: left;'), P('Getting Process Queue')), ajax=True) -->
 </div>
-
-<h1>Import Media Files</h1>
+<hr />
+<h4>Scan Media Files</h4>
 <p>
-    Start a process that will check for media files that aren't in the database. Usefull if you uploaded a batch of movies from another source.
+    Start a process that will check for media files that aren't in the database. Useful if you uploaded a batch of movies from another SMC Server.
 </p>
-{{=import_form}}
+<a href="{{=URL('media', 'scan_media_files')}}">Scan Media Files Tool</a>

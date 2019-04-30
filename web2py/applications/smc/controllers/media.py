@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import tempfile
 import time
 import uuid
 import re
@@ -101,8 +102,8 @@ def playlists():
     # rows = db(query).select()
     playlist_grid = SQLFORM.grid(query,
                                  editable=True, create=dict(parent=False, child=True),
-                                 deletable=True,csv=False,links=links,links_in_grid=True,
-                                 details=False,searchable=False,
+                                 deletable=True, csv=False,links=links,links_in_grid=True,
+                                 details=False, searchable=False,
                                  orderby=[db.playlist.title], fields=fields, headers=headers)
 
     return dict(playlist_grid=playlist_grid)
@@ -323,12 +324,7 @@ def upload_media():
     form = SQLFORM(db.media_file_import_queue, showid=False,
                    fields=['title', 'description', 'category', 'tags', 'media_file'],
                    _name="queue_media").process(formname="queue_media")
-    
-    import_form = SQLFORM.factory(submit_button="Import Videos", _name="import_videos").process(formname="import_videos")
-    if import_form.accepted:
-        result = scheduler.queue_task('update_media_database_from_json_files', pvars=dict(), timeout=18000, immediate=True, sync_output=5, group_name="process_videos")
-        response.flash = "Import process started!"  # + str(result)
-        
+
     if form.accepted:
         # Saved
         new_id = form.vars.id
@@ -345,7 +341,7 @@ def upload_media():
         pass
 
     ret = ""
-    return dict(form=form, ret=ret, import_form=import_form)
+    return dict(form=form, ret=ret)
 
 
 @auth.requires(
@@ -490,7 +486,7 @@ def process_queue():
                                                         _href=(URL('media', 'player', extension=False) + "/"
                                                                + row.media_guid), _target='blank'))),
             (dict(header=T('Status'), body=lambda row: DIV(getTaskStatus(row.id), BR(), A('Re-Queue',
-                _href=URL('media', 'reset_queued_item', args=[row.id], user_signature=True))))),
+                 _href=URL('media', 'reset_queued_item', args=[row.id], user_signature=True))))),
             (dict(header=T('Queued On'), body=lambda row: row.modified_on)),
             (dict(header=T('Progress'), body=lambda row: getTaskProgress(row.id))),
             ]
@@ -1093,6 +1089,24 @@ def getPDFURLS(txt):
     return ret
 
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def utilities():
+    # Just a landing page
+    return locals()
+
+
+def scan_media_files():
+    # Find all media files and make sure they are in the database.
+    form = SQLFORM.factory(submit_button="Import Videos", _name="import_videos").process(
+        formname="import_videos")
+    if form.accepted:
+        result = scheduler.queue_task('update_media_database_from_json_files', pvars=dict(), timeout=18000,
+                                      immediate=True, sync_output=5, group_name="process_videos")
+        response.flash = "Import process started!"  # + str(result)
+
+    return dict(form=form)
+
+
 def wamap_import_run():
     result = find_wamap_videos()  # wamap_import_run()
     return True
@@ -1237,6 +1251,35 @@ def getMediaPoster(media_guid):
     return url
 
 
+def getYouTubeTaskStatus(media_guid):
+    q1 = '"media_guid": "' + str(media_guid) + '"'
+    q2 = '"media_guid": ' + str(media_guid) + ''
+    task = db_scheduler(db_scheduler.scheduler_task.vars.contains(q1) |
+                        db_scheduler.scheduler_task.vars.contains(q2)).select(
+        orderby=db_scheduler.scheduler_task.last_run_time).first()
+    ret = "<not run>"
+    if task is not None:
+        ret = str(task.status) + " (" + str(task.last_run_time) + ")"
+    return ret
+
+
+def getYouTubeTaskProgress(media_guid):
+    ret = ""
+
+    q1 = '"media_guid": "' + str(media_guid) + '"'
+    q2 = '"media_guid": ' + str(media_guid) + ''
+    task = db_scheduler(db_scheduler.scheduler_task.vars.contains(q1) |
+                        db_scheduler.scheduler_task.vars.contains(q2)).select(join=db_scheduler.scheduler_run.on(
+        db_scheduler.scheduler_task.id == db_scheduler.scheduler_run.task_id),
+        orderby=db_scheduler.scheduler_task.last_run_time).first()
+    ret = ""
+    if task is not None:
+        # Get the output from the run record
+        ret = str(task.scheduler_run.run_output)
+
+    return ret
+
+
 def getTaskStatus(media_id):
     q1 = '{"media_id": "' + str(media_id) + '"}'
     q2 = '{"media_id": ' + str(media_id) + '}'
@@ -1268,20 +1311,143 @@ def getTaskProgress(media_id):
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def conversion():
+    # Landing Page
+    return dict()
 
-    return dict(message='Tools for converting canvas courses for offline use')
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def pull_from_youtube():
+    # Form to pull videos from youtube
+    # NOTE - only works when online
+
+    return dict()
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def pull_from_youtube_step_1():
+    form = FORM(TABLE(TR("YouTube Link: ", INPUT(_type="text", _name="yt_url", requires=IS_NOT_EMPTY())),
+                      TR("", INPUT(_type="submit", _value="Next"))), keepvalues=True, _name="yt_step1")
+
+    if form.process(formname="yt_step1").accepted:
+        yt_url = form.vars.yt_url
+
+        if yt_url is None:
+            response.flash = "Invalid YouTube URL"
+            return dict(form1=form)
+
+        # Check if this video exists in the database already
+        vid = db(db.media_files.youtube_url==yt_url).select().first()
+        if vid is not None:
+            # Video exists already
+            response.flash = "Video already in SMC!"
+        else:
+            redirect(URL('media', 'pull_from_youtube_step_2.load', vars=dict(yt_url=yt_url), user_signature=True))
+    elif form.errors:
+        response.flash = "Form has errors!"
+
+    return dict(form1=form)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def pull_from_youtube_step_2():
+    yt_url = request.vars.yt_url
+    if yt_url is not None:
+        session.yt_url = yt_url
+    else:
+        yt_url = session.yt_url
+
+    yt = None
+    res = ''
+    try:
+        # Get yt video info
+        yt, stream, res = find_best_yt_stream(yt_url)
+
+    except Exception as ex:
+        response.flash = "Error getting YouTube Video - Are you online?\n " + str(yt_url) + " " + str(ex)
+        return dict(form2="Error finding video - reload page and try again.")
+
+    # NOTE - Need form name separate from other steps for form to work properly
+    form = FORM(TABLE(TR("YouTube Link:", INPUT(_type="text", _name="yt_url", _value=yt_url, _readonly=True)),
+                      TR("Title:", INPUT(_type="text", _name="title", _value=yt.title, requires=IS_NOT_EMPTY())),
+                      TR("Description:", TEXTAREA(_name="desc", value=yt.description)),
+                      TR("Category:", INPUT(_type="text", _name="category")),
+                      # TR("Keywords:", INPUT(_type="text", _name="keywords", value=    yt.keywords)),
+                      TR("", INPUT(_type="submit", _value="Download"))),
+                # INPUT(_type="hidden", _value=res, _name="res"),
+                # INPUT(_type="hidden", _value=yt.thumbnail_url, _name="thumbnail_url"),
+                # hidden=dict(res=res, thumbnail_url=yt.thumbnail_url),
+                keepvalues=True, _name="yt_step2", _action=URL('media', 'pull_from_youtube_step_2.load'))
+
+    if form.process(formname="yt_step2").accepted:
+        # Start download or get current db entry for this video
+        media_file = queue_up_yt_video(yt_url, yt, res, form.vars.category)
+        # Override the values we collected
+        media_file.update_record(title=form.vars.title, description=form.vars.desc)
+        db.commit()
+
+        response.flash = 'Video queued for download.'  # + str(result)
+
+        # Show a start over button
+        form = A('Download another video', _href=URL('media', 'pull_from_youtube.html   '))
+    elif form.errors:
+        response.flash = "ERROR " + str(form.errors)
+    else:
+        # response.flash = "Input your desired info and download the video."
+        pass
+
+    return dict(form2=form)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def pull_from_youtube_download_queue():
+
+    query = (db.media_files.youtube_url != "")
+    fields = [db.media_files.title, db.media_files.needs_downloading,
+              db.media_files.modified_on, db.media_files.id,
+              db.media_files.media_guid]
+    links = [
+        (dict(header=T('Title'), body=lambda row: A(row.title,
+                                                    _href=(URL('media', 'player', extension=False) + "/"
+                                                           + row.media_guid), _target='blank'))),
+        (dict(header=T('Status'), body=lambda row: DIV(getYouTubeTaskStatus(row.media_guid), ))),  # BR(), A('Re-Queue',
+                                                                              #        _href=URL('media',
+                                                                              #                  'reset_queued_item',
+                                                                              #                  args=[row.id],
+                                                                              #                  user_signature=True))))),
+        (dict(header=T('Queued On'), body=lambda row: row.modified_on)),
+        # Check if getTaskProgress is generic enough for this too?
+        (dict(header=T('Progress'), body=lambda row: getYouTubeTaskProgress(row.media_guid))),
+    ]
+
+    db.media_files.id.readable = False
+    db.media_files.media_guid.readable = False
+    db.media_files.modified_on.readable = True
+    db.media_files.needs_downloading.readable = False
+    db.media_files.title.readable = False
+    db.media_files.modified_on.readable = False
+    headers = {'media_files.modified_on': 'Queued On'}
+
+    maxtextlengths = {'media_files.title': '80', 'media_files.media_guid': '80'}
+
+    # rows = db(query).select()
+    process_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False, csv=False,
+                                links=links, links_in_grid=True, details=False, searchable=False,
+                                orderby=[~db.media_files.modified_on], fields=fields,
+                                headers=headers, maxtextlengths=maxtextlengths)
+    return dict(process_grid=process_grid)
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace():
+    Canvas.Init()
     server_url = Canvas._canvas_server_url
 
     # TODO - Force module reload so we don't have to kill python process
-    #import module_reload
+    # import module_reload
     reload_str = ""
-    #reload_str = module_reload.ReloadModules()
+    # reload_str = module_reload.ReloadModules()
     # Make sure we init the module
-    #Canvas.Init()
+    # Canvas.Init()
 
     return dict(server_url=server_url)
 
@@ -1297,32 +1463,264 @@ def find_replace_step_1():
         course_dict[str(c['id'])] = c["name"]
         course_list.append(OPTION(c["name"], _value=c['id']))
 
-    course_select = SELECT(course_list, _name="current_course", _id="current_course")
+    course_select = SELECT(course_list, _name="current_course", _id="current_course", _style="width: 600px;")
 
     form = FORM(TABLE(TR("Choose A Course: ", course_select),
-                      TR("", INPUT(_type="submit", _value="Next")))).process()
+                      TR("", INPUT(_type="submit", _value="Next"))), _name="fr_step1").process(formname="fr_step1")
 
-    if form.accepts(request.vars):
+    if form.accepted:
         cname = course_dict[str(form.vars.current_course)]
         cid = form.vars.current_course
         redirect(URL("find_replace_step_2.load", vars=dict(current_course=cid,
                                                            current_course_name=cname)))
         # reload_str = form.vars.current_course
 
-    return dict(form=form)
+    return dict(form1=form)
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace_step_2():
     server_url = Canvas._canvas_server_url
 
-    current_course = request.vars["current_course"]
-    current_course_name = request.vars["current_course_name"]
+    current_course = request.vars.current_course
+    current_course_name = request.vars.current_course_name
+
+    if current_course is not None:
+        session.fr_current_course = current_course
+    else:
+        current_course = session.fr_current_course
+
+    if current_course_name is not None:
+        session.fr_current_course_name = current_course_name
+    else:
+        current_course_name = session.fr_current_course_name
 
     if current_course is None:
-        redirect(URL("find_replace"))
+        redirect(URL("find_replace.html"))
 
-    form = None
+    fr_options = dict(
+        auto_youtube_tool="YouTube -> SMC Links (ONLY WORKS ONLINE)",
+        auto_google_docs_tool="Google Docs -> SMC Links (ONLY WORKS ONLINE)",
+        custom_regex="Custom Search/Replace RegEx (Not Done)",
+    )
 
-    return dict(form=form, current_course=current_course, current_course_name=current_course_name,
+    option_list = []
+    for o in fr_options:
+        option_list.append(OPTION(fr_options[o], _value=o))
+
+    options_select = SELECT(option_list, _name="fr_option", _style="width: 600px;")
+
+    form2 = FORM(TABLE(TR("Choose Tool: ", options_select),
+                      TR("", INPUT(_type="submit", _value="Next"))),
+                 _action=URL('media', 'find_replace_step_2.load')).process()
+
+    if form2.accepted:
+        # Save which option and redirect to that page
+        if form2.vars.fr_option == "auto_youtube_tool":
+            redirect(URL('media', 'find_replace_step_youtube.load'))
+            pass
+        elif form2.vars.fr_option == "auto_google_docs_tool":
+            response.flash = "Google"
+            pass
+        elif form2.vars.fr_option == "custom_regex":
+            response.flash = "RegEx"
+            pass
+        else:
+            response.flash = "Unknown Option!"
+        pass
+
+    return dict(form2=form2, current_course=current_course, current_course_name=current_course_name,
                 server_url=server_url)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_step_youtube():
+    server_url = Canvas._canvas_server_url
+
+    current_course = request.vars.current_course
+    current_course_name = request.vars.current_course_name
+
+    if current_course is not None:
+        session.fr_current_course = current_course
+    else:
+        current_course = session.fr_current_course
+
+    if current_course_name is not None:
+        session.fr_current_course_name = current_course_name
+    else:
+        current_course_name = session.fr_current_course_name
+
+    if current_course is None:
+        redirect(URL("find_replace.html"))
+
+    # Find all known instances of youtube links in the canvas course.
+    yt_urls = dict()
+    pages = Canvas.get_page_list_for_course(current_course)
+    total_urls = 0
+    for p in pages:
+        urls = getURLS(pages[p])
+        if len(urls) > 0:
+            total_urls += len(urls)
+            yt_urls[p] = urls
+
+    session.yt_urls =yt_urls
+    session.yt_urls_curr_pos = 0
+    session.yt_urls_total_len = total_urls
+    session.yt_urls_msg = ""
+    session.yt_urls_status = ""
+    session.yt_urls_error_msg = ""
+
+    return dict(form=yt_urls, current_course=current_course, current_course_name=current_course_name,
+                server_url=server_url)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_step_youtube_progress():
+    # Run one dl operation per view
+    msg = ""
+
+    current_course = session.fr_current_course
+    current_course_name = session.fr_current_course_name
+
+    finished = False
+    if len(session.yt_urls) < 1:
+        msg = "<br /><br /><b>Finished!</b>"
+        finished = True
+    else:
+        page_url, yt_urls = session.yt_urls.popitem()
+        for yt_url in yt_urls:
+            session.yt_urls_curr_pos += 1
+            msg = "<br />Processing " + str(yt_url)
+
+            try:
+                # Get yt video info
+                yt, stream, res = find_best_yt_stream(yt_url)
+
+                # Start download or get current db entry for this video
+                media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                vid_guid = media_file.media_guid
+                title = media_file.title
+                description = media_file.description
+                category = media_file.category
+                tags = media_file.tags
+
+                # Now replace the value in the canvas page
+                smc_url = URL('media', 'player', args=[vid_guid], host=True)
+                msg += "Replacing " + str(yt_url) + " with " + str(smc_url)
+
+                Canvas.replace_value_in_course_page(current_course, page_url, yt_url, smc_url)
+                pass
+            except Exception as ex:
+                session.yt_urls_error_msg += "<br/>\nError getting video " + str(yt_url) + " -> " + str(ex)
+
+    session.yt_urls_msg += msg
+
+    session.yt_urls_status = str(session.yt_urls_curr_pos) + " of " + str(session.yt_urls_total_len) + " videos processed..."
+
+    if finished is not True:
+        response.js = "web2py_component('" + URL('media', 'find_replace_step_youtube_progress.load') +\
+                      "', target='process_queue_view');"
+    else:
+        response.js = "$('#process_queue_progress_img').hide();"
+
+    return dict(output=XML(session.yt_urls_msg), status=XML(session.yt_urls_status), errors=XML(session.yt_urls_error_msg))
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_step_youtube_progress_dl_queue():
+    query = (db.media_files.youtube_url != "")
+    fields = [db.media_files.title, db.media_files.needs_downloading,
+              db.media_files.modified_on, db.media_files.id,
+              db.media_files.media_guid]
+    links = [
+        (dict(header=T('Title'), body=lambda row: A(row.title,
+                                                    _href=(URL('media', 'player', extension=False) + "/"
+                                                           + row.media_guid), _target='blank'))),
+        (dict(header=T('Status'), body=lambda row: DIV(getYouTubeTaskStatus(row.media_guid), ))),  # BR(), A('Re-Queue',
+        #        _href=URL('media',
+        #                  'reset_queued_item',
+        #                  args=[row.id],
+        #                  user_signature=True))))),
+        (dict(header=T('Queued On'), body=lambda row: row.modified_on)),
+        # Check if getTaskProgress is generic enough for this too?
+        (dict(header=T('Progress'), body=lambda row: getYouTubeTaskProgress(row.media_guid))),
+    ]
+
+    db.media_files.id.readable = False
+    db.media_files.media_guid.readable = False
+    db.media_files.modified_on.readable = True
+    db.media_files.needs_downloading.readable = False
+    db.media_files.title.readable = False
+    db.media_files.modified_on.readable = False
+    headers = {'media_files.modified_on': 'Queued On'}
+
+    maxtextlengths = {'media_files.title': '80', 'media_files.media_guid': '80'}
+
+    # rows = db(query).select()
+    process_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False, csv=False,
+                                links=links, links_in_grid=True, details=False, searchable=False,
+                                orderby=[~db.media_files.modified_on], fields=fields,
+                                headers=headers, maxtextlengths=maxtextlengths)
+
+    response.js = "setTimeout(function() {web2py_component('" + URL('media', 'find_replace_step_youtube_progress_dl_queue.load') + \
+                  "', target='process_queue_view_dl_progress');}, 6000);"
+    return dict(process_grid=process_grid)
+
+
+def queue_up_yt_video(yt_url, yt, res, category=None):
+    # Find the current video, or queue it up for download and return the db info
+
+    vid_guid = str(uuid.uuid4()).replace('-', '')
+    title = yt.title
+    description = yt.description
+    if category is None:
+        category = "YouTube"
+    tags = ["YouTube"]
+    media_file = db(db.media_files.youtube_url == yt_url).select().first()
+    if media_file is None:
+        # Create db entry
+        db.media_files.insert(title=title, youtube_url=yt_url,
+                              description=description, original_file_name=title,
+                              category=category, tags=tags,
+                              media_guid=vid_guid, needs_downloading=True)
+        db.commit()
+
+        # Launch the background process to download the video
+        result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=yt_url,
+                                                                       media_guid=vid_guid,
+                                                                       res=res,
+                                                                       thumbnail_url=yt.thumbnail_url),
+                                      timeout=18000, immediate=True, sync_output=5,
+                                      group_name="download_videos")
+
+        # Make sure to grab the new record now that it has been inserted
+        media_file = db(db.media_files.youtube_url == yt_url).select().first()
+    else:
+        # Video exists, just return the db record
+        pass
+
+    return media_file
+
+
+def find_best_yt_stream(yt_url):
+    yt = None
+    res = '480p'
+    stream = None
+
+    # Change out embed for watch so the link works properly
+    yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
+    s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+    if s is None:
+        # Try 360p
+        res = '360p'
+        s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+    if s is None:
+        # Try 720p
+        res = '720p'
+        s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+    if s is None:
+        # If that doesn't exist, then get the first one in the list
+        s = yt.streams.filter(file_extension='mp4', progressive=True).first()
+    # s.download()  # put in folder name
+
+    return yt, stream, res

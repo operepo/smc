@@ -1,6 +1,7 @@
 @echo off
 
 rem http://www.hurryupandwait.io/blog/understanding-and-troubleshooting-winrm-connection-and-authentication-a-thrill-seekers-guide-to-adventure
+rem https://github.com/diyan/pywinrm
 
 rem Need this to allow other admin accounts to run winrm commands - not just the built in administrator account
 call reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f

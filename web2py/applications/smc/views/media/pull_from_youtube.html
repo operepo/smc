@@ -1,0 +1,35 @@
+{{extend 'layout.html'}}
+
+<script>
+$(function() {
+		GetProcessQueue();
+		window.setInterval(function() {GetProcessQueue();}, 8000);
+    });
+
+	function GetProcessQueue() {
+		web2py_component('{{=URL('media', 'pull_from_youtube_download_queue.load')}}',
+                         target='process_queue_view');
+
+	}
+</script>
+
+<h1>Pull Media From YouTube</h1>
+<div>
+	Download media file directly from YouTube and insert into the SMC media library.
+    <span style="color: green;">Requires online connection.</span>
+</div>
+<div>
+    {{=LOAD('media', 'pull_from_youtube_step_1.load', ajax=True, user_signature=True)}}
+</div>
+<hr />
+<h4>
+	YouTube Download Process Queue
+</h4>
+<div id="process_queue" class='well'>
+	<p>
+		<b>NOTE: </b> Download goes only as fast as your internet connection. You must be ONLINE for this to work. You can use the retry link to make the system try again if a media file gets stuck in the queue.
+	</p>
+	<div id="process_queue_view">
+		<img src="{{=URL('static', 'images/progress.gif') }}" />
+	</div>
+</div>

@@ -5,6 +5,7 @@ import time
 import subprocess
 from gluon.contrib.simplejson import loads, dumps
 import urllib
+import shutil
 
 # For finding number of CPUs
 import multiprocessing
@@ -282,15 +283,118 @@ def process_media_file(media_id):
             'media_type': media_file.media_type, 'category': media_file.category,
             'tags': dumps(media_file.tags), 'width': media_file.width,
             'height': media_file.height, 'quality': media_file.quality}
-    
+
     meta_json = dumps(meta)
-    f = os.open(output_meta, os.O_TRUNC|os.O_WRONLY|os.O_CREAT)
+    f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
     os.write(f, meta_json)
     os.close(f)
     
     print("!clear!100%")
     
-    return dict(mp4_ret=mp4_ret,ogv_ret=ogv_ret,webm_ret=webm_ret, poster_ret=poster_ret, thumb_ret=thumb_ret)
+    return dict(mp4_ret=mp4_ret, ogv_ret=ogv_ret, webm_ret=webm_ret, poster_ret=poster_ret, thumb_ret=thumb_ret)
+
+
+def pull_youtube_video(yt_url, media_guid, res, thumbnail_url):
+    # Download the specified movie.
+
+    # Pull the db info
+    media_file = db(db.media_files.media_guid==media_guid).select().first()
+    if media_file is None:
+        print("ERROR - Unable to find a db record for " + str(media_guid))
+        return False
+
+    # Figure out file paths
+    w2py_folder = os.path.abspath(__file__)
+    # print("Running File: " + app_folder)
+    w2py_folder = os.path.dirname(w2py_folder)
+    # app folder
+    w2py_folder = os.path.dirname(w2py_folder)
+    app_folder = w2py_folder
+    # Applications folder
+    w2py_folder = os.path.dirname(w2py_folder)
+    # Root folder
+    w2py_folder = os.path.dirname(w2py_folder)
+
+    # Figure out output file name (use media guid)
+    # static/media/01/010102alj29vsor3.webm
+    file_guid = media_file.media_guid.replace('-', '')
+    # print("File GUID: " + str(file_guid))
+    target_folder = os.path.join(app_folder, 'static')
+
+    target_folder = os.path.join(target_folder, 'media')
+
+    file_prefix = file_guid[0:2]
+
+    target_folder = os.path.join(target_folder, file_prefix)
+    # print("Target Dir: " + target_folder)
+
+    try:
+        os.makedirs(target_folder)
+    except OSError as message:
+        pass
+
+    target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
+
+    output_mp4 = target_file + ".mp4"
+    output_mp4_filename = file_guid  # Note - don't add mp4 as yt will do that
+    output_meta = target_file + ".json"
+    output_poster = target_file + ".poster.png"
+    output_thumb = target_file + ".thumb.png"
+
+    from pytube import YouTube
+    yt = None
+    res = '480p'
+
+    try:
+        # Change out embed for watch so the link works properly
+        yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
+        s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+        if s is None:
+            # Try 360p
+            res = '360p'
+            s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+        if s is None:
+            # Try 720p
+            res = '720p'
+            s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+        if s is None:
+            # If that doesn't exist, then get the first one in the list
+            s = yt.streams.filter(file_extension='mp4', progressive=True).first()
+        print("Downloading " + str(yt_url))
+        s.download(output_path=target_folder, filename=output_mp4_filename)  # put in folder name
+        print("Download Complete!")
+    except Exception as ex:
+        # TODO - Schedule it to try again? Or just let it die?
+        print("Error Downloading YouTube Video!  Are you online? " + str(ex))
+        return False
+
+    # Download the thumbnail file
+    try:
+        tn = urllib.urlopen(thumbnail_url)
+        with open(output_thumb, 'wb') as f:
+            f.write(tn.read())
+        # Copy the thumbnail to the poster
+        shutil.copy(output_thumb, output_poster)
+    except Exception as ex:
+        print("Error trying to save thumbnail file: " + thumbnail_url + " - " + str(ex))
+
+    # Save JSON info
+    meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),
+            'description': media_file.description, 'original_file_name': media_file.original_file_name,
+            'media_type': media_file.media_type, 'category': media_file.category,
+            'tags': dumps(media_file.tags), 'width': media_file.width,
+            'height': media_file.height, 'quality': media_file.quality, 'youtube_url': media_file.youtube_url}
+
+    meta_json = dumps(meta)
+    f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+    os.write(f, meta_json)
+    os.close(f)
+
+    # Update media file to show it has been downloaded
+    media_file.update_record(needs_downloading=False)
+    db.commit()
+
+    return True
 
 
 def remove_old_wamap_video_files():
@@ -724,7 +828,8 @@ def refresh_all_ad_logins():
 from gluon.scheduler import Scheduler
 
 scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=1,
-                      group_names=['process_videos', 'create_home_directory', 'wamap_delete', 'wamap_videos', 'misc'],
+                      group_names=['process_videos', 'create_home_directory', 'wamap_delete',
+                                   'wamap_videos', 'misc', "download_videos"],
                       tasks=dict(process_media_file=process_media_file,
                                  process_wamap_video_links=process_wamap_video_links,
                                  create_home_directory=create_home_directory,
@@ -732,6 +837,7 @@ scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=1,
                                  download_wamap_qimages=download_wamap_qimages,
                                  refresh_all_ad_logins=refresh_all_ad_logins,
                                  update_media_database_from_json_files=update_media_database_from_json_files,
+                                 pull_youtube_video=pull_youtube_video,
                                  ))
 current.scheduler = scheduler
 
