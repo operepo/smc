@@ -403,6 +403,8 @@ def reset_smc():
     reset_smc_form = SQLFORM.factory(submit_button="Reset SMC App", _name="reset_smc_form").process(formname="reset_smc_form")
     
     kill_scheduler = SQLFORM.factory(submit_button="Kill Scheduler Process", _name="kill_scheduler").process(formname="kill_scheduler")
+
+    reload_modules_form = SQLFORM.factory(submit_button="Reload Python Modules", _name="reload_modules").process(formname="reload_modules")
     
     ffmpeg_running=isFFMPEGRunning()
     if ffmpeg_running == "is NOT":
@@ -430,6 +432,9 @@ def reset_smc():
         # kill_process_videos_schedule_process()
         kill_all_workers()
         response.flash = "Scheduler process killed" # + str(ret)
+
+    if reload_modules_form.accepted:
+        #
     
     return dict(reset_smc_form=reset_smc_form, ffmpeg_running=ffmpeg_running, kill_scheduler=kill_scheduler)
 

@@ -1363,8 +1363,10 @@ def pull_from_youtube_step_2():
         yt, stream, res = find_best_yt_stream(yt_url)
 
     except Exception as ex:
-        response.flash = "Error getting YouTube Video - Are you online?\n " + str(yt_url) + " " + str(ex)
-        return dict(form2="Error finding video - reload page and try again.")
+        response.flash = "Error getting YouTube Video - Are you online?"  # + str(yt_url) + " " + str(ex)
+        return dict(form2=XML("Error finding video (" + str(yt_url) +
+                              ") - reload page and try again.<br /> <span style='font-size: 10px; font-weight: bold;'>Error: " +
+                              str(ex) + "</span>"))
 
     # NOTE - Need form name separate from other steps for form to work properly
     form = FORM(TABLE(TR("YouTube Link:", INPUT(_type="text", _name="yt_url", _value=yt_url, _readonly=True)),
