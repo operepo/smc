@@ -1,0 +1,37 @@
+
+<h4>Regular Expression Pattern Finder</h4>
+<div>
+Finding text/links that match a pattern in all your pages and optionally replace it with new text.
+</div>
+
+<hr />
+<div>
+    <b>Using Course: {{=current_course_name + " (" + current_course + ")"}}</b>
+</div>
+
+NOTE: This uses Regular Expressions. You can experiment with regular expressions online here:
+<a href="https://regex101.com/" target="_regex">Regex101.com</a>
+<p>
+Lookup Values - You can use some values in the replace pattern to do additional lookups:<br />
+&lt;CANVAS_FILE_ID__[FILE_NAME]__&gt; - Will look up the file ID and replace it - &lt;CANVAS_FILE_ID__my-file__&gt; becomes 1004213
+
+</p>
+<table width="100%">
+<tr>
+<td width="50%">
+<b>Enter Pattern</b><br/>
+{{=form2}}
+</td>
+
+<td width="50%">
+<b>Or use pre-defined pattern</b><br/>
+{{=form3}}
+</td>
+</tr>
+</table>
+
+<div>
+{{=find_replace_results}}
+</div>
+
+

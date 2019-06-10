@@ -23,8 +23,9 @@ import uuid
 import hashlib
 from Crypto.Hash import SHA, HMAC
 
-
 class Canvas:
+    # When needing to do paged requests, this will get filled in after APICall
+    _api_next = ""
     
     # Config Values
     _canvas_enabled = False
@@ -626,6 +627,8 @@ class Canvas:
             headers = dict()
         response_items = dict()
 
+        # Reset the next link - for paging
+        Canvas._api_next = ""
         canvas_url = server + api_call
 
         headers["Authorization"] = "Bearer " + str(dev_key)
@@ -649,6 +652,23 @@ class Canvas:
             return None
         
         if resp is not None:
+            # Pull the next link out of the header
+            link = resp.headers.get("Link")
+            if link is not None:
+                # print("Next Page: " + link)
+                # Split the links
+                links = link.split(',')
+                for l in links:
+                    if 'rel="next"' in l:
+                        # print("Found Next: " + l)
+                        # Found the link
+                        p = l.split(";")
+                        # Save the link w out the <> around it
+                        next_link = p[0].replace("<", "").replace(">", "")
+                        # Save the next_link so we can use it later to grab the next page
+                        Canvas._api_next = next_link
+                        # print(" Got Next: " + Canvas._api_next)
+
             try:
                 ret = resp.json()
             except ValueError as error_message:
@@ -688,17 +708,43 @@ class Canvas:
         return current_enrollment
 
     @staticmethod
+    def get_id_for_filename(course_id, file_name):
+        ret = "<FILE_ID_NOT_FOUND_" + file_name + ">"
+        Canvas.Init()
+
+        api = "/api/v1/courses/" + course_id + "/files/?search_term=" + str(file_name)
+
+        p = dict()
+        p["per_page"] = 20000
+
+        files_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                   api, params=p)
+
+        # Should be a list of files (should be 1)
+        for f in files_list:
+            # Need to make an API call to get the page body
+            ret = f['id']
+            break  # just grab the first match
+
+        return ret
+
+    @staticmethod
     def get_page_list_for_course(course_id):
         Canvas.Init()
 
         api = "/api/v1/courses/" + str(course_id) + "/pages"
 
         p = dict()
-        p["per_page"] = 20000
+        p["per_page"] = 50
+
+        next_url = ""
 
         page_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
                                    api, params=p)
 
+        # If there are more pages, _api_next should have the link to the next page
+        next_url = Canvas._api_next
+        # print("Next URL: " + next_url)
         # Should be a list of pages, now get individual page bodies
         page_bodies = dict()
         for p in page_list:
@@ -706,6 +752,22 @@ class Canvas:
             page = Canvas.get_page_for_course(course_id, p['url'])
 
             page_bodies[p['url']] = page["body"]
+
+        while next_url != '':
+            # Calls to get more results (and strip off https://canvas.ed/)
+            api = next_url.replace(Canvas._canvas_server_url, "")
+            # print("Next API: " + api)
+            page_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                api)  # Note - don't send params, they are in the api url
+
+            # If there are more pages, _api_next should have the link to the next page
+            next_url = Canvas._api_next
+            # print("Next URL: " + next_url)
+
+            for p in page_list:
+                # print("P: " + str(p))
+                page = Canvas.get_page_for_course(course_id, p['url'])
+                page_bodies[p['url']] = page["body"]
 
         return page_bodies
 
@@ -738,6 +800,8 @@ class Canvas:
 
         page = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
                               api, params=p, method="PUT")
+
+        res = str(page)
 
         return res
 

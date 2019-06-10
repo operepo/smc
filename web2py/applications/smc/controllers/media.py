@@ -1503,7 +1503,7 @@ def find_replace_step_2():
     fr_options = dict(
         auto_youtube_tool="YouTube -> SMC Links (ONLY WORKS ONLINE)",
         auto_google_docs_tool="Google Docs -> SMC Links (ONLY WORKS ONLINE)",
-        custom_regex="Custom Search/Replace RegEx (Not Done)",
+        custom_regex="Custom Find/Replace",
     )
 
     option_list = []
@@ -1525,7 +1525,8 @@ def find_replace_step_2():
             response.flash = "Google"
             pass
         elif form2.vars.fr_option == "custom_regex":
-            response.flash = "RegEx"
+            # response.flash = "RegEx"
+            redirect(URL('media', 'find_replace_step_custom_regex.load'))
             pass
         else:
             response.flash = "Unknown Option!"
@@ -1533,6 +1534,146 @@ def find_replace_step_2():
 
     return dict(form2=form2, current_course=current_course, current_course_name=current_course_name,
                 server_url=server_url)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_post_process_text(course_id, txt):
+    # Deal with left over cleaup for find/replace
+
+    # Find canvas file ids.
+    pattern = re.compile("<CANVAS_FILE_ID__(.*)__>")
+
+    match = pattern.search(txt)
+    while match is not None:
+        # Lookup the found file(s)
+        file_name = match.group(1)
+        file_id = Canvas.get_id_for_filename(course_id, file_name)
+
+        # replace the original tag w the file id
+        txt = txt.replace("<CANVAS_FILE_ID__" + file_name + "__>", str(file_id))
+        match = pattern.search(txt)
+
+    return txt
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pattern):
+    ret = ""
+
+    # Get the list of pages
+    pages = Canvas.get_page_list_for_course(current_course)
+    total_pages = len(pages)
+    ret += "<h3>Searched " + str(total_pages) + " pages</h3>Search Pattern: " + \
+           find_pattern.replace(">", "&gt;").replace("<", "&lt;") + \
+           "<br /><b>Note:</b> Local URLs may not work in this view but work find when viewed from Canvas.<hr/>"
+    inc = 0
+    for p in pages:
+        inc += 1
+        p_orig_text = pages[p]
+        p_new_text, subs = re.subn(find_pattern, replace_pattern, p_orig_text)
+        p_new_text = find_replace_post_process_text(current_course, p_new_text)
+
+        style = "width: 100%; height: 800px; overflow: auto; display: none; border: 1px solid black;"
+        ret += "<H5><div onclick='$(\"#show_hide_" + str(inc) + "\").toggle();' style='cursor: pointer;'>" + p + \
+               " - " + str(subs) + " replacements.</div></H5>"
+
+        ret += "<div id='show_hide_" + str(inc) + "' style='" + style + "'>"
+        ret += "<h2>OLD PAGE</h2>"
+        ret += "<code>" + p_orig_text + "</code>"
+        ret += "<hr />"
+        ret += "<h2>NEW PAGE</h2>"
+        ret += "<code>" + p_new_text + "</code>"
+        ret += "</div>"
+
+        if subs > 0:
+            # Update the page in canvas
+            new_page = dict()
+            new_page["wiki_page[body]"] = p_new_text
+
+            result = Canvas.update_page_for_course(current_course, p, new_page)
+            # ret += result
+    return ret
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_step_custom_regex():
+    ret = ""
+
+    form2 = None
+    form3 = None
+
+    server_url = Canvas._canvas_server_url
+
+    current_course = request.vars.current_course
+    current_course_name = request.vars.current_course_name
+
+    if current_course is not None:
+        session.fr_current_course = current_course
+    else:
+        current_course = session.fr_current_course
+
+    if current_course_name is not None:
+        session.fr_current_course_name = current_course_name
+    else:
+        current_course_name = session.fr_current_course_name
+
+    if current_course is None:
+        redirect(URL("find_replace.html"))
+
+    # Make a form with the Find and Replace boxes
+    form2 = FORM(TABLE(TR("Find Pattern: ", INPUT(_type="text", _name="find_pattern")),
+                       TR("Replace Pattern: ", INPUT(_type="text", _name="replace_pattern")),
+                       TR("", INPUT(_type="submit", _value="Next"))),
+                 _action=URL('media', 'find_replace_step_custom_regex.load'),
+                 _name="form2").process(keepvalues=True, formname="form2")
+
+    pre_defined_patterns = {
+        "Change Host Links - (smc.sbctc... -> smc.ed)": ["smc.sbctc.correctionsed.com", "smc.ed"],
+        "Change Host Links - (smc.ed -> smc.sbctc...)": ["smc.ed", "smc.sbctc.correctionsed.com"],
+        "IDEA - Listen Audio (change media tag to correct url)":
+            [r'''<audio .* src=["'](.*)/courses/([0-9]+)/media_download\?entryId=(m-[0-9a-zA-Z]+)(.*)redirect=1(["']) .*>.*</audio>''',
+             r'''<audio controls="controls"><source src="\1/courses/\2/files/<CANVAS_FILE_ID__\3__>/download?download_frd=1" orig_filename="\3" /></audio>'''],
+    }
+
+    patterns_list = []
+    for p in pre_defined_patterns:
+        patterns_list.append(OPTION(p, _value=p))
+
+    pre_defined_patterns_select = SELECT(patterns_list, _name="pattern_option", _style="width: 400px;")
+
+    form3 = FORM(TABLE(TR(pre_defined_patterns_select),
+                       TR(INPUT(_type="submit", _value="Next"))
+                       ),
+                 _action=URL('media', 'find_replace_step_custom_regex.load'),
+                 _name="form3").process(keepvalues=True, formname="form3")
+
+    if form2.accepted:
+        if form2.vars.find_pattern != "" and form2.vars.replace_pattern != "":
+            # Run find/replace pattern
+            find_pattern = form2.vars.find_pattern
+            replace_pattern = form2.vars.replace_pattern
+
+            ret = find_replace_step_custom_regex_run(current_course, find_pattern, replace_pattern)
+
+        elif form2.vars.find_pattern != "" and form2.vars.replace_pattern == "":
+            response.flash = "Find only not done."
+        else:
+            response.flash = "Please enter a find pattern to search for."
+
+        pass
+
+    if form3.accepted:
+        if form3.vars.pattern_option != "":
+            # Grab the find/replace patterns
+            find_pattern = pre_defined_patterns[form3.vars.pattern_option][0]
+            replace_pattern = pre_defined_patterns[form3.vars.pattern_option][1]
+
+            ret = find_replace_step_custom_regex_run(current_course, find_pattern, replace_pattern)
+        else:
+            response.flash = "Please select an option to search for."
+
+    return dict(form2=form2, current_course=current_course, current_course_name=current_course_name,
+                server_url=server_url, find_replace_results=XML(ret), form3=form3)
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
@@ -1565,7 +1706,7 @@ def find_replace_step_youtube():
             total_urls += len(urls)
             yt_urls[p] = urls
 
-    session.yt_urls =yt_urls
+    session.yt_urls = yt_urls
     session.yt_urls_curr_pos = 0
     session.yt_urls_total_len = total_urls
     session.yt_urls_msg = ""
@@ -1596,10 +1737,13 @@ def find_replace_step_youtube_progress():
 
             try:
                 # Get yt video info
+                # session.yt_urls_error_msg += "A"
                 yt, stream, res = find_best_yt_stream(yt_url)
+                # session.yt_urls_error_msg += "AB"
 
                 # Start download or get current db entry for this video
                 media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                # session.yt_urls_error_msg += "B"
                 vid_guid = media_file.media_guid
                 title = media_file.title
                 description = media_file.description
@@ -1617,7 +1761,8 @@ def find_replace_step_youtube_progress():
 
     session.yt_urls_msg += msg
 
-    session.yt_urls_status = str(session.yt_urls_curr_pos) + " of " + str(session.yt_urls_total_len) + " videos processed..."
+    session.yt_urls_status = str(session.yt_urls_curr_pos) + " of " + str(session.yt_urls_total_len) + \
+                             " videos processed..."
 
     if finished is not True:
         response.js = "web2py_component('" + URL('media', 'find_replace_step_youtube_progress.load') +\
@@ -1710,19 +1855,28 @@ def find_best_yt_stream(yt_url):
     stream = None
 
     # Change out embed for watch so the link works properly
-    yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
-    s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
-    if s is None:
-        # Try 360p
-        res = '360p'
-        s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
-    if s is None:
-        # Try 720p
-        res = '720p'
-        s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
-    if s is None:
-        # If that doesn't exist, then get the first one in the list
-        s = yt.streams.filter(file_extension='mp4', progressive=True).first()
-    # s.download()  # put in folder name
+    try:
+        yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
+    except Exception as ex:
+        session.yt_urls_error_msg += "Bad YT URL? " + yt_url + " -- " + str(ex)
 
+    s = None
+    try:
+        s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+        if s is None:
+            # Try 360p
+            res = '360p'
+            s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+        if s is None:
+            # Try 720p
+            res = '720p'
+            s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+        if s is None:
+            # If that doesn't exist, then get the first one in the list
+            s = yt.streams.filter(file_extension='mp4', progressive=True).first()
+        # s.download()  # put in folder name
+    except Exception as ex:
+        session.yt_urls_error_msg += "Error grabbing yt video info! " + str(ex)
+
+    stream = s
     return yt, stream, res
