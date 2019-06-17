@@ -1357,6 +1357,7 @@ def pull_from_youtube_step_2():
         yt_url = session.yt_url
 
     yt = None
+    stream = None
     res = ''
     try:
         # Get yt video info
@@ -1364,9 +1365,20 @@ def pull_from_youtube_step_2():
 
     except Exception as ex:
         response.flash = "Error getting YouTube Video - Are you online?"  # + str(yt_url) + " " + str(ex)
-        return dict(form2=XML("Error finding video (" + str(yt_url) +
-                              ") - reload page and try again.<br /> <span style='font-size: 10px; font-weight: bold;'>Error: " +
+        return dict(form2=XML("<span style='color: red; font-weight:bold;'>" +
+                              "Error Downloading video</span> (" + str(yt_url) +
+                              ") - reload page and try again.<br /> " + \
+                              "<span style='font-size: 10px; font-weight: bold;'>" + \
+                              "Error: " +
                               str(ex) + "</span>"))
+
+    if yt is None:
+        return dict(form2=XML("<span style='color: red; font-weight:bold;'>" +
+                              "Error finding video</span> (" + str(yt_url) +
+                              ") - reload page and try again.<br /> " +
+                              "<span style='font-size: 10px; font-weight: bold;'>" +
+                              "Error: yt is none! Unable to get yt info for link " +
+                              str(yt) + "/" + str(stream) + "/" + str(res) + "</span>"))
 
     # NOTE - Need form name separate from other steps for form to work properly
     form = FORM(TABLE(TR("YouTube Link:", INPUT(_type="text", _name="yt_url", _value=yt_url, _readonly=True)),
@@ -1833,10 +1845,17 @@ def queue_up_yt_video(yt_url, yt, res, category=None):
         db.commit()
 
         # Launch the background process to download the video
+
+        yt_thumbnail = None
+        try:
+            yt_thumbnail = yt.thumbnail_url
+        except:
+            pass
+
         result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=yt_url,
                                                                        media_guid=vid_guid,
                                                                        res=res,
-                                                                       thumbnail_url=yt.thumbnail_url),
+                                                                       thumbnail_url=yt_thumbnail),
                                       timeout=18000, immediate=True, sync_output=5,
                                       group_name="download_videos")
 
@@ -1852,13 +1871,23 @@ def queue_up_yt_video(yt_url, yt, res, category=None):
 def find_best_yt_stream(yt_url):
     yt = None
     res = '480p'
-    stream = None
+
+    if yt_url is None:
+        print("ERROR: yt_url was none?")
+        yt_url = ""
+
+    # print("Looking for YT: " + yt_url)
+
+    if session.yt_urls_error_msg is None:
+        session.yt_urls_error_msg = ""
 
     # Change out embed for watch so the link works properly
     try:
         yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
     except Exception as ex:
-        session.yt_urls_error_msg += "Bad YT URL? " + yt_url + " -- " + str(ex)
+        msg = "Bad YT URL? " + yt_url + " -- " + str(ex)
+        session.yt_urls_error_msg += msg
+        print(msg)
 
     s = None
     try:
@@ -1876,7 +1905,9 @@ def find_best_yt_stream(yt_url):
             s = yt.streams.filter(file_extension='mp4', progressive=True).first()
         # s.download()  # put in folder name
     except Exception as ex:
-        session.yt_urls_error_msg += "Error grabbing yt video info! " + str(ex)
+        msg = "Error grabbing yt video info! " + str(ex)
+        session.yt_urls_error_msg += msg
+        print(msg)
 
     stream = s
     return yt, stream, res
