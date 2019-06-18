@@ -435,8 +435,17 @@ def reset_smc():
 
     if reload_modules_form.accepted:
         #
+        import module_reload
+        module_reload.ReloadModules()
+
+        # Make sure certain modules are init
+        Canvas.Init()
+
+        response.flash = "Modules reloaded!"
+        pass
     
-    return dict(reset_smc_form=reset_smc_form, ffmpeg_running=ffmpeg_running, kill_scheduler=kill_scheduler)
+    return dict(reset_smc_form=reset_smc_form, ffmpeg_running=ffmpeg_running, kill_scheduler=kill_scheduler,
+                reload_modules_form=reload_modules_form)
 
 
 def kill_all_workers():

@@ -20,4 +20,20 @@
 <p>
 	{{=reset_smc_form}}
 </p>
-<h4>	Kill Scheduler Process</h4><div class="well">	<p>		FFMPEG {{=ffmpeg_running}} running.	</p>	<p>		FFMPEG should be running if an item in the queue is marked as running. If you see that FFMPEG is <b>NOT</b> running for a long period of time but a media file in the queue is running then the scheduler may be stuck. You can use this button to reset the scheduler process. Make sure you reload this page to see the status change as it will not update itself. The scheduler process is started automatically when you view this page or upload a new media file.	</p>	{{=kill_scheduler}}	</div>
+<p>
+    {{=reload_modules_form}}
+</p>
+
+<h4>
+	Kill Scheduler Process
+</h4>
+<div class="well">
+	<p>
+		FFMPEG {{=ffmpeg_running}} running.
+	</p>
+	<p>
+		FFMPEG should be running if an item in the queue is marked as running. If you see that FFMPEG is <b>NOT</b> running for a long period of time but a media file in the queue is running then the scheduler may be stuck. You can use this button to reset the scheduler process. Make sure you reload this page to see the status change as it will not update itself. The scheduler process is started automatically when you view this page or upload a new media file.
+	</p>
+	{{=kill_scheduler}}
+	
+</div>

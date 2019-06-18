@@ -729,6 +729,48 @@ class Canvas:
         return ret
 
     @staticmethod
+    def get_quizz_list_for_course(course_id):
+        Canvas.Init()
+
+        api = "/api/v1/courses/" + str(course_id) + "/quizzes"
+
+        p = dict()
+        p["per_page"] = 50
+
+        next_url = ""
+
+        quizz_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                   api, params=p)
+
+        # If there are more pages, _api_next should have the link to the next page
+        next_url = Canvas._api_next
+        # print("Next URL: " + next_url)
+        # Should be a list of pages, now get individual page bodies
+        quizz_bodies = dict()
+        for q in quizz_list:
+            # Need to make an API call to get the page body
+
+            quizz_bodies[q['id']] = q["description"]
+
+        while next_url != '':
+            # Calls to get more results (and strip off https://canvas.ed/)
+            api = next_url.replace(Canvas._canvas_server_url, "")
+            # print("Next API: " + api)
+            qizz_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                       api)  # Note - don't send params, they are in the api url
+
+            # If there are more pages, _api_next should have the link to the next page
+            next_url = Canvas._api_next
+            # print("Next URL: " + next_url)
+
+            for q in quizz_list:
+                # print("P: " + str(p))
+
+                quizz_bodies[q['id']] = q["description"]
+
+        return quizz_bodies
+
+    @staticmethod
     def get_page_list_for_course(course_id):
         Canvas.Init()
 

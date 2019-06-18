@@ -1458,7 +1458,7 @@ def find_replace():
 
     # TODO - Force module reload so we don't have to kill python process
     # import module_reload
-    reload_str = ""
+    # reload_str = ""
     # reload_str = module_reload.ReloadModules()
     # Make sure we init the module
     # Canvas.Init()
@@ -1586,7 +1586,7 @@ def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pat
         p_new_text = find_replace_post_process_text(current_course, p_new_text)
 
         style = "width: 100%; height: 800px; overflow: auto; display: none; border: 1px solid black;"
-        ret += "<H5><div onclick='$(\"#show_hide_" + str(inc) + "\").toggle();' style='cursor: pointer;'>" + p + \
+        ret += "<H5><div onclick='$(\"#show_hide_" + str(inc) + "\").toggle();' style='cursor: pointer;'>PAGE: " + p + \
                " - " + str(subs) + " replacements.</div></H5>"
 
         ret += "<div id='show_hide_" + str(inc) + "' style='" + style + "'>"
@@ -1604,6 +1604,47 @@ def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pat
 
             result = Canvas.update_page_for_course(current_course, p, new_page)
             # ret += result
+
+    # Work on list of quizzes
+    quizzes = Canvas.get_quizz_list_for_course(current_course)
+    total_quizzes = len(quizzes)
+    ret += "<h3>Searched " + str(total_pages) + " quizzes</h3>Search Pattern: " + \
+           find_pattern.replace(">", "&gt;").replace("<", "&lt;") + \
+           "<br /><b>Note:</b> Local URLs may not work in this view but work find when viewed from Canvas.<hr/>"
+    inc = 0
+    for q in quizzes:
+        inc += 1
+        quizz_id = q
+        q_orig_text = quizzes[q]
+        q_new_text, subs = re.subn(find_pattern, replace_pattern, q_orig_text)
+        q_new_text = find_replace_post_process_text(current_course, q_new_text)
+
+        style = "width: 100%; height: 800px; overflow: auto; display: none; border: 1px solid black;"
+        ret += "<H5><div onclick='$(\"#show_hide_" + str(inc) + "\").toggle();' style='cursor: pointer;'>QUIZZ: " + q + \
+               " - " + str(subs) + " replacements.</div></H5>"
+
+        ret += "<div id='show_hide_" + str(inc) + "' style='" + style + "'>"
+        ret += "<h2>OLD QUIZZ DESCRIPTION</h2>"
+        ret += "<code>" + q_orig_text + "</code>"
+        ret += "<hr />"
+        ret += "<h2>NEW QUIZZ DESCRIPTION</h2>"
+        ret += "<code>" + q_new_text + "</code>"
+        ret += "</div>"
+
+        if subs > 0:
+            # Update the page in canvas
+            new_page = dict()
+            new_page["quiz[body]"] = q_new_text
+                TODO - need this canvas function
+            result = Canvas.update_quizz_for_course(current_course, quizz_id, new_page)
+            # ret += result
+
+        TODO - DO QUIZZ QUESTIONS
+            TODO - need this canvas function
+        quizz_questions = Canvas.get_quizz_questions_for_quizz(current_course, quizz_id)
+        TODO TODO
+
+
     return ret
 
 
