@@ -6,9 +6,10 @@ track_changes(True)
 import os
 import sys
 
-#spath_imported = False
+spath_imported = False
 
-#import_path = os.path.join(request.folder, 'modules')
-#if import_path not in sys.path:
-#    sys.path.append(import_path)
-#    spath_imported = True
+# Needed because w2p import sucks and can't find modules in the modules folder
+import_path = os.path.join(request.folder, 'modules')
+if import_path not in sys.path:
+    sys.path.append(import_path)
+    spath_imported = True
