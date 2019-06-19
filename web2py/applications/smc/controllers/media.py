@@ -1474,8 +1474,8 @@ def find_replace_step_1():
     courses = Canvas.get_courses_for_faculty(auth.user.username)
 
     for c in courses:
-        course_dict[str(c['id'])] = c["name"]
-        course_list.append(OPTION(c["name"], _value=c['id']))
+        course_dict[str(c)] = courses[c]
+        course_list.append(OPTION(courses[c], _value=c))
 
     course_select = SELECT(course_list, _name="current_course", _id="current_course", _style="width: 600px;")
 
@@ -1569,15 +1569,23 @@ def find_replace_post_process_text(course_id, txt):
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
-def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pattern):
+def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pattern, update_canvas=False):
     ret = ""
+
+    ret += "<h2>Searching with pattern: </h2> <b>Find</b>(" + \
+           find_pattern.replace(">", "&gt;").replace("<", "&lt;") + \
+           ") / <b>Replace</b> (" + replace_pattern.replace(">", "&gt;").replace("<", "&lt;") + ") " + \
+           "<p><b>Note:</b> Local URLs may not work in this view but work fine when viewed from Canvas.</p><hr/>"
+
+    style = "width: 100%; height: 800px; overflow: auto; display: none; border: 1px solid black;"
 
     # Get the list of pages
     pages = Canvas.get_page_list_for_course(current_course)
     total_pages = len(pages)
-    ret += "<h3>Searched " + str(total_pages) + " pages</h3>Search Pattern: " + \
-           find_pattern.replace(">", "&gt;").replace("<", "&lt;") + \
-           "<br /><b>Note:</b> Local URLs may not work in this view but work find when viewed from Canvas.<hr/>"
+    ret += "<h3>Pages Searched: " + str(total_pages) + "</h3>" + \
+           "<div onclick='$(\"#show_hide_pages\").toggle();' style='cursor: pointer;'><h4>PAGES PROCESSED: " + \
+           "<span style='font-size:8px;'>(click to open/close)</span></h4></div>" + \
+           "<div id='show_hide_pages' style='" + style + "'>"
     inc = 0
     for p in pages:
         inc += 1
@@ -1585,9 +1593,8 @@ def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pat
         p_new_text, subs = re.subn(find_pattern, replace_pattern, p_orig_text)
         p_new_text = find_replace_post_process_text(current_course, p_new_text)
 
-        style = "width: 100%; height: 800px; overflow: auto; display: none; border: 1px solid black;"
         ret += "<H5><div onclick='$(\"#show_hide_" + str(inc) + "\").toggle();' style='cursor: pointer;'>PAGE: " + p + \
-               " - " + str(subs) + " replacements.</div></H5>"
+               " - " + str(subs) + " replacements. <span style='font-size:8px;'>(click to open/close)</span></div></H5>"
 
         ret += "<div id='show_hide_" + str(inc) + "' style='" + style + "'>"
         ret += "<h2>OLD PAGE</h2>"
@@ -1597,53 +1604,107 @@ def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pat
         ret += "<code>" + p_new_text + "</code>"
         ret += "</div>"
 
-        if subs > 0:
+        if subs > 0 or p_orig_text != p_new_text:
             # Update the page in canvas
             new_page = dict()
             new_page["wiki_page[body]"] = p_new_text
 
-            result = Canvas.update_page_for_course(current_course, p, new_page)
+            if update_canvas is True:
+                result = Canvas.update_page_for_course(current_course, p, new_page)
+            else:
+                result = "Not Updating!"
             # ret += result
+
+    # Close the show/hide for all pages
+    ret += "</div><hr />"
 
     # Work on list of quizzes
     quizzes = Canvas.get_quizz_list_for_course(current_course)
     total_quizzes = len(quizzes)
-    ret += "<h3>Searched " + str(total_pages) + " quizzes</h3>Search Pattern: " + \
-           find_pattern.replace(">", "&gt;").replace("<", "&lt;") + \
-           "<br /><b>Note:</b> Local URLs may not work in this view but work find when viewed from Canvas.<hr/>"
+    ret += "<h3>Searched " + str(total_quizzes) + " quizzes</h3>" + \
+           "<div onclick='$(\"#show_hide_quizzes\").toggle();' style='cursor: pointer;'><h4>QUIZZES PROCESSED:" + \
+           "<span style='font-size:8px;'>(click to open/close)</span></h4></div>" + \
+           "<div id='show_hide_quizzes' style='" + style + "'>"
     inc = 0
     for q in quizzes:
         inc += 1
+        total_qq_replacements = 0
         quizz_id = q
         q_orig_text = quizzes[q]
         q_new_text, subs = re.subn(find_pattern, replace_pattern, q_orig_text)
         q_new_text = find_replace_post_process_text(current_course, q_new_text)
 
-        style = "width: 100%; height: 800px; overflow: auto; display: none; border: 1px solid black;"
-        ret += "<H5><div onclick='$(\"#show_hide_" + str(inc) + "\").toggle();' style='cursor: pointer;'>QUIZZ: " + q + \
-               " - " + str(subs) + " replacements.</div></H5>"
+        ret += "<H5><div onclick='$(\"#show_hide_q_" + str(inc) + "\").toggle();' style='cursor: pointer;'>QUIZZ: " + \
+               str(q) + " - " + str(subs) + "/<QQ_COUNT_" + str(quizz_id) + "> matches. " + \
+               "<span style='font-size:8px;'>(click to open/close)</span></div></H5>"
 
-        ret += "<div id='show_hide_" + str(inc) + "' style='" + style + "'>"
+        ret += "<div id='show_hide_q_" + str(inc) + "' style='" + style + "'>"
         ret += "<h2>OLD QUIZZ DESCRIPTION</h2>"
         ret += "<code>" + q_orig_text + "</code>"
         ret += "<hr />"
         ret += "<h2>NEW QUIZZ DESCRIPTION</h2>"
         ret += "<code>" + q_new_text + "</code>"
-        ret += "</div>"
 
-        if subs > 0:
+        if subs > 0 or q_orig_text != q_new_text:
             # Update the page in canvas
             new_page = dict()
             new_page["quiz[body]"] = q_new_text
-                TODO - need this canvas function
-            result = Canvas.update_quizz_for_course(current_course, quizz_id, new_page)
-            # ret += result
+            result = ""
+            if update_canvas is True:
+                result = Canvas.update_quizz_for_course(current_course, quizz_id, new_page)
+            else:
+                result = "NOT UPDATING!"
+            ret += "UPDATE QUIZZ RESULT: " + str(result)
 
-        TODO - DO QUIZZ QUESTIONS
-            TODO - need this canvas function
         quizz_questions = Canvas.get_quizz_questions_for_quizz(current_course, quizz_id)
-        TODO TODO
+        total_questions = len(quizz_questions)
+        qq_inc = 0
+        for qq in quizz_questions:
+            qq_inc += 1
+            qq_id = qq
+            qq_orig_text = quizz_questions[qq]
+            qq_new_text, subs = re.subn(find_pattern, replace_pattern, qq_orig_text)
+            qq_new_text = find_replace_post_process_text(current_course, qq_new_text)
 
+            style = "width: 100%; height: 800px; overflow: auto; display: none; border: 1px solid black;"
+            ret += "<H5><div onclick='$(\"#show_hide_qq_" + str(
+                qq_id) + "\").toggle();' style='cursor: pointer;'>QUESTION: " + \
+                   str(qq_id) + " - " + str(subs) + " matches. " + \
+                   "<span style='font-size:8px;'>(click to open/close)</span></div></H5>"
+
+            ret += "<div id='show_hide_qq_" + str(qq_id) + "' style='" + style + "'>"
+            ret += "<h2>OLD QUESTION TEXT</h2>"
+            ret += "<code>" + qq_orig_text + "</code>"
+            ret += "<hr />"
+            ret += "<h2>NEW QUESTION TEXT</h2>"
+            ret += "<code>" + qq_new_text + "</code>"
+            ret += "</div>"
+
+            # this should be a match/change
+            # if qq_id == 999999000006926:
+            #    from gluon.debug import dbg
+            #    dbg.set_trace()  # stop here!
+
+            if subs > 0 or qq_orig_text != qq_new_text:
+                total_qq_replacements += 1
+                new_page = dict()
+                new_page["id"] = qq_id
+                new_page["quizz_id"] = quizz_id
+                new_page["question[question_text]"] = qq_new_text
+                result = ""
+                if update_canvas is True:
+                    result = Canvas.update_quizz_question_for_course(current_course, quizz_id, qq_id, new_page)
+                else:
+                    result = "NOT UPDATING!"
+                ret += "UPDATE QUESTION RESULT: " + str(result)
+
+        # Enter question replacements so we can see how many matches there were
+        ret = ret.replace("<QQ_COUNT_" + str(quizz_id) + ">", str(total_qq_replacements))
+
+        ret += "</div>"
+
+    # Close show/hide for all quizzes
+    ret += "</div>"
 
     return ret
 
@@ -1676,7 +1737,10 @@ def find_replace_step_custom_regex():
     # Make a form with the Find and Replace boxes
     form2 = FORM(TABLE(TR("Find Pattern: ", INPUT(_type="text", _name="find_pattern")),
                        TR("Replace Pattern: ", INPUT(_type="text", _name="replace_pattern")),
-                       TR("", INPUT(_type="submit", _value="Next"))),
+                       TR(XML("Write Changes <span style='color: red; font-size:10px;'>" +
+                              "(check this to update canvas)</span>: "),
+                          INPUT(_type="checkbox", _name="write_changes", value='')),
+                       TR("", INPUT(_type="submit", _value="GO"))),
                  _action=URL('media', 'find_replace_step_custom_regex.load'),
                  _name="form2").process(keepvalues=True, formname="form2")
 
@@ -1695,21 +1759,30 @@ def find_replace_step_custom_regex():
     pre_defined_patterns_select = SELECT(patterns_list, _name="pattern_option", _style="width: 400px;")
 
     form3 = FORM(TABLE(TR(pre_defined_patterns_select),
-                       TR(INPUT(_type="submit", _value="Next"))
+                       TR(XML("Write Changes <span style='color: red; font-size:10px;'>" +
+                              "(check this to update canvas)</span>: "),
+                          INPUT(_type="checkbox", _name="write_changes", value='')),
+                       TR(INPUT(_type="submit", _value="GO"))
                        ),
                  _action=URL('media', 'find_replace_step_custom_regex.load'),
                  _name="form3").process(keepvalues=True, formname="form3")
 
     if form2.accepted:
-        if form2.vars.find_pattern != "" and form2.vars.replace_pattern != "":
+        # Note - leaving write_changes unchecked w an empty replace should be "find only"
+        if form2.vars.find_pattern != "":  # and form2.vars.replace_pattern != "":
             # Run find/replace pattern
             find_pattern = form2.vars.find_pattern
             replace_pattern = form2.vars.replace_pattern
 
-            ret = find_replace_step_custom_regex_run(current_course, find_pattern, replace_pattern)
+            write_changes = False
+            if form2.vars.write_changes is not None:
+                print("write changes")
+                write_changes = True
 
-        elif form2.vars.find_pattern != "" and form2.vars.replace_pattern == "":
-            response.flash = "Find only not done."
+            ret = find_replace_step_custom_regex_run(current_course, find_pattern, replace_pattern, write_changes)
+
+        # elif form2.vars.find_pattern != "" and form2.vars.replace_pattern == "":
+        #    response.flash = "Find only not done."
         else:
             response.flash = "Please enter a find pattern to search for."
 
@@ -1721,7 +1794,11 @@ def find_replace_step_custom_regex():
             find_pattern = pre_defined_patterns[form3.vars.pattern_option][0]
             replace_pattern = pre_defined_patterns[form3.vars.pattern_option][1]
 
-            ret = find_replace_step_custom_regex_run(current_course, find_pattern, replace_pattern)
+            write_changes = False
+            if form3.vars.write_changes is not None:
+                write_changes = True
+
+            ret = find_replace_step_custom_regex_run(current_course, find_pattern, replace_pattern, write_changes)
         else:
             response.flash = "Please select an option to search for."
 

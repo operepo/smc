@@ -16,6 +16,68 @@ from ednet.ad import AD
 from ednet import Faculty
 from ednet import Student
 
+
+def get_app_folders():
+    # Will return calculated folders we will need
+    # see return statement for values returned
+
+    # Get the full path for this file
+    this_file = os.path.abspath(__file__)
+    # Get the models folder
+    models_folder = os.path.dirname(this_file)
+    # app folder
+    app_folder = os.path.dirname(models_folder)
+
+    # Applications folder (app parent folder)
+    applications_folder = os.path.dirname(app_folder)
+    # w2py Root folder
+    w2py_folder = os.path.dirname(applications_folder)
+
+    # static folder
+    # static_folder = os.path.join(app_folder, "static")
+    # media folder
+    # media_folder = os.path.join(static_folder, "media")
+
+    #controllers_folder = os.path.join(app_folder, "controllers")
+    #cron_folder = os.path.join(app_folder, "cron")
+    #databases_folder = os.path.join(app_folder, "databases")
+    #errors_folder = os.path.join(app_folder, "errors")
+    #languages_folder = os.path.join(app_folder, "languages")
+    #private_folder = os.path.join(app_folder, "private")
+    #modules_folder = os.path.join(app_folder, "modules")
+    #sessions_folder = os.path.join(app_folder, "sessions")
+    #uploads_folder = os.path.join(app_folder, "uploads")
+    #views_folder = os.path.join(app_folder, "views")
+
+    # win ffmpeg folder
+    #win_ffmpeg_folder = os.path.join(w2py_folder, "ffmpeg", "bin")
+
+    return w2py_folder, applications_folder, app_folder
+
+def find_ffmpeg():
+    # Find the ffmpeg folder and return it
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+
+    acodec = "aac"
+
+    # Find ffmpeg binary
+    ffmpeg = "/usr/bin/ffmpeg"
+    if os.path.isfile(ffmpeg) is not True:
+        ffmpeg = "/usr/local/bin/ffmpeg"
+    if os.path.isfile(ffmpeg) is not True:
+        # Try windows path
+        ffmpeg = os.path.join(w2py_folder, "ffmpeg", "bin", "ffmpeg.exe")
+        acodec = "libvo_aacenc"
+    if os.path.isfile(ffmpeg) is not True:
+        ret = "ERROR - NO FFMPEG APP FOUND! " + ffmpeg
+        ffmpeg = None
+        acodec = None
+        print(ret)
+        # raise an exception so it is marked as failed
+        # failed to find, will return None now
+
+    return ffmpeg, acodec
+
 # Task Scheduler Code
 
 
@@ -296,6 +358,7 @@ def process_media_file(media_id):
 
 def pull_youtube_video(yt_url, media_guid, res, thumbnail_url):
     # Download the specified movie.
+    had_errors = False
 
     # Pull the db info
     media_file = db(db.media_files.media_guid==media_guid).select().first()
@@ -303,25 +366,14 @@ def pull_youtube_video(yt_url, media_guid, res, thumbnail_url):
         print("ERROR - Unable to find a db record for " + str(media_guid))
         return False
 
-    # Figure out file paths
-    w2py_folder = os.path.abspath(__file__)
-    # print("Running File: " + app_folder)
-    w2py_folder = os.path.dirname(w2py_folder)
-    # app folder
-    w2py_folder = os.path.dirname(w2py_folder)
-    app_folder = w2py_folder
-    # Applications folder
-    w2py_folder = os.path.dirname(w2py_folder)
-    # Root folder
-    w2py_folder = os.path.dirname(w2py_folder)
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+    (ffmpeg, acodec) = find_ffmpeg()
 
     # Figure out output file name (use media guid)
     # static/media/01/010102alj29vsor3.webm
     file_guid = media_file.media_guid.replace('-', '')
     # print("File GUID: " + str(file_guid))
-    target_folder = os.path.join(app_folder, 'static')
-
-    target_folder = os.path.join(target_folder, 'media')
+    target_folder = os.path.join(app_folder, 'static', 'media')
 
     file_prefix = file_guid[0:2]
 
@@ -368,7 +420,9 @@ def pull_youtube_video(yt_url, media_guid, res, thumbnail_url):
         print("Error Downloading YouTube Video!  Are you online? " + str(ex))
         return False
 
+    print("TN File: " + output_thumb)
     # Download the thumbnail file
+    make_own_thumbnail = False
     try:
         tn = urllib.urlopen(thumbnail_url)
         with open(output_thumb, 'wb') as f:
@@ -376,7 +430,39 @@ def pull_youtube_video(yt_url, media_guid, res, thumbnail_url):
         # Copy the thumbnail to the poster
         shutil.copy(output_thumb, output_poster)
     except Exception as ex:
-        print("Error trying to save thumbnail file: " + thumbnail_url + " - " + str(ex))
+        print("Error trying to save thumbnail file: " + str(thumbnail_url) + " - " + str(ex))
+        make_own_thumbnail = True
+
+    if make_own_thumbnail is True:
+        # Unable to pull thumbnail - make our own.
+        if ffmpeg is None:
+            print("FFMPEG NOT FOUND! Can't make thumbnail.")
+            # note - let things keep going so at least we have the video
+        else:
+            # Process the video
+            # Generate thumbnail image
+            input_file = output_mp4
+            print("Input File: " + input_file)
+            cmd = ffmpeg + " -y -ss 5 -i \"" + input_file + "\" -vf  \"thumbnail,scale=128:-1\" -frames:v 1 \"" + \
+                output_thumb + "\""
+            # print("Creating thumbnail image..."  + " [" + str(time.time()) + "]")
+            print("Generating Thumbnail...")
+            try:
+                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+                thumb_ret = p.communicate()[0]
+            except Exception as ex:
+                print("Error generating thumbnail: " + str(output_thumb) + " - " + str(ex))
+
+            # Generate poster image
+            cmd = ffmpeg + " -y -ss 5 -i \"" + input_file + "\" -vf  \"thumbnail,scale=640:-1\" -frames:v 1 \"" + \
+                output_poster + "\""
+            # print("Creating poster image..." + " [" + str(time.time()) + "]")
+            print("Generating Poster Image...")
+            try:
+                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+                poster_ret = p.communicate()[0]
+            except Exception as ex:
+                print("Error generating poster: " + str(output_poster) + " - " + str(ex))
 
     # Save JSON info
     meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),

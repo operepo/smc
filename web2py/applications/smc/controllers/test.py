@@ -20,6 +20,26 @@ import sys
 
 auth.settings.allow_basic_login = True
 
+@auth.requires_membership("Administrators")
+def checkbox_test():
+    form3 = FORM(TABLE(
+                       TR(XML("Write Changes <span style='color: red; font-size:10px;'>" +
+                              "(check this to update canvas)</span>: "),
+                          INPUT(_type="checkbox", _name="write_changes", value="")),
+                       TR(INPUT(_type="submit", _value="GO"))
+                       ),
+                 #_action=URL('test', 'checkbox_test.load'),
+                 _name="form3").process(keepvalues=True, formname="form3")
+
+    write_changes = None
+
+    if form3.accepted:
+        write_changes = form3.vars.write_changes
+        #if form3.vars.write_changes is True:
+        #    write_changes = True
+
+    return dict(form3=form3, write_changes=write_changes)
+
 
 @auth.requires_membership("Administrators")
 def basic_auth_test():

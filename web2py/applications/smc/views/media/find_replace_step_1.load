@@ -1,4 +1,7 @@
-
+<p class=well>
+<span style='color: red; font-weight: bold; font-size: 18px;'>WARNING:</span> This tool does <b>MASS EDITS</b> to your canvas course. Please make sure you backup your course
+before running this tool. There is <b>NO</b> undo if you mess up.
+</p>
 <div>
     {{=form1}}
 </div>
