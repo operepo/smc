@@ -231,7 +231,7 @@ class TestFields(DALtest):
         db.tt.drop()
 
     def testRun(self):
-        """Test all field types and their return values"""
+        #Test all field types and their return values
         db = self.connect()
         for ft in ['string', 'text', 'password', 'upload', 'blob']:
             db.define_table('tt', Field('aa', ft, default=''))
@@ -310,12 +310,24 @@ class TestFields(DALtest):
 
         ## Lazy and Virtual fields
         db.tt.b = Field.Virtual(lambda row: row.tt.aa)
+        # test for FieldVirtual.bind
+        self.assertEqual(db.tt.b.tablename, 'tt')
+        self.assertEqual(db.tt.b.name, 'b')
         db.tt.c = Field.Lazy(lambda row: row.tt.aa)
-        row = db().select(db.tt.aa)[0]
+        # test for FieldMethod.bind
+        self.assertEqual(db.tt.c.name, 'c')
+        rows = db().select(db.tt.aa)
+        row = rows[0]
         self.assertEqual(row.b,t0)
         self.assertEqual(row.c(),t0)
-
+        # test for BasicRows.colnames_fields
+        rows.colnames.insert(0, 'tt.b')
+        rows.colnames.insert(1, 'tt.c')
+        colnames_fields = rows.colnames_fields
+        self.assertIs(colnames_fields[0], db.tt.b)
+        self.assertIs(colnames_fields[1], db.tt.c)
         db.tt.drop()
+
         db.define_table('tt', Field('aa', 'time', default='11:30'))
         t0 = datetime.time(10, 30, 55)
         self.assertEqual(db.tt.insert(aa=t0), 1)
@@ -1532,43 +1544,47 @@ class TestMigrations(unittest.TestCase):
         db.commit()
         db.close()
 
-        # Change field type
-        db = DAL(DEFAULT_URI, check_reserved=['all'])
-        db.define_table('tt', Field('aa', rname='faa'),
-            Field('b', 'text', rname='fb'), migrate='.storage.table')
-        db.define_table('t1', Field('aa', rname='faa'),
-            Field('b', 'text', rname='fb'), migrate='.storage.rname',
-            rname='foo')
-        data = dict(aa='aa4', b='b4')
-        checkWrite(db, db.tt, data)
-        checkWrite(db, db.t1, data)
-        row = db(db.tt).select(*[db.tt[x] for x in integrity.keys()]).first()
-        self.assertIsNot(row, None)
-        self.assertEqual(row.as_dict(), integrity)
-        row2 = db(db.t1).select(*[db.t1[x] for x in integrity.keys()]).first()
-        self.assertIsNot(row2, None)
-        self.assertEqual(row2.as_dict(), integrity)
-        db.commit()
-        db.close()
+        if not IS_SQLITE:
 
-        # Change field rname
-        db = DAL(DEFAULT_URI, check_reserved=['all'])
-        db.define_table('tt', Field('aa', rname='faa'),
-            Field('b', 'text', rname='xb'), migrate='.storage.table')
-        db.define_table('t1', Field('aa', rname='faa'),
-            Field('b', 'text', rname='xb'), migrate='.storage.rname',
-            rname='foo')
-        data = dict(aa='aa4', b='b4')
-        checkWrite(db, db.tt, data)
-        checkWrite(db, db.t1, data)
-        row = db(db.tt).select(*[db.tt[x] for x in integrity.keys()]).first()
-        self.assertIsNot(row, None)
-        self.assertEqual(row.as_dict(), integrity)
-        row2 = db(db.t1).select(*[db.t1[x] for x in integrity.keys()]).first()
-        self.assertIsNot(row2, None)
-        self.assertEqual(row2.as_dict(), integrity)
-        db.commit()
-        db.close()
+            # Change field type
+            db = DAL(DEFAULT_URI, check_reserved=['all'])
+            db.define_table('tt', Field('aa', rname='faa'),
+                Field('b', 'text', rname='fb'), migrate='.storage.table')
+            db.define_table('t1', Field('aa', rname='faa'),
+                Field('b', 'text', rname='fb'), migrate='.storage.rname',
+                rname='foo')
+            data = dict(aa='aa4', b='b4')
+            checkWrite(db, db.tt, data)
+            checkWrite(db, db.t1, data)
+            row = db(db.tt).select(*[db.tt[x] for x in integrity.keys()]).first()
+            self.assertIsNot(row, None)
+            self.assertEqual(row.as_dict(), integrity)
+            row2 = db(db.t1).select(*[db.t1[x] for x in integrity.keys()]).first()
+            self.assertIsNot(row2, None)
+            self.assertEqual(row2.as_dict(), integrity)
+            db.commit()
+            db.close()
+
+        if not IS_SQLITE:
+
+            # Change field rname
+            db = DAL(DEFAULT_URI, check_reserved=['all'])
+            db.define_table('tt', Field('aa', rname='faa'),
+                Field('b', 'text', rname='xb'), migrate='.storage.table')
+            db.define_table('t1', Field('aa', rname='faa'),
+                Field('b', 'text', rname='xb'), migrate='.storage.rname',
+                rname='foo')
+            data = dict(aa='aa4', b='b4')
+            checkWrite(db, db.tt, data)
+            checkWrite(db, db.t1, data)
+            row = db(db.tt).select(*[db.tt[x] for x in integrity.keys()]).first()
+            self.assertIsNot(row, None)
+            self.assertEqual(row.as_dict(), integrity)
+            row2 = db(db.t1).select(*[db.t1[x] for x in integrity.keys()]).first()
+            self.assertIsNot(row2, None)
+            self.assertEqual(row2.as_dict(), integrity)
+            db.commit()
+            db.close()
 
         # Drop field defined by ALTER TABLE
         db = DAL(DEFAULT_URI, check_reserved=['all'])
@@ -1645,7 +1661,7 @@ class TestClientLevelOps(DALtest):
     def testRun(self):
         db = self.connect()
         db.define_table(
-            'tt', 
+            'tt',
             Field('aa', represent=lambda x,r:'x'+x),
             Field('bb', type='integer', represent=lambda x,r:'y'+str(x)))
         db.commit()
@@ -2559,9 +2575,9 @@ class TestQuoting(DALtest):
                              Field('words', 'text'))
 
         blather = 'blah blah and so'
-        t0[0] = {'f': 'content'}
-        t1[0] = {'B': int(t0[1]['id']),
-                 'words': blather}
+        t0[None] = {'f': 'content'}
+        t1[None] = {'B': int(t0[1]['id']),
+                    'words': blather}
 
         r = db(db.t0.id==db.b.B).select()
 
@@ -2585,7 +2601,7 @@ class TestQuoting(DALtest):
                 return
             raise e
 
-        t0[0] = dict(a_a = 'a_a', a_A='a_A')
+        t0[None] = dict(a_a = 'a_a', a_A='a_A')
 
         self.assertEqual(t0[1].a_a, 'a_a')
         self.assertEqual(t0[1].a_A, 'a_A')
@@ -2696,6 +2712,33 @@ class TestGis(DALtest):
             db.commit()
             db.close()
 
+
+@unittest.skipUnless(IS_POSTGRESQL, "Only implemented for postgres for now")
+class TestJSON(DALtest):
+
+    def testJSONExpressions(self):
+        db = self.connect()
+        if not hasattr(db._adapter.dialect, 'json_key'):
+            return
+        tj = db.define_table('tj', Field('testjson', 'json'))
+        rec1 = tj.insert(testjson={u'a': {u'a1': 2, u'a0': 1}, u'b': 3, u'c': {u'c0': {u'c01': [2, 4]}}})
+        rec2 = tj.insert(testjson={u'a': {u'a1': 2, u'a0': 2}, u'b': 4, u'c': {u'c0': {u'c01': [2, 3]}}})
+        rows = db(db.tj.testjson.json_key('a').json_key_value('a0') == 1).select()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].id, rec1)
+        rows = db(db.tj.testjson.json_path_value('{a, a1}') == 2).select()
+        self.assertEqual(len(rows), 2)
+        rows = db(db.tj.testjson.json_path_value('{a, a0}') == 2).select()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].id, rec2)
+        rows = db(db.tj.testjson.json_contains('{"c": {"c0":{"c01": [2]}}}')).select()
+        self.assertEqual(len(rows), 2)
+        rows = db(db.tj.testjson.json_contains('{"c": {"c0":{"c01": [4]}}}')).select()
+        self.assertEqual(len(rows), 1)
+        rows = db(db.tj.id > 0).select(db.tj.testjson.json_path('{c, c0, c01, 0}').with_alias('first'))
+        self.assertEqual(rows[0].first, 2)
+        self.assertEqual(rows[1].first, 2)
+        
 
 class TestSQLCustomType(DALtest):
 
@@ -2933,7 +2976,7 @@ class TestIterselect(DALtest):
             for pos, r in enumerate(rows):
                 self.assertEqual(r.name, names[pos])
 
-        # Empty iterRows
+        # Empty IterRows
         rows = db(db.t0.name=="IterRows").iterselect(orderby=db.t0.id)
         self.assertEqual(bool(rows), False)
         for pos, r in enumerate(rows):

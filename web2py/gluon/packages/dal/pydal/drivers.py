@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from ._gae import gae
 
 DRIVERS = {}
 
+from ._gae import gae
 if gae is not None:
     DRIVERS['google'] = gae
     psycopg2_adapt = None
@@ -47,7 +47,7 @@ try:
     DRIVERS['psycopg2'] = psycopg2
 except ImportError:
     psycopg2_adapt = None
-    
+
 try:
     import pg8000
     DRIVERS['pg8000'] = pg8000
@@ -59,7 +59,7 @@ try:
     DRIVERS['cx_Oracle'] = cx_Oracle
 except ImportError:
     cx_Oracle = None
-    
+
 try:
     import pyodbc
     DRIVERS['pyodbc'] = pyodbc
@@ -72,7 +72,7 @@ except ImportError:
         DRIVERS['pyodbc'] = pyodbc
     except ImportError:
         pyodbc = None
-    
+
 try:
     import ibm_db_dbi
     DRIVERS['ibm_db_dbi'] = ibm_db_dbi
@@ -154,8 +154,3 @@ try:
     DRIVERS['imaplib'] = imaplib
 except:
     pass
-
-
-# for backward compatibility?
-def get_driver(name):
-    return DRIVERS.get(name)

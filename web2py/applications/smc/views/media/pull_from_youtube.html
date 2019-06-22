@@ -7,7 +7,7 @@ $(function() {
     });
 
 	function GetProcessQueue() {
-		web2py_component('{{=URL('media', 'pull_from_youtube_download_queue.load')}}',
+		web2py_component('{{=URL('media', 'pull_from_youtube_download_queue.load', user_signature=True)}}',
                          target='process_queue_view');
 
 	}

@@ -1,4 +1,5 @@
 from ..adapters.postgres import Postgre, PostgreNew, PostgreBoolean
+from .._compat import integer_types, basestring
 from ..helpers.methods import varquote_aux
 from ..objects import Expression
 from .base import SQLDialect
@@ -136,6 +137,9 @@ class PostgreDialect(SQLDialect):
     def st_astext(self, first, query_env={}):
         return 'ST_AsText(%s)' % self.expand(first, query_env=query_env)
 
+    def st_aswkb(self, first, query_env={}):
+        return '%s' % self.expand(first, query_env=query_env)
+
     def st_x(self, first, query_env={}):
         return 'ST_X(%s)' % (self.expand(first, query_env=query_env))
 
@@ -193,6 +197,17 @@ class PostgreDialect(SQLDialect):
             self.expand(tup[0], first.type, query_env=query_env),
             self.expand(tup[1], 'double', query_env=query_env))
 
+    def st_transform(self, first, second, query_env={}):
+    	# The SRID argument can be provided as an integer SRID or a Proj4 string
+        if isinstance(second, int):
+            return 'ST_Transform(%s,%s)' % (
+                self.expand(first, query_env=query_env),
+                self.expand(second, 'integer', query_env=query_env))
+        else:
+            return 'ST_Transform(%s,%s)' % (
+                self.expand(first, query_env=query_env),
+                self.expand(second, 'string', query_env=query_env))
+
     @register_expression('doy')
     def extract_doy(self, expr):
         return Expression(expr.db, self.extract, expr, 'doy', 'integer')
@@ -238,6 +253,46 @@ class PostgreDialectJSON(PostgreDialect):
     @sqltype_for('jsonb')
     def type_jsonb(self):
         return 'JSONB'
+
+    def st_astext(self, first, query_env={}):
+        return 'ST_AsText(%s)' % self.expand(first, query_env=query_env)
+    
+    def st_asgeojson(self, first, second, query_env={}):
+        return 'ST_AsGeoJSON(%s,%s,%s,%s)' % (
+            second['version'], self.expand(first, query_env=query_env),
+            second['precision'], second['options'])
+
+    def json_key(self, first, key, query_env=None):
+        """ Get the json in key which you can use for more queries """
+        if isinstance(key, basestring):
+            key = self.expand(key, 'string', query_env=query_env)
+        elif not isinstance(key, integer_types):
+            raise TypeError('Key must be a string or int')
+        return "%s->%s" % (self.expand(first, query_env=query_env or {}), key)
+
+    def json_key_value(self, first, key, query_env=None):
+        """ Get the value int or text in key """
+        if isinstance(key, basestring):
+            key = self.expand(key, 'string', query_env=query_env)
+        elif isinstance(key, integer_types):
+            key = self.expand(key, 'integer', query_env=query_env)
+        else:
+            raise TypeError('Key must be a string or int')
+        return "%s->>%s" % (self.expand(first, query_env=query_env or {}), key)
+
+    def json_path(self, first, path, query_env=None):
+        """ Get the json in path which you can use for more queries """
+        return "%s#>'%s'" % (self.expand(first, query_env=query_env or {}), path)
+
+    def json_path_value(self, first, path, query_env=None):
+        """ Get the json in path which you can use for more queries """
+        return "%s#>>'%s'" % (self.expand(first, query_env=query_env or {}), path)
+
+    # JSON Queries
+    def json_contains(self, first, jsonvalue, query_env=None):
+        # requires jsonb, value is json e.g. '{"country": "Peru"}'
+        return "%s::jsonb@>'%s'::jsonb" % (self.expand(first, query_env=query_env or {}), jsonvalue)
+
 
 @dialects.register_for(PostgreNew)
 class PostgreDialectArrays(PostgreDialect):

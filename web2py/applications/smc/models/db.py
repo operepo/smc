@@ -154,13 +154,13 @@ response.form_label_separator = myconf.get('forms.separator') or ''
 #########################################################################
 
 from gluon.tools import Auth, Crud, Service, PluginManager, prettydate
-#auth = Auth(db)
-#auth = Auth(db, host_names=myconf.get('host.names'))
-auth = Auth(db, hmac_key = Auth.get_or_create_key(), signature=True) #secure=True
+# auth = Auth(db)
+# auth = Auth(db, host_names=myconf.get('host.names'))
+auth = Auth(db, hmac_key=Auth.get_or_create_key(), signature=True) # secure=True
 crud, service, plugins = Crud(db), Service(), PluginManager()
 
 ## create all tables needed by auth if not custom tables
-auth.define_tables(username=True) #signature=False
+auth.define_tables(username=True)  # signature=False
 auth.settings.create_user_groups=False
 
 ## configure email
@@ -173,7 +173,8 @@ mail.settings.ssl = myconf.get('smtp.ssl') or False
 
 ## configure auth policy
 # auth.settings.actions_disabled = ['register', 'request_reset_password']
-auth.settings.actions_disabled=['register','change_password','request_reset_password','retrieve_username','profile']
+auth.settings.actions_disabled = ['register', 'change_password', 'request_reset_password',
+                                  'retrieve_username', 'profile']
 # you don't have to remember me
 auth.settings.remember_me_form = False
 ##  auth.settings.actions_disabled=['change_password','request_reset_password','retrieve_username','profile']
@@ -182,7 +183,7 @@ auth.settings.remember_me_form = False
 auth.settings.registration_requires_verification = False
 auth.settings.registration_requires_approval = False
 auth.settings.reset_password_requires_verification = True
-auth.settings.expiration = 3600
+auth.settings.expiration = 7200  # 2 hrs
 
 ## if you need to use OpenID, Facebook, MySpace, Twitter, Linkedin, etc.
 ## register with janrain.com, write your domain:api_key in private/janrain.key
@@ -195,40 +196,6 @@ auth.settings.expiration = 3600
 #auth.settings.login_methods.append(
 #    basic_auth('OPE - SMC'))
 
-
-# ldap authentication and not save password on web2py
-#from gluon.contrib.login_methods.ldap_auth import ldap_auth
-#auth.settings.login_methods = [ldap_auth(mode='ad',
-#                                         bind_dn="cn=huskers,ou=users,dc=cbcc,dc=pencollege,dc=net",
-#                                         bind_pw="abc123",
-#    db=db,
-#    server='206.111.5.2',
-#    base_dn='ou=Users,dc=cbcc,dc=pencollege,dc=net',
-#    logging_level='debug')] #,auth]
-#pass
-
-#['ou=Users,dc=cbcc,dc=pencollege,dc=net','ou=Students,dc=cbcc,dc=pencollege,dc=net']))
-#group=, goup_name_attrib='cn',
-
-#auth.settings.login_methods = [ldap_auth(mode='ad',
-#    manage_groups= True, 
-#    db = db,
-#    group_name_attrib = 'cn',
-#    group_member_attrib = 'member',
-#    group_filterstr = 'objectClass=Group',
-#    server='<server>',
-#    base_dn='OU=<my org unit>,DC=<domain>,DC=<domain>')]
-
-#auth.settings.login_methods = [ldap_auth(mode="ad", server=settings.ldap_server, base_dn=settings.domain_name, db=db,
-#                                    manage_user=True,
-#                                    user_firstname_attrib="givenName",
-#                                    user_lastname_attrib="sn",
-#                                    user_mail_attrib="mail",
-#                                    manage_groups=True,
-#                                    group_dn="ou=Groups," + settings.domain_name,
-#                                    group_name_attrib="cn",
-#                                    group_member_attrib="member",
-#                                    group_filterstr='objectClass=*')]
 
 #########################################################################
 ## Define your tables below (or better in another model file) for example

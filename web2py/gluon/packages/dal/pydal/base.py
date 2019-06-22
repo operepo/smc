@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# pylint: disable=no-member
 """
 | This file is part of the web2py Web Framework
 | Copyrighted by Massimo Di Pierro <mdipierro@cs.depaul.edu>
@@ -145,6 +145,7 @@ from .helpers.rest import RestParser
 from .helpers.serializers import serializers
 from .objects import Table, Field, Rows, Row, Set
 from .adapters.base import BaseAdapter, NullAdapter
+from .default_validators import default_validators
 
 TABLE_ARGS = set(
     ('migrate', 'primarykey', 'fake_migrate', 'format', 'redefine',
@@ -247,11 +248,12 @@ class DAL(with_metaclass(MetaDAL, Serializable, BasicStorage)):
     """
     serializers = None
     validators = None
-    validators_method = None
     representers = {}
+    validators_method = default_validators
     uuid = lambda x: str(uuid4())
     logger = logging.getLogger("pyDAL")
 
+    Field = Field
     Table = Table
     Rows = Rows
     Row = Row
@@ -605,7 +607,7 @@ class DAL(with_metaclass(MetaDAL, Serializable, BasicStorage)):
         # must follow above line to handle self references
         table._create_references()
         for field in table:
-            if field.requires == DEFAULT:
+            if field.requires is DEFAULT:
                 field.requires = auto_validators(field)
             if field.represent is None:
                 field.represent = auto_represent(field)

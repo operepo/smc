@@ -836,7 +836,6 @@ class Session(Storage):
             compression_level(int): 0-9, sets zlib compression on the data
                 before the encryption
         """
-        from gluon.dal import Field
         request = request or current.request
         response = response or current.response
         masterapp = masterapp or request.application
@@ -927,7 +926,7 @@ class Session(Storage):
         elif response.session_storage_type == 'db':
             if global_settings.db_sessions is not True:
                 global_settings.db_sessions.add(masterapp)
-            # if had a session on file alreday, close it (yes, can happen)
+            # if had a session on file already, close it (yes, can happen)
             if response.session_file:
                 self._close(response)
             # if on GAE tickets go also in DB
@@ -939,7 +938,7 @@ class Session(Storage):
                 table_migrate = False
             tname = tablename + '_' + masterapp
             table = db.get(tname, None)
-            # Field = db.Field
+            Field = db.Field
             if table is None:
                 db.define_table(
                     tname,
@@ -1051,7 +1050,7 @@ class Session(Storage):
             if record_id.isdigit() and long(record_id) > 0:
                 new_unique_key = web2py_uuid()
                 row = table(record_id)
-                if row and row[b'unique_key'] == to_bytes(unique_key):
+                if row and row['unique_key'] == unique_key:
                     table._db(table.id == record_id).update(unique_key=new_unique_key)
                 else:
                     record_id = None
@@ -1078,7 +1077,7 @@ class Session(Storage):
         if self._same_site is None:
             # Using SameSite Lax Mode is the default
             # You actually have to call session.samesite(False) if you really
-            # dont want the extra protection provided by the SameSite header 
+            # dont want the extra protection provided by the SameSite header
             self._same_site = 'Lax'
         if self._same_site:
             if 'samesite' not in Cookie.Morsel._reserved:

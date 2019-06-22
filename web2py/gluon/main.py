@@ -9,10 +9,9 @@
 The gluon wsgi application
 ---------------------------
 """
-from __future__ import print_function
 
 if False:
-    import import_all  # DO NOT REMOVE PART OF FREEZE PROCESS
+    from . import import_all  # DO NOT REMOVE PART OF FREEZE PROCESS
 import gc
 
 import os
@@ -26,7 +25,7 @@ import socket
 import random
 import string
 
-from gluon._compat import Cookie, urllib2
+from gluon._compat import Cookie, urllib_quote
 # from thread import allocate_lock
 
 from gluon.fileutils import abspath, write_file
@@ -249,7 +248,7 @@ class LazyWSGI(object):
             def app(environ, start_response):
                 data = f()
                 start_response(self.response.status,
-                               self.response.headers.items())
+                               list(self.response.headers.items()))
                 if isinstance(data, list):
                     return data
                 return [data]
@@ -358,7 +357,7 @@ def wsgibase(environ, responder):
 
                 request.update(
                     client=client,
-                    folder=abspath('applications', app) + os.sep,
+                    folder=abspath('applications', app),
                     ajax=x_req_with == 'xmlhttprequest',
                     cid=env.http_web2py_component_element,
                     is_local=(env.remote_addr in local_hosts and client == env.remote_addr),
@@ -486,10 +485,10 @@ def wsgibase(environ, responder):
                     if request.ajax:
                         if response.flash:
                             http_response.headers['web2py-component-flash'] = \
-                                urllib2.quote(xmlescape(response.flash).replace(b'\n', b''))
+                                urllib_quote(xmlescape(response.flash).replace(b'\n', b''))
                         if response.js:
                             http_response.headers['web2py-component-command'] = \
-                                urllib2.quote(response.js.replace('\n', ''))
+                                urllib_quote(response.js.replace('\n', ''))
 
                     # ##################################################
                     # store cookies in headers
@@ -717,9 +716,9 @@ class HttpServer(object):
             if isinstance(interfaces, list):
                 for i in interfaces:
                     if not isinstance(i, tuple):
-                        raise "Wrong format for rocket interfaces parameter - see http://packages.python.org/rocket/"
+                        raise AttributeError("Wrong format for rocket interfaces parameter - see http://packages.python.org/rocket/")
             else:
-                raise "Wrong format for rocket interfaces parameter - see http://packages.python.org/rocket/"
+                raise AttributeError("Wrong format for rocket interfaces parameter - see http://packages.python.org/rocket/")
 
         if path:
             # if a path is specified change the global variables so that web2py

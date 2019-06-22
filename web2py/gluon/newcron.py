@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -20,13 +19,9 @@ import re
 import datetime
 import platform
 from functools import reduce
-try:
-    import cPickle as pickle
-except:
-    import pickle
 from gluon.settings import global_settings
 from gluon import fileutils
-from gluon._compat import to_bytes
+from gluon._compat import to_bytes, pickle
 from pydal.contrib import portalocker
 
 logger = logging.getLogger("web2py.cron")
@@ -195,8 +190,7 @@ def rangetolist(s, period='min'):
             s = s.replace('*', '1-12', 1)
         elif period == 'dow':
             s = s.replace('*', '0-6', 1)
-    m = re.compile(r'(\d+)-(\d+)/(\d+)')
-    match = m.match(s)
+    match = re.match(r'(\d+)-(\d+)/(\d+)', s)
     if match:
         for i in range(int(match.group(1)), int(match.group(2)) + 1):
             if i % int(match.group(3)) == 0:
@@ -283,8 +277,7 @@ class cronlauncher(threading.Thread):
 
 def crondance(applications_parent, ctype='soft', startup=False, apps=None):
     apppath = os.path.join(applications_parent, 'applications')
-    cron_path = os.path.join(applications_parent)
-    token = Token(cron_path)
+    token = Token(applications_parent)
     cronmaster = token.acquire(startup=startup)
     if not cronmaster:
         return
@@ -318,9 +311,8 @@ def crondance(applications_parent, ctype='soft', startup=False, apps=None):
         if not os.path.exists(crontab):
             continue
         try:
-            cronlines = fileutils.readlines_file(crontab, 'rt')
-            lines = [x.strip() for x in cronlines if x.strip(
-            ) and not x.strip().startswith('#')]
+            cronlines = [line.strip() for line in fileutils.readlines_file(crontab, 'rt')]
+            lines = [line for line in cronlines if line and not line.startswith('#')]
             tasks = [parsecronline(cline) for cline in lines]
         except Exception as e:
             logger.error('WEB2PY CRON: crontab read error %s' % e)

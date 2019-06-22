@@ -7,7 +7,7 @@ $(function() {
     });
 
 	function GetProcessQueue() {
-		web2py_component('{{=URL('media', 'find_replace_step_youtube_progress.load')}}',
+		web2py_component('{{=URL('media', 'find_replace_step_youtube_progress.load', user_signature=True)}}',
                          target='process_queue_view');
 
         // See if finished message is present
