@@ -1,39 +1,1 @@
-{{extend 'layout.html'}}
-<div>
-	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a>
-</div>
-
-<h1>Change File Server Settings</h1>
-
-<div>
-	<b>NOTE:</b> <a href="{{=URL('docs', 'winrm') }}">WinRM</a> needs to be setup on your file server.
-</div>
-
-<div>
-    <div style="float: left; width: 600px; overflow: initial;">
-        {{=form}}
-    </div>
-    <div class="well" style="float: left; width: 400px; ">
-        <h3>
-            Help
-        </h3>
-		<p>
-			File server settings allow you to specify a location for user home directories. This script will create the folder, set permissions for this student, and set quota options if specified. For this to work, the drive letter and the home folder need to be set. <a href="{{=URL('docs', 'winrm') }}">WinRM</a> is used to run the required commands and will need to be enabled on your file server.
-		</p>
-		<div>
-			<b>File Server Import Enabled: </b> Turn on/off the ability to setup home folder for users during import.
-		</div>
-		<div>
-			<b>File Server Login User: </b> Use a <b>LOCAL NOT DOMAIN</b> admin account that is on the file server. This account needs priviledges to create user folder and set permissions. The account <b>HAS</b> to be <b>LOCAL</b> or it will not work!!!
-		</div>
-		<div>
-			<b>File Server Login Pass: </b> The password for the local account described above. Password is encypted using AES encryption.
-		</div>
-		<div>
-			<b>File Server Address: </b>  Please enter the IP of the File Server where user home folders will be created. NOTE: Using the IP is more reliable. Default options for DNS lookup does not allow this server to look back into your network to resolve names so the IP of your domain controller is needed.
-		</div>
-		<div>
-			<b>File Server Quota Drive: </b> If you use quotas for user folders, the import tool can set those during import. This drive letter is the physical drive letter on the file server, <b>NOT</b> the drive letter the user will see for their home folder.
-		</div>
-	</div>
-</div>
+{{extend 'layout.html'}}<div>	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a></div><h1>Change File Server Settings</h1><div>    <span style="font-weight: bold; color: green;">        NOTE: <br />        <a href="{{=URL('docs', 'winrm') }}">WinRM</a> needs to be setup on your file server.<br />        User account should have admin privileges and format should be domain\user if a domain user, or just the username if a local user.</span></div><div>    <div style="float: left; width: 600px; overflow: initial;">        {{=form}}    </div>    <div class="well" style="float: left; width: 400px; ">        <h3>            Help        </h3>		<p>			File server settings allow you to specify a location for user home directories. This script will create the folder, set permissions for this student, and set quota options if specified. For this to work, the drive letter and the home folder need to be set. <a href="{{=URL('docs', 'winrm') }}">WinRM</a> is used to run the required commands and will need to be enabled on your file server.		</p>		<div>			<b>File Server Import Enabled: </b> Turn on/off the ability to setup home folder for users during import.		</div>		<div>			<b>File Server Login User: </b> Use a <b>LOCAL NOT DOMAIN</b> admin account that is on the file server. This account needs priviledges to create user folder and set permissions. The account <b>HAS</b> to be <b>LOCAL</b> or it will not work!!!		</div>		<div>			<b>File Server Login Pass: </b> The password for the local account described above. Password is encypted using AES encryption.		</div>		<div>			<b>File Server Address: </b>  Please enter the IP of the File Server where user home folders will be created. NOTE: Using the IP is more reliable. Default options for DNS lookup does not allow this server to look back into your network to resolve names so the IP of your domain controller is needed.		</div>		<div>			<b>File Server Quota Drive: </b> If you use quotas for user folders, the import tool can set those during import. This drive letter is the physical drive letter on the file server, <b>NOT</b> the drive letter the user will see for their home folder.		</div>	</div></div>

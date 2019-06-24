@@ -9,10 +9,4 @@
 </div>
 <hr />
 
-<div id="process_queue_dl_progress" class='well'>
-<h5>Video Download Progress</h5>
-	<div id="process_queue_view_dl_progress">
-		<!--img src="{{=URL('static', 'images/progress.gif') }}" /-->
-		{{=LOAD('media', 'find_replace_step_youtube_progress_dl_queue.load', ajax=True, user_signature=True)}}
-	</div>
-</div>
+

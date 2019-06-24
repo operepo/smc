@@ -32,8 +32,8 @@ response.menu = [
         (T('Upload Media'), False, URL('media', 'upload_media')),
         (T('Upload Document'), False, URL('media', 'upload_document')),
         (T('Offline Conversion'), False, URL('media', 'conversion'), [
-            (T('Pull From YouTube'), False, URL('media', 'pull_from_youtube')),
-            (T('Find/Replace'), False, URL('media', 'find_replace')),
+            (T('Pull From YouTube (single url)'), False, URL('media', 'pull_from_youtube')),
+            (T('Find/Replace (mass edit course)'), False, URL('media', 'find_replace')),
          ]),
         (T('Media Utilities'), False, URL('media', 'utilities'), [
             (T('Scan Media Files'), False, URL('media', 'scan_media_files')),

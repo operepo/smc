@@ -7,6 +7,7 @@ Finding text/links that match a pattern in all your pages and optionally replace
 <hr />
 <div>
     <b>Using Course: {{=current_course_name + " (" + current_course + ")"}}</b>
+    <span><a href="{{=URL('media', 'find_replace.html')}}">(Choose a different course)</a></span>
 </div>
 
 NOTE: This uses Regular Expressions. You can experiment with regular expressions online here:

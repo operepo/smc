@@ -1,36 +1,1 @@
-{{extend 'layout.html'}}
-
-<div>
-	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a>
-</div>
-
-<h1>Change Active Directory Settings</h1>
-
-<div>
-    <div style="float: left; width: 600px; overflow: initial;">
-        {{=form}}
-    </div>
-    <div class="well" style="float: left; width: 400px; ">
-        <h3>
-            Help
-        </h3>
-		<p>
-			Configure the app to import users into Active Directory. Four Organizational Units will be used (Students, Faculty, StudentGroups, FacultyGroups). All accounts will be created in either Students or Faculty. A group will be created for each class in FacultyGroups or StudentGroups. Each Faculty or Student will be added to the appropriate groups.
-		</p>
-		<div>
-			<b>AD Import Enabled: </b> Turn Active Directory imports on or off. Turning this off will also turn off File Server imports as file server settings rely on an Active Directory user.
-		</div>
-		<div>
-			<b>AD Service User: </b> The app needs an admin account with rights to create and configure user accounts in Active Directory. You <b>DO NOT</b> need to include the domain with the user (e.g. Administrator is fine, you do not need Domain\Administrator).
-		</div>
-		<div>
-			<b>AD Service Password: </b> The password for the service user. Password is stored using AES encryption.
-		</div>
-		<div>
-			<b>AD Server Protocol: </b> Default is LDAPS://. Select alternate protocols for connecting to Active Directory if needed.
-		</div>
-		<div>
-			<b>AD Server Address: </b> Please enter the IP of the Active Directory Domain Controller where user accounts will be created. <b>NOTE:</b> Using the IP is more reliable. Default options for DNS lookup does not allow this server to look back into your network to resolve names so the IP of your domain controller is needed.
-		</div>
-	</div>
-</div>
+{{extend 'layout.html'}}<div>	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a></div><h1>Change Active Directory Settings</h1><div>    <div style="float: left; width: 600px; overflow: initial;">        <span style="font-weight: bold; color: green;">NOTE: AD User works format should be: domain\user </span>        {{=form}}    </div>    <div class="well" style="float: left; width: 400px; ">        <h3>            Help        </h3>		<p>			Configure the app to import users into Active Directory. Four Organizational Units will be used (Students, Faculty, StudentGroups, FacultyGroups). All accounts will be created in either Students or Faculty. A group will be created for each class in FacultyGroups or StudentGroups. Each Faculty or Student will be added to the appropriate groups.		</p>		<div>			<b>AD Import Enabled: </b> Turn Active Directory imports on or off. Turning this off will also turn off File Server imports as file server settings rely on an Active Directory user.		</div>		<div>			<b>AD Service User: </b> The app needs an admin account with rights to create and configure user accounts in Active Directory. You <b>DO NOT</b> need to include the domain with the user (e.g. Administrator is fine, you do not need Domain\Administrator).		</div>		<div>			<b>AD Service Password: </b> The password for the service user. Password is stored using AES encryption.		</div>		<div>			<b>AD Server Protocol: </b> Default is LDAPS://. Select alternate protocols for connecting to Active Directory if needed.		</div>		<div>			<b>AD Server Address: </b> Please enter the IP of the Active Directory Domain Controller where user accounts will be created. <b>NOTE:</b> Using the IP is more reliable. Default options for DNS lookup does not allow this server to look back into your network to resolve names so the IP of your domain controller is needed.		</div>	</div></div>

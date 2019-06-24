@@ -435,6 +435,7 @@ db.define_table('document_files',
                 Field('category', 'string'),
                 Field('tags', 'list:string'),
                 Field('views', 'integer', default=0),
+                Field('google_url', 'string', default=''),
                 auth.signature
                 )
 # Indexes

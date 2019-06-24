@@ -1095,6 +1095,62 @@ class Canvas:
         return page
 
     @staticmethod
+    def get_quiz_for_course(course_id, quiz_id):
+        Canvas.Init()
+
+        api = "/api/v1/courses/" + str(course_id) + "/quizzes/" + str(quiz_id)
+
+        p = dict()
+        p["per_page"] = 20000
+
+        page = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                              api, params=p)
+
+        return page
+
+    @staticmethod
+    def get_question_for_course(course_id, quiz_id, question_id):
+        Canvas.Init()
+
+        api = "/api/v1/courses/" + str(course_id) + "/quizzes/" + str(quiz_id) + "/questions/" + str(question_id)
+
+        p = dict()
+        p["per_page"] = 20000
+
+        page = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                              api, params=p)
+
+        return page
+
+    @staticmethod
+    def get_discussion_for_course(course_id, discussion_id):
+        Canvas.Init()
+
+        api = "/api/v1/courses/" + str(course_id) + "/discussion_topics/" + str(discussion_id)
+
+        p = dict()
+        p["per_page"] = 20000
+
+        page = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                              api, params=p)
+
+        return page
+
+    @staticmethod
+    def get_assignment_for_course(course_id, assignment_id):
+        Canvas.Init()
+
+        api = "/api/v1/courses/" + str(course_id) + "/assignments/" + str(assignment_id)
+
+        p = dict()
+        p["per_page"] = 20000
+
+        page = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                              api, params=p)
+
+        return page
+
+    @staticmethod
     def update_page_for_course(course_id, page_url, page):
         # Post page to course
         res = False
@@ -1128,4 +1184,66 @@ class Canvas:
         Canvas.update_page_for_course(course_id, page_url, new_page)
 
         pass
+
+    @staticmethod
+    def replace_value_in_quiz_page(course_id, quiz_id, find_value, replace_value):
+        # First - get the original page info
+        quiz = Canvas.get_quiz_for_course(course_id, quiz_id)
+        if quiz is None:
+            print("Unable to find quiz (replace_value_in_quiz_page): " + str(quiz_id))
+            return
+        new_page = dict()
+        new_page["quiz[description]"] = quiz["description"].replace(find_value, replace_value)
+
+        # Now submit page back to canvas
+        Canvas.update_quiz_for_course(course_id, quiz_id, new_page)
+
+        pass
+
+    @staticmethod
+    def replace_value_in_question_page(course_id, quiz_id, question_id, find_value, replace_value):
+        # First - get the original page info
+        question = Canvas.get_question_for_course(course_id, quiz_id, question_id)
+        if question is None:
+            print("Unable to find question (replace_value_in_question_page): " + str(quiz_id) + "/" + str(question_id))
+            return
+        new_page = dict()
+        new_page["question[question_text]"] = question["question_text"].replace(find_value, replace_value)
+
+        # Now submit page back to canvas
+        Canvas.update_quiz_question_for_course(course_id, quiz_id, question_id, new_page)
+
+        pass
+
+    @staticmethod
+    def replace_value_in_discussion_page(course_id, discussion_id, find_value, replace_value):
+        # First - get the original page info
+        discussion = Canvas.get_discussion_for_course(course_id, discussion_id)
+        if discussion is None:
+            print("Unable to find discussion (replace_value_in_discussion_page): " + str(discussion_id))
+            return
+        new_page = dict()
+        new_page["message"] = discussion["message"].replace(find_value, replace_value)
+
+        # Now submit page back to canvas
+        Canvas.update_discussion_for_course(course_id, discussion_id, new_page)
+
+        pass
+
+    @staticmethod
+    def replace_value_in_assignment_page(course_id, assignment_id, find_value, replace_value):
+        # First - get the original page info
+        assignment = Canvas.get_assignment_for_course(course_id, assignment_id)
+        if assignment is None:
+            print("Unable to find assignment (replace_value_in_assignment_page): " + str(assignment_id))
+            return
+        new_page = dict()
+        new_page["assignment[description]"] = assignment["description"].replace(find_value, replace_value)
+
+        # Now submit page back to canvas
+        Canvas.update_assignment_for_course(course_id, assignment_id, new_page)
+
+        pass
+
+
 ###### End CanvasAPIClass

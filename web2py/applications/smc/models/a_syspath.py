@@ -17,16 +17,17 @@ if import_path not in sys.path:
 
 # If windows, write a kill bat file to end the web2py process
 # This is nice so we don't have to track the current PID when it starts and use taskkill
-if os.name is 'nt':
+if os.name is 'nt' and request.is_scheduler is False:
     # Should be the parent folder of web2py - where the start_smc.bat file is
     curr_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
         os.path.dirname(os.path.abspath(__file__))))))
     bat_path = os.path.join(curr_path, "kill_smc.bat")
-    f = open(bat_path, 'w')
-    f.write("@echo off\r\ntaskkill /f /pid ")
-    f.write(str(os.getpid()))
-    f.write("\r\n")
-    f.close()
+    if os.path.exists(bat_path) is not True:
+        f = open(bat_path, 'w')
+        f.write("@echo off\r\ntaskkill /f /pid ")
+        f.write(str(os.getpid()))
+        f.write("\r\n")
+        f.close()
 
 
 

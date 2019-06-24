@@ -260,9 +260,9 @@ def player():
 
 def view_document():
 
-    width = '100%' # '724'  # '640'  # '720' ,'640'
+    width = '100%'  # '724'  # '640'  # '720' ,'640'
     height = '700'  # '385'  # '433' ,'385'
-    iframe_width = '100%' # '734'  # '650'
+    iframe_width = '100%'  # '734'  # '650'
     iframe_height = '720'  # '405'
     views = 0
 
@@ -297,7 +297,7 @@ def view_document():
 
     can_preview = False
     is_image = False
-    dl_link = A('Download', _href=URL('media','dl_document', args=[document_id]))
+    dl_link = A('Download', _href=URL('media', 'dl_document', args=[document_id]))
     preview_extensions = ["pdf", "odt", "fodt", "ott", "odp", "fodp", "otp", "ods", "fods", "ots"]
     image_extensions = ["jpg", "png", "gif"]
 
@@ -1481,7 +1481,8 @@ def find_replace_step_1():
     course_select = SELECT(course_list, _name="current_course", _id="current_course", _style="width: 600px;")
 
     form = FORM(TABLE(TR("Choose A Course: ", course_select),
-                      TR("", INPUT(_type="submit", _value="Next"))), _name="fr_step1").process(formname="fr_step1")
+                      TR("", INPUT(_type="submit", _value="Next"))), _name="fr_step1").process(formname="fr_step1",
+                                                                                               keepvalues=True)
 
     if form.accepted:
         cname = course_dict[str(form.vars.current_course)]
@@ -1527,19 +1528,20 @@ def find_replace_step_2():
 
     form2 = FORM(TABLE(TR("Choose Tool: ", options_select),
                        TR("", INPUT(_type="submit", _value="Next"))),
-                 _action=URL('media', 'find_replace_step_2.load', user_signature=True)).process()
+                 _action=URL('media', 'find_replace_step_2.load', user_signature=True)).process(keepvalues=True)
 
     if form2.accepted:
         # Save which option and redirect to that page
         if form2.vars.fr_option == "auto_youtube_tool":
-            redirect(URL('media', 'find_replace_step_youtube.load'))
+            redirect(URL('media', 'find_replace_step_youtube.load', user_signature=True))
             pass
         elif form2.vars.fr_option == "auto_google_docs_tool":
-            response.flash = "Google"
+            # response.flash = "Google"
+            redirect(URL('media', 'find_replace_google.load', user_signature=True))
             pass
         elif form2.vars.fr_option == "custom_regex":
             # response.flash = "RegEx"
-            redirect(URL('media', 'find_replace_step_custom_regex.load'))
+            redirect(URL('media', 'find_replace_step_custom_regex.load', user_signature=True))
             pass
         else:
             response.flash = "Unknown Option!"
@@ -1547,6 +1549,341 @@ def find_replace_step_2():
 
     return dict(form2=form2, current_course=current_course, current_course_name=current_course_name,
                 server_url=server_url)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_google():
+    server_url = Canvas._canvas_server_url
+
+    current_course = request.vars.current_course
+    current_course_name = request.vars.current_course_name
+
+    if current_course is not None:
+        session.fr_current_course = current_course
+    else:
+        current_course = session.fr_current_course
+
+    if current_course_name is not None:
+        session.fr_current_course_name = current_course_name
+    else:
+        current_course_name = session.fr_current_course_name
+
+    if current_course is None:
+        redirect(URL("find_replace.html"))
+
+    options = dict(
+        docx="Word Doc (.docx - no preview)",
+        epub="EPub (.epub - works w animations, no preview)",
+        html="HTML (html/zipped - no preview)",
+        odt="Open Document Format (.odt - preview available)",
+        pdf="Adobe PDF (.pdf - preview available)",
+        rtf="Rich Text Format (.rtf - no preview)",
+        txt="Plain Text (.txt - no preview)",
+    )
+
+    option_list = []
+    for o in options:
+        option_list.append(OPTION(options[o], _value=o))
+
+    options_select = SELECT(option_list, _name="export_option", _style="width: 600px;")
+
+    form1 = FORM(TABLE(TR("Export As Format: ", options_select),
+                       TR("", INPUT(_type="submit", _value="GO"))),
+                 _action=URL('media', 'find_replace_google.load', user_signature=True)).process(keepvalues=True)
+
+    find_replace_results = ""
+
+    if form1.accepted:
+        export_format = form1.vars.export_option
+        find_replace_results = find_replace_google_run(current_course, current_course_name, export_format)
+        # response.flash = "Not enabled yet!"
+
+    return dict(form1=form1, current_course=current_course, current_course_name=current_course_name,
+                server_url=server_url, find_replace_results=XML(find_replace_results))
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_google_run(current_course, current_course_name, export_format):
+    ret = "Running...<br /><br />"
+
+    # Regular expression to find google docs
+    find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)'''
+
+    # === Pull all pages and extract links ===
+    items = Canvas.get_page_list_for_course(current_course)
+    total_pages = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Page: " + str(i)
+
+        matches = re.finditer(find_str, new_text)
+        match_count = 0
+        for m in matches:
+            match_count += 1
+            # Dl this doc and then do a replace.
+            doc_url = m.group(0)
+            print("found url: " + str(doc_url))
+            smc_url = find_replace_google_download_doc(current_course_name, export_format, doc_url)
+            if smc_url != "":
+                new_text = new_text.replace(doc_url, smc_url)
+                page_changed = True
+            else:
+                print("error getting smc url for google doc " + str(doc_url))
+
+        # Update page
+        if page_changed is True:
+            new_item = dict()
+            new_item["wiki_page[body]"] = new_text
+            Canvas.update_page_for_course(current_course, i, new_item)
+            ret += " page updated with " + str(match_count) + " changes."
+        else:
+            ret += " no links found."
+
+    # === Pull all quizzes and extract links ===
+    items = Canvas.get_quiz_list_for_course(current_course)
+    total_quizzes = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Quiz: " + str(i)
+
+        matches = re.finditer(find_str, new_text)
+        match_count = 0
+        for m in matches:
+            match_count += 1
+            # Dl this doc and then do a replace.
+            doc_url = m.group(0)
+            print("found url: " + str(doc_url))
+            smc_url = find_replace_google_download_doc(current_course_name, export_format, doc_url)
+            if smc_url != "":
+                new_text = new_text.replace(doc_url, smc_url)
+                page_changed = True
+            else:
+                print("error getting smc url for google doc " + str(doc_url))
+
+        # Update
+        if page_changed is True:
+            new_item = dict()
+            new_item["quiz[description]"] = new_text
+            Canvas.update_quiz_for_course(current_course, i, new_item)
+            ret += " quiz updated with " + str(match_count) + " changes."
+        else:
+            ret += " no links found."
+
+        quiz_id = i
+        # === Pull all questions and extract links ===
+        q_items = Canvas.get_quiz_questions_for_quiz(current_course, quiz_id)
+        total_questions = len(q_items)
+        for q in q_items:
+            q_orig_text = q_items[q]
+            q_new_text = q_orig_text
+            q_page_changed = False
+            ret += "<br />&nbsp;&nbsp;&nbsp;&nbsp;Working on question: " + str(q)
+
+            q_matches = re.finditer(find_str, q_new_text)
+            q_match_count = 0
+            for q_m in q_matches:
+                q_match_count += 1
+                # Dl this doc and then do a replace.
+                q_doc_url = q_m.group(0)
+                print("found url: " + str(q_doc_url))
+                q_smc_url = find_replace_google_download_doc(current_course_name, export_format, q_doc_url)
+                if q_smc_url != "":
+                    q_new_text = q_new_text.replace(q_doc_url, q_smc_url)
+                    q_page_changed = True
+                else:
+                    print("error getting smc url for google doc " + str(q_doc_url))
+
+            # Update page
+            if q_page_changed is True:
+                new_item = dict()
+                new_item["question[question_text]"] = q_new_text
+                Canvas.update_quiz_question_for_course(current_course, quiz_id, q, new_item)
+                ret += " question updated with " + str(q_match_count) + " changes."
+            else:
+                ret += " no links found."
+
+    # === Pull all discussion topics and extract links ===
+    items = Canvas.get_discussion_list_for_course(current_course)
+    total_dicussions = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Discussion: " + str(i)
+
+        matches = re.finditer(find_str, new_text)
+        match_count = 0
+        for m in matches:
+            match_count += 1
+            # Dl this doc and then do a replace.
+            doc_url = m.group(0)
+            print("found url: " + str(doc_url))
+            smc_url = find_replace_google_download_doc(current_course_name, export_format, doc_url)
+            if smc_url != "":
+                new_text = new_text.replace(doc_url, smc_url)
+                page_changed = True
+            else:
+                print("error getting smc url for google doc " + str(doc_url))
+
+        # Update page
+        if page_changed is True:
+            new_item = dict()
+            new_item["message"] = new_text
+            Canvas.update_discussion_for_course(current_course, i, new_item)
+            ret += " discussion updated with " + str(match_count) + " changes."
+        else:
+            ret += " no links found."
+
+    # === Pull all assignments and extract links ===
+    items = Canvas.get_assignment_list_for_course(current_course)
+    total_assignments = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Assignment: " + str(i)
+
+        matches = re.finditer(find_str, new_text)
+        match_count = 0
+        for m in matches:
+            match_count += 1
+            # Dl this doc and then do a replace.
+            doc_url = m.group(0)
+            print("found url: " + str(doc_url))
+            smc_url = find_replace_google_download_doc(current_course_name, export_format, doc_url)
+            if smc_url != "":
+                new_text = new_text.replace(doc_url, smc_url)
+                page_changed = True
+            else:
+                print("error getting smc url for google doc " + str(doc_url))
+
+        # Update page
+        if page_changed is True:
+            new_item = dict()
+            new_item["assignment[description]"] = new_text
+            Canvas.update_assignment_for_course(current_course, i, new_item)
+            ret += " assignment updated with " + str(match_count) + " changes."
+        else:
+            ret += " no links found."
+
+    ret += "<br /><br /><b>Done!</b>"
+    return ret
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_google_download_doc(current_course_name, export_format, doc_url):
+    # Will return the new SMC url or empty string if an error occurs
+    ret = ""
+
+    # Check if exists - return smc link if it does
+    row = db(db.document_files.google_url == doc_url).select().first()
+    if row is not None:
+        ret = URL('media', 'dl_document', args=[row.document_guid], scheme=True, host=True)
+        print("Google Doc Already Downloaded: " + str(ret))
+        return ret
+
+    # Regular expression to pull out the id
+    find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)'''
+    matches = re.search(find_str, doc_url)
+
+    if matches is None:
+        msg = "No google doc id found in " + str(doc_url)
+        print(msg)
+        return ret
+
+    # Grab the ID from the match
+    doc_id = matches.group(3)
+
+    # Make export link
+    export_url = "https://docs.google.com/document/export?format=epub&id=" + str(doc_id)
+
+    print("Pulling google doc: " + export_url)
+
+    # Figure out a local file name
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+
+    # static/documents/01/010102alj29v.... (no file extension)
+    # generate new uuid
+    file_guid = str(uuid.uuid4()).replace('-', '')
+    # print("File GUID: " + str(file_guid))
+    target_folder = os.path.join(app_folder, 'static', 'documents')
+
+    file_prefix = file_guid[0:2]
+
+    target_folder = os.path.join(target_folder, file_prefix)
+    # print("Target Dir: " + target_folder)
+
+    try:
+        os.makedirs(target_folder)
+    except OSError as message:
+        pass
+
+    target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
+
+    original_file_name = file_guid + "." + export_format
+
+    # Download the file
+    try:
+        req = urllib.urlopen(export_url)
+        with open(target_file, 'wb') as f:
+            f.write(req.read())
+
+        # Should have file name in the content-disposition header
+        # content-disposition: attachment; filename="WB-CapitalLettersPunctuation.epub";
+        # filename*=UTF-8''WB%20-%20Capital%20Letters%20%26%20Punctuation.epub
+        content_type = str(req.info()['Content-Type'])
+        content_disposition = str(req.info()['content-disposition'])
+        # split the content-disposition into parts and find the original filename
+        parts = content_disposition.split("; ")
+        for part in parts:
+            if "filename=" in part:
+                parts2 = part.split("=")
+                p = parts2[1]
+                p = p.strip('"')  # strip off "s
+                if p is not None and p != "":
+                    original_file_name = p
+                    break
+
+    except Exception as ex:
+        print("Error trying to save google doc file: " + str(export_url) + " - " + str(ex))
+        return ret
+
+    # Now add the info to the database.
+    output_meta = target_file + ".json"
+    # Save JSON info
+    # Pull the extension off the original filename
+    title, ext = os.path.splitext(original_file_name)
+    description = "Pulled from google docs (" + str(doc_url) + ") for course " + str(current_course_name)
+    media_type = "document"
+    category = current_course_name
+    tags = []
+
+    meta = {'title': title, 'document_guid': file_guid,
+            'description': description, 'original_file_name': original_file_name,
+            'media_type': media_type, 'category': category,
+            'tags': dumps(tags), 'google_url': doc_url}
+
+    meta_json = dumps(meta)
+
+    try:
+        f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+        os.write(f, meta_json)
+        os.close(f)
+    except Exception as ex:
+        print("ERROR SAVING JSON for google doc download " + str(output_meta) + " - " + str(ex))
+
+    # Store this file in the database
+    db.document_files.insert(document_guid=file_guid, title=title, description=description,
+                             original_file_name=original_file_name, media_type=media_type,
+                             category=category, tags=tags, google_url=doc_url)
+    db.commit()
+
+    ret = URL('media', 'dl_document', args=[file_guid], scheme=True, host=True)
+    return ret
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
@@ -1907,17 +2244,77 @@ def find_replace_step_youtube():
     if current_course is None:
         redirect(URL("find_replace.html"))
 
-    # Find all known instances of youtube links in the canvas course.
+    # Total of ALL urls
+    total_urls = 0
+
+    # === FIND PAGE URLS FOR YT ===
     yt_urls = dict()
     pages = Canvas.get_page_list_for_course(current_course)
-    total_urls = 0
+
     for p in pages:
         urls = getURLS(pages[p])
         if len(urls) > 0:
             total_urls += len(urls)
             yt_urls[p] = urls
 
-    session.yt_urls = yt_urls
+    session.yt_page_urls = yt_urls
+    session.yt_page_urls_curr_pos = 0
+
+    # === FIND QUIZ URLS FOR YT ===
+    yt_urls = dict()
+    # Set some values for sub queries for questions
+    session.yt_question_urls = dict()
+    session.yt_question_curls_curr_pos = 0
+
+    items = Canvas.get_quiz_list_for_course(current_course)
+
+    for i in items:
+        urls = getURLS(items[i])
+        if len(urls) > 0:
+            total_urls += len(urls)
+            yt_urls[i] = urls
+
+        # Now pull for each question
+        question_yt_urls = dict()
+        questions = Canvas.get_quiz_questions_for_quiz(current_course, i)
+        for q in questions:
+            question_urls = getURLS(questions[q])
+            if len(question_urls) > 0:
+                total_urls += len(question_urls)
+                question_yt_urls[q] = question_urls
+
+        # Add the questions to the main list
+        session.yt_question_urls[i] = question_yt_urls
+
+    session.yt_quiz_urls = yt_urls
+    session.yt_quiz_urls_curr_pos = 0
+
+    # === FIND DISCUSSION TOPIC URLS FOR YT ===
+    yt_urls = dict()
+    items = Canvas.get_discussion_list_for_course(current_course)
+
+    for i in items:
+        urls = getURLS(items[i])
+        if len(urls) > 0:
+            total_urls += len(urls)
+            yt_urls[i] = urls
+
+    session.yt_discussion_urls = yt_urls
+    session.yt_discussion_urls_curr_pos = 0
+
+    # === FIND ASSIGNMENT URLS FOR YT ===
+    yt_urls = dict()
+    items = Canvas.get_assignment_list_for_course(current_course)
+
+    for i in items:
+        urls = getURLS(items[i])
+        if len(urls) > 0:
+            total_urls += len(urls)
+            yt_urls[i] = urls
+
+    session.yt_assignment_urls = yt_urls
+    session.yt_assignment_urls_curr_pos = 0
+
     session.yt_urls_curr_pos = 0
     session.yt_urls_total_len = total_urls
     session.yt_urls_msg = ""
@@ -1937,11 +2334,9 @@ def find_replace_step_youtube_progress():
     current_course_name = session.fr_current_course_name
 
     finished = False
-    if len(session.yt_urls) < 1:
-        msg = "<br /><br /><b>Finished!</b>"
-        finished = True
-    else:
-        page_url, yt_urls = session.yt_urls.popitem()
+    # Process a page
+    if len(session.yt_page_urls) > 0:
+        page_url, yt_urls = session.yt_page_urls.popitem()
         for yt_url in yt_urls:
             session.yt_urls_curr_pos += 1
             msg = "<br />Processing " + str(yt_url)
@@ -1969,19 +2364,164 @@ def find_replace_step_youtube_progress():
                 pass
             except Exception as ex:
                 session.yt_urls_error_msg += "<br/>\nError getting video " + str(yt_url) + " -> " + str(ex)
+    elif len(session.yt_quiz_urls) > 0:
+        quiz_id, yt_urls = session.yt_quiz_urls.popitem()
+        for yt_url in yt_urls:
+            session.yt_urls_curr_pos += 1
+            msg = "<br />Processing " + str(yt_url)
+
+            try:
+                # Get yt video info
+                # session.yt_urls_error_msg += "A"
+                yt, stream, res = find_best_yt_stream(yt_url)
+                # session.yt_urls_error_msg += "AB"
+
+                # Start download or get current db entry for this video
+                media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                # session.yt_urls_error_msg += "B"
+                vid_guid = media_file.media_guid
+                title = media_file.title
+                description = media_file.description
+                category = media_file.category
+                tags = media_file.tags
+
+                # Now replace the value in the canvas page
+                smc_url = URL('media', 'player', args=[vid_guid], host=True)
+                msg += "Replacing " + str(yt_url) + " with " + str(smc_url)
+
+                Canvas.replace_value_in_quiz_page(current_course, quiz_id, yt_url, smc_url)
+                pass
+            except Exception as ex:
+                session.yt_urls_error_msg += "<br/>\nError getting video " + str(yt_url) + " -> " + str(ex)
+    elif len(session.yt_question_urls) > 0:
+        # Questions are 2 level array - yt_question_urls[quiz_id][question_id]=urls
+        # pop one question
+        question_id = 0
+        yt_urls = dict()
+        quiz_id = 0
+        while question_id < 1 and len(session.yt_question_urls) > 0:
+            # Pull the next question urls - remove quiz from array if empty
+            for quiz_id in session.yt_question_urls:
+                if len(session.yt_question_urls[quiz_id]) < 1:
+                    # No sub items, remove it
+                    del session.yt_question_urls[quiz_id]
+                    break  # Jump to next while loop
+
+                # Get the question, then bump out of the loop so we move on
+                question_id, yt_urls = session.yt_question_urls[quiz_id].popitem()
+                break
+
+        # Should have the current question, the urls, and the quiz for it
+        for yt_url in yt_urls:
+            session.yt_urls_curr_pos += 1
+            msg = "<br />Processing " + str(yt_url)
+
+            try:
+                # Get yt video info
+                # session.yt_urls_error_msg += "A"
+                yt, stream, res = find_best_yt_stream(yt_url)
+                # session.yt_urls_error_msg += "AB"
+
+                # Start download or get current db entry for this video
+                media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                # session.yt_urls_error_msg += "B"
+                vid_guid = media_file.media_guid
+                title = media_file.title
+                description = media_file.description
+                category = media_file.category
+                tags = media_file.tags
+
+                # Now replace the value in the canvas page
+                smc_url = URL('media', 'player', args=[vid_guid], host=True)
+                msg += "Replacing " + str(yt_url) + " with " + str(smc_url)
+
+                Canvas.replace_value_in_question_page(current_course, quiz_id, question_id, yt_url, smc_url)
+                pass
+            except Exception as ex:
+                session.yt_urls_error_msg += "<br/>\nError getting video " + str(yt_url) + " -> " + str(ex)
+
+    elif len(session.yt_discussion_urls) > 0:
+        discussion_id, yt_urls = session.yt_discussion_urls.popitem()
+        for yt_url in yt_urls:
+            session.yt_discussion_urls_curr_pos += 1
+            msg = "<br />Processing " + str(yt_url)
+
+            try:
+                # Get yt video info
+                # session.yt_urls_error_msg += "A"
+                yt, stream, res = find_best_yt_stream(yt_url)
+                # session.yt_urls_error_msg += "AB"
+
+                # Start download or get current db entry for this video
+                media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                # session.yt_urls_error_msg += "B"
+                vid_guid = media_file.media_guid
+                title = media_file.title
+                description = media_file.description
+                category = media_file.category
+                tags = media_file.tags
+
+                # Now replace the value in the canvas page
+                smc_url = URL('media', 'player', args=[vid_guid], host=True)
+                msg += "Replacing " + str(yt_url) + " with " + str(smc_url)
+
+                Canvas.replace_value_in_discussion_page(current_course, discussion_id, yt_url, smc_url)
+                pass
+            except Exception as ex:
+                session.yt_urls_error_msg += "<br/>\nError getting video " + str(yt_url) + " -> " + str(ex)
+
+    elif len(session.yt_assignment_urls) > 0:
+        assignment_id, yt_urls = session.yt_assignment_urls.popitem()
+        for yt_url in yt_urls:
+            session.yt_urls_curr_pos += 1
+            msg = "<br />Processing " + str(yt_url)
+
+            try:
+                # Get yt video info
+                # session.yt_urls_error_msg += "A"
+                yt, stream, res = find_best_yt_stream(yt_url)
+                # session.yt_urls_error_msg += "AB"
+
+                # Start download or get current db entry for this video
+                media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                # session.yt_urls_error_msg += "B"
+                vid_guid = media_file.media_guid
+                title = media_file.title
+                description = media_file.description
+                category = media_file.category
+                tags = media_file.tags
+
+                # Now replace the value in the canvas page
+                smc_url = URL('media', 'player', args=[vid_guid], host=True)
+                msg += "Replacing " + str(yt_url) + " with " + str(smc_url)
+
+                Canvas.replace_value_in_assignment_page(current_course, assignment_id, yt_url, smc_url)
+                pass
+            except Exception as ex:
+                session.yt_urls_error_msg += "<br/>\nError getting video " + str(yt_url) + " -> " + str(ex)
+    else:
+        # No more of anything to process
+        msg = "<br /><br /><b>Finished!</b>"
+        finished = True
 
     session.yt_urls_msg += msg
 
-    session.yt_urls_status = str(session.yt_urls_curr_pos) + " of " + str(session.yt_urls_total_len) + \
-                             " videos processed..."
+    if finished is not True:
+        session.yt_urls_status = str(session.yt_urls_curr_pos) + " of " + str(session.yt_urls_total_len) + \
+            " videos processed..."
+    else:
+        session.yt_urls_status = ""
 
     if finished is not True:
-        response.js = "web2py_component('" + URL('media', 'find_replace_step_youtube_progress.load') +\
+        response.js = "web2py_component('" + \
+                      URL('media', 'find_replace_step_youtube_progress.load', user_signature=True) +\
                       "', target='process_queue_view');"
     else:
         response.js = "$('#process_queue_progress_img').hide();"
+        response.js = "$('#process_queue_progress_img').hide();"
 
-    return dict(output=XML(session.yt_urls_msg), status=XML(session.yt_urls_status), errors=XML(session.yt_urls_error_msg))
+    return dict(output=XML(session.yt_urls_msg), status=XML(session.yt_urls_status),
+                errors=XML(session.yt_urls_error_msg))
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
@@ -2020,8 +2560,9 @@ def find_replace_step_youtube_progress_dl_queue():
                                 orderby=[~db.media_files.modified_on], fields=fields,
                                 headers=headers, maxtextlengths=maxtextlengths)
 
-    response.js = "setTimeout(function() {web2py_component('" + URL('media', 'find_replace_step_youtube_progress_dl_queue.load') + \
-                  "', target='process_queue_view_dl_progress');}, 6000);"
+    response.js = "setTimeout(function() {web2py_component('" + \
+                  URL('media', 'find_replace_step_youtube_progress_dl_queue.load', user_signature=True) + \
+                  "', target='process_queue_view_dl_progress');}, 3000);"
     return dict(process_grid=process_grid)
 
 

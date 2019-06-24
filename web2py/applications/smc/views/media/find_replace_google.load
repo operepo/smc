@@ -1,10 +1,22 @@
 
+<h4>Google Documents Finder</h4>
+<div>
+Find and download Google docs.
+</div>
+
+<hr />
 <div>
     <b>Using Course: {{=current_course_name + " (" + current_course + ")"}}</b>
     <span><a href="{{=URL('media', 'find_replace.html')}}">(Choose a different course)</a></span>
 </div>
 
 <div>
-    {{=form2}}
+
+{{=form1}}
 </div>
+
+<div>
+{{=find_replace_results}}
+</div>
+
 
