@@ -251,7 +251,7 @@ def config_canvas_settings():
             AppSettings.SetValue("canvas_import_enabled", True)
             response.flash = "Canvas integration auto configured and enabled"
         else:
-            response.flash = "Unable to auto configure canvas integration!"
+            response.flash = "Unable to auto configure canvas integration!" + msg1
 
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False, _name="canvas_config",

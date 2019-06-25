@@ -80,7 +80,7 @@ class Canvas:
                 # Invalid user
                 Canvas._errors.append(
                     "<b>Canvas Error</b> - Check that your server url and DEV key is properly configured (" +
-                    str(Canvas._canvas_server_url) + ")")
+                    str(Canvas._canvas_server_url) + ") - " + str(Canvas._admin_user))
                 return False
             # Canvas._errors.append("Result: " + str(Canvas._admin_user))
         
@@ -157,7 +157,7 @@ class Canvas:
             dev_key = hashlib.sha224(str(uuid.uuid4()).replace('-', '').encode('utf-8')).hexdigest()
             sql = "INSERT INTO developer_keys (api_key, name) VALUES ('" + dev_key + "', 'OPE-Integration'); "
             db_canvas.executesql(sql)
-            db_canvas.commit() # Make sure to commit the changes
+            db_canvas.commit()  # Make sure to commit the changes
             # msg += "  inserting new dev key..."
 
             # Now grab the new id
@@ -173,13 +173,89 @@ class Canvas:
 
         if dev_key_id is None:
             dev_key_id = 0
+
+        # Make sure the workflow state is active
+        sql = "UPDATE developer_keys SET workflow_state='active', visible='TRUE' WHERE name='OPE-Integration'"
+        db_canvas.executesql(sql)
+        db_canvas.commit()
+
+        canvas_url = AppSettings.GetValue('canvas_server_url', 'https://canvas.ed')
+        # Strip off http and canvas
+        canvas_domain = canvas_url.replace("https://canvas.", "")
+
+        # Find the admin user
+        admin_user = "admin@" + canvas_domain
+        # sql = "SELECT id FROM users WHERE name='admin@ed'"
+        sql = "SELECT user_id, account_id FROM pseudonyms WHERE unique_id='" + admin_user + "'"
+        rows = db_canvas.executesql(sql)
+        user_id = 0
+        account_id = 0
+        for row in rows:
+            user_id = row[0]
+            account_id = row[1]
+
+        if user_id < 1:
+            msg += "  Unable to find admin user in canvas - ensure that a user exists with the " + admin_user + " user name"
+            return "", msg
+
+        # NOTE: Need to make sure developer_key_account_bindings has a record and that it
+        # is listed as "on" or we won't be able to use the key
+        sql = "DELETE FROM developer_key_account_bindings WHERE account_id=" + str(account_id) + \
+              " and developer_key_id=" + str(dev_key_id)
+        db_canvas.executesql(sql)
+        sql = "INSERT INTO developer_key_account_bindings (account_id, developer_key_id, " + \
+              "workflow_state, created_at, updated_at) VALUES (" + str(account_id) + \
+              ", " + str(dev_key_id) + ", 'on', now(), now())"
+        db_canvas.executesql(sql)
+
         # At this point we should have a dev key setup, return its id
         return dev_key_id, msg
 
     @staticmethod
+    def FlushRedisKeys(pattern):
+        # TODO - TODO - pull only patterns?
+        # Try and connect to canvas redis server and flush the
+        # redis keys that match the pattern
+        canvas_url = AppSettings.GetValue('canvas_server_url', 'https://canvas.ed')
+        # Strip off http and canvas
+        canvas_domain = canvas_url.replace("https://canvas.", "")
+        redis_url = "redis." + canvas_domain
+        had_error = False
+        import redis
+
+        try:
+            r = redis.Redis(host=redis_url, port=6379)  # password=...
+            r.flushdb()
+        except Exception as ex:
+            print("Error flushing redis db: " + str(ex))
+            had_error = True
+
+        if had_error is True:
+            # Try again w different redis url
+            redis_url = 'redis'
+            try:
+                r = redis.Redis(host=redis_url, port=6379)  # password=...
+                r.flushdb()
+            except Exception as ex:
+                print("Error flushing redis db: " + str(ex))
+                had_error = True
+
+
+    @staticmethod
     def EnsureAdminAccessToken():
+        # Connect to the canvas database
+        db_canvas = Canvas.ConnectDB()
+        if db_canvas is None:
+            return "", "Error - Can't connect to Canvas Postgresql Database!"
+
         # Make sure there is a dev key
         dev_key_id, msg = Canvas.EnsureDevKey()
+        if dev_key_id == 0:
+            return "", "Error setting up dev key! " + msg
+
+        canvas_url = AppSettings.GetValue('canvas_server_url', 'https://canvas.ed')
+        # Strip off http and canvas
+        canvas_domain = canvas_url.replace("https://canvas.", "")
 
         # Make sure we have a canvas_secret
         canvas_secret = Canvas.GetCanvasSecret()
@@ -187,19 +263,19 @@ class Canvas:
             msg += "   No canvas secret found!"
             return "", msg
 
-        # Connect to the canvas database
-        db_canvas = Canvas.ConnectDB()
-
         # Find the admin user
+        admin_user = "admin@" + canvas_domain
         # sql = "SELECT id FROM users WHERE name='admin@ed'"
-        sql = "SELECT user_id FROM pseudonyms WHERE unique_id='admin@ed'"
+        sql = "SELECT user_id, account_id FROM pseudonyms WHERE unique_id='" + admin_user + "'"
         rows = db_canvas.executesql(sql)
         user_id = 0
+        account_id = 0
         for row in rows:
             user_id = row[0]
+            account_id = row[1]
 
         if user_id < 1:
-            msg += "  Unable to find admin user in canvas - ensure that a user exists with the admin@ed user name"
+            msg += "  Unable to find admin user in canvas - ensure that a user exists with the " + admin_user + " user name"
             return "", msg
 
         # We should have a user id and a dev key id, add an access token
@@ -219,6 +295,9 @@ class Canvas:
         db_canvas.executesql(sql)
         db_canvas.commit()
         # msg += "   RAN SQL: " + sql
+
+        # Make sure redis info is flushed
+        Canvas.FlushRedisKeys("*keys*")
 
         return access_token, msg
 
@@ -242,11 +321,13 @@ class Canvas:
             return "", msg, "", ""
 
         # Find the admin user
-        sql = "SELECT user_id FROM pseudonyms WHERE unique_id='" + user_name + "'"
+        sql = "SELECT user_id, account_id FROM pseudonyms WHERE unique_id='" + user_name + "'"
         rows = db_canvas.executesql(sql)
         user_id = 0
+        account_id = 0
         for row in rows:
             user_id = row[0]
+            account_id = row[1]
 
         if user_id < 1:
             msg += "  Unable to find user in canvas: " + user_name
@@ -303,6 +384,9 @@ class Canvas:
         
         # Calculate pw hash
         hash = Util.encrypt(student_pw, access_token)
+
+        # Make sure redis info is flushed
+        Canvas.FlushRedisKeys("*keys*")
 
         return access_token, msg, hash, student_name
 
