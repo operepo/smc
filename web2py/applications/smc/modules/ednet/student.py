@@ -189,7 +189,7 @@ class Student:
     
     @staticmethod
     def GetUsername(student_id):
-        db = current.db # Grab the current db object
+        db = current.db  # Grab the current db object
         ret = ""
 
         pattern = AppSettings.GetValue('student_id_pattern', '<user_id>')

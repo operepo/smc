@@ -7,6 +7,7 @@ import re
 import glob
 import mimetypes
 from gluon.contrib.simplejson import loads, dumps
+import requests
 
 from ednet.canvas import Canvas
 
@@ -1903,7 +1904,232 @@ def find_replace_post_process_text(course_id, txt):
         txt = txt.replace("<CANVAS_FILE_ID__" + file_name + "__>", str(file_id))
         match = pattern.search(txt)
 
+    # Find quizlet IDs  <FLASH_CARD_LINK___2130943___()___>
+    pattern = re.compile("<FLASH_CARD_LINK___([0-9]+)___([a-zA-Z0-9]+)___>")
+    match = pattern.search(txt)
+    while match is not None:
+        # Run code to pull info for quizlet
+        q_id = match.group(1)
+        q_type = match.group(2)
+
+        try:
+            if pull_single_quizlet_url(q_id, q_type) is True:
+                # Succeeded, replace original link w new link.
+                smc_url = URL('media', 'flashcard_player.load', args=[str(q_id), str(q_type)],
+                              extension=False, host=True, scheme=True)
+                txt = txt.replace(match.group(0), smc_url)
+            else:
+                print("----> Error pulling quizlet: " + str(q_id))
+                error_text = "ERROR_PULLING_QUIZLET_" + str(q_id)
+                txt = txt.replace(match.group(0), error_text)
+        except Exception as ex:
+            print("----> Unknown Exception pulling quizlet data " + str(q_id) + "\n" + str(ex))
+            break
+
+        match = pattern.search(txt)
+
     return txt
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def flashcard_player():
+    ret = dict()
+    ret["error_msg"] = ""
+    ret["json_str"] = dumps(dict())
+
+    flashcard_id = request.args(0)
+    if flashcard_id is None:
+        ret["error_msg"] = "Flashcard Not Found!"
+        return ret
+
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+
+    # flashcards folder
+    flashcards_folder = os.path.join(app_folder, 'static', 'media', 'flashcards')
+
+    item_folder = os.path.join(flashcards_folder, flashcard_id)
+
+    # Open the json file
+    json_file = os.path.join(item_folder, 'data.json')
+    if os.path.exists(json_file) is not True:
+        ret["error_msg"] = "JSON Data does not exist!"
+        return ret
+
+    json_f = open(json_file, "r")
+    json_str = json_f.read()
+    json_f.close()
+
+    js_data = None
+    try:
+        js_data = loads(json_str)
+    except Exception as ex:
+        # Invalid json?
+        ret["error_msg"] = "Invalid JSON data! " + str(ex)
+        return ret
+
+    # ret["error_msg"] = json_file
+    ret["json_str"] = XML(json_str)
+
+    # Not working?
+    # response.js = "alert('test')"  # "flashcard_data = " + json_str + ";\n"
+
+    return ret
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def pull_single_quizlet_url(q_id, q_type):
+    # Fill in headers with public stuff so it looks good
+    headers = dict()
+    headers[
+        'accept'] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3"
+    headers['accept-encoding'] = "gzip, deflate, br"
+    headers['accept-language'] = "en-US,en;q=0.9,es;q=0.8"
+    headers['cache-control'] = "max-age=0"
+    headers[
+        'user-agent'] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
+
+    # Pull data for a quizlet url - includes json, pics, and mp3s
+    ret = False
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+
+    # flashcards folder
+    flashcards_folder = os.path.join(app_folder, 'static', 'media', 'flashcards')
+
+    # item folder
+    item_folder = os.path.join(flashcards_folder, str(q_id))
+
+    if os.path.exists(item_folder) is not True:
+        os.makedirs(item_folder)
+
+    # Pull the embed url
+    q_url = "https://quizlet.com/" + q_id + "/flashcards/embed"
+    resp = requests.get(q_url, headers=headers)
+    html = resp.text
+
+    # Find the json data
+    # Now strip out the json data - we want the json between these
+    find_str = r'''<script>window\.Quizlet\["cardsModeData"\] = (.*); QLoad\("Quizlet\.cardsModeData"\);</script>'''
+    m = re.search(find_str, html)
+    if m is None:
+        print("-----> No flashcard data found at " + q_url)
+        return
+
+    js_string = str(m.group(1))
+    # print(js_string)
+
+    js_data = loads(js_string)
+
+    # print("JS Data: " + str(js_data))
+
+    id = str(js_data['id'])
+    url = str(js_data['url'])
+    word_label = str(js_data['wordLabel'])
+    definition_label = str(js_data['definitionLabel'])
+    sets = js_data['sets']
+    terms = js_data['terms']
+
+    # Now pull terms found
+    for t in terms:
+        t_id = str(t['id'])
+        t_quiz_id = str(t['quiz_id'])
+        t_photo = str(t['photo'])
+        t_word = str(t['word'])
+        t_definition = str(t['definition'])
+        t_term_lang = str(t['term_lang'])
+        t_def_lant = str(t['def_lang'])
+        t_word_audio = str(t['word_audio'])
+        t_has_word_custom_audio = str(t['has_word_custom_audio'])
+        t_def_audio = str(t['def_audio'])
+        t_has_def_custom_audio = str(t['has_def_custom_audio'])
+        t_can_edit = str(t['can_edit'])
+
+        # print("Found Term: " + t_word)
+        # print("\tSaving QL Pics and MP3s...")
+
+        photo_file = os.path.join(item_folder, str(t_id))
+        t['local_photo'] = pull_ql_image(headers, q_url, photo_file, t_photo)
+
+        word_file = os.path.join(item_folder, str(t_id) + ".word.mp3")
+        pull_ql_audio(headers, q_url, word_file, t_word_audio)
+
+        def_file = os.path.join(item_folder, str(t_id) + ".def.mp3")
+        pull_ql_audio(headers, q_url, def_file, t_def_audio)
+
+    # print("Saving JSON data for: " + str(q_id))
+    json_path = os.path.join(item_folder, 'data.json')
+
+    f = open(json_path, 'w+')
+    f.write(dumps(js_data))
+    f.close()
+
+    ret = True
+
+    return ret
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def pull_ql_audio(headers, quizlet_url, save_path, url):
+    if len(url) < 1 or url == 'False':
+        # No audio url.
+        return
+
+    # Make sure to add referer for this request or it will fail
+    h = headers.copy()
+    h['Referer'] = quizlet_url
+
+    pull_url = url
+    if 'http' not in url:
+        pull_url = "https://quizlet.com" + url
+
+    if os.path.exists(save_path):
+        print("--> QL MP3 ALREADY DOWNLOADED " + pull_url)
+        return
+    else:
+        print("--> DOWNLOADING QL MP3: " + pull_url)
+
+    # Pull the image from the url and save it locally
+    r = requests.get(pull_url, headers=h)
+
+    f_path = save_path
+    f = open(f_path, "wb+")
+    f.write(r.content)
+    f.close()
+    # print("MP3 Done: " + pull_url)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def pull_ql_image(headers, quizlet_url, save_path, image_data):
+    if len(image_data) < 1 or image_data == "False":
+        # No image data
+        return ""
+
+    # Make sure to add referer for this request or it will fail
+    h = headers.copy()
+    h['Referer'] = quizlet_url
+
+    # Image data looks like: 3,pBj7uiWsawC-9EuYswJrCw,jpg,960x720
+    # transform it to this form: https://o.quizlet.com/pBj7uiWsawC-9EuYswJrCw_b.jpg
+    parts = image_data.split(",")
+    pull_url = "https://o.quizlet.com/" + parts[1] + "_b." + parts[2]
+
+    # Add extention on (.jpg ?)
+    f_path = save_path + "." + parts[2]
+
+    if os.path.exists(f_path):
+        print("--> QL PIC ALREADY DOWNLOADED " + pull_url)
+        return os.path.basename(f_path)
+    else:
+        print("--> DOWNLOADING QL PIC: " + pull_url)
+
+    # Pull the image from the url and save it locally
+    r = requests.get(pull_url, headers=h)
+
+    # Save the image
+    f = open(f_path, "wb+")
+    f.write(r.content)
+    f.close()
+    # print("---> Pic DONE: " + pull_url)
+    return os.path.basename(f_path)
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
@@ -2168,6 +2394,9 @@ def find_replace_step_custom_regex():
         "IDEA - Listen Audio (change media tag to correct url)":
             [r'''<audio .* src=["'](.*)/courses/([0-9]+)/media_download\?entryId=(m-[0-9a-zA-Z]+)(.*)redirect=1(["']) .*>.*</audio>''',
              r'''<audio controls="controls"><source src="\1/courses/\2/files/<CANVAS_FILE_ID__\3__>/download?download_frd=1" orig_filename="\3" /></audio>'''],
+        "Quizlet Flashcards (download data and use local player)":
+            [r'''https://(www\.)?quizlet\.com/([0-9]+)/([a-zA-Z]+)/embed''',
+             r'''<FLASH_CARD_LINK___\2___\3___>'''],
     }
 
     patterns_list = []
