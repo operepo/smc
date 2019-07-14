@@ -1931,7 +1931,8 @@ def find_replace_post_process_text(course_id, txt):
     return txt
 
 
-@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+# This should be public
+#@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def flashcard_player():
     ret = dict()
     ret["error_msg"] = ""
@@ -1980,7 +1981,7 @@ def flashcard_player():
 def pull_single_quizlet_url(q_id, q_type):
     # Fill in headers with public stuff so it looks good
     headers = dict()
-    headers[
+    headers
         'accept'] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3"
     headers['accept-encoding'] = "gzip, deflate, br"
     headers['accept-language'] = "en-US,en;q=0.9,es;q=0.8"
