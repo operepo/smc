@@ -1981,7 +1981,7 @@ def flashcard_player():
 def pull_single_quizlet_url(q_id, q_type):
     # Fill in headers with public stuff so it looks good
     headers = dict()
-    headers
+    headers[
         'accept'] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3"
     headers['accept-encoding'] = "gzip, deflate, br"
     headers['accept-language'] = "en-US,en;q=0.9,es;q=0.8"
