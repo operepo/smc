@@ -66,7 +66,8 @@ def documents():
 
     # Hide columns
     db.document_files.id.readable = False
-    db.document_files.title.readable = False
+    db.document_files.title.listable = False
+    db.document_files.title.searchable = True
     db.document_files.document_guid.readable = False
     db.document_files.original_file_name.readable = False
     db.document_files.media_type.readable = False
@@ -1776,6 +1777,101 @@ def find_replace_google_run(current_course, current_course_name, export_format):
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_google_re_download_docs():
+    response.view = 'generic.html'
+    # Go through all documents and ensure that the document has been downloaded - if not, do so now
+
+    ret = ""
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+
+    # Get full list of docs in the database
+    docs = db(db.document_files).select()
+    for d in docs:
+        ret += "<br />Checking doc: " + d["title"]
+        g_url = d["google_url"]
+        if g_url is None:
+            ret += " - no google url"
+            continue
+
+        original_file_name = d['original_file_name']
+        (root_file_name, export_format) = os.path.splitext(original_file_name)
+        export_format = export_format.replace(".", "")  # remove the .
+
+        # get the local file path and see if it exists
+
+        # static/documents/01/010102alj29v.... (no file extension)
+        # generate new uuid
+        file_guid = d['document_guid']
+        # print("File GUID: " + str(file_guid))
+        target_folder = os.path.join(app_folder, 'static', 'documents')
+
+        file_prefix = file_guid[0:2]
+
+        target_folder = os.path.join(target_folder, file_prefix)
+
+        if os.path.exists(target_folder) is not True:
+            try:
+                # Ensure the prefix folder exists - ok if this is an exception
+                os.makedirs(target_folder)
+            except OSError as message:
+                pass
+
+        target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
+
+        if os.path.exists(target_file):
+            ret += " - File already downloaded..."
+            continue
+
+        # Need the document id from the google url
+        # Regular expression to pull out the id
+        find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)'''
+        matches = re.search(find_str, g_url)
+
+        if matches is None:
+            ret += " - No google doc id found in " + str(g_url)
+            print("INVALID Google URL - NO ID FOUND " + str(g_url))
+            continue
+
+        # Grab the ID from the match
+        doc_id = matches.group(3)
+        # Make export link
+        export_url = "https://docs.google.com/document/export?format=epub&id=" + str(doc_id)
+
+        ret += " - pulling from " + str(export_url)
+        print("Pulling google doc: " + export_url)
+
+        # Download the file
+        try:
+            req = urllib.urlopen(export_url)
+            with open(target_file, 'wb') as f:
+                f.write(req.read())
+
+            # NOTE - Just re-downloading - don't need the rest of this.
+            # Should have file name in the content-disposition header
+            # content-disposition: attachment; filename="WB-CapitalLettersPunctuation.epub";
+            # filename*=UTF-8''WB%20-%20Capital%20Letters%20%26%20Punctuation.epub
+            # content_type = str(req.info()['Content-Type'])
+            # content_disposition = str(req.info()['content-disposition'])
+            # split the content-disposition into parts and find the original filename
+            # parts = content_disposition.split("; ")
+            # for part in parts:
+            #    if "filename=" in part:
+            #        parts2 = part.split("=")
+            #        p = parts2[1]
+            #        p = p.strip('"')  # strip off "s
+            #        if p is not None and p != "":
+            #            original_file_name = p
+            #            break
+
+        except Exception as ex:
+            print("Error trying to save google doc file: " + str(export_url) + " - " + str(ex))
+            ret += " --- ERROR " + str(export_url) + " - " + str(ex)
+            continue
+
+    return ret
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace_google_download_doc(current_course_name, export_format, doc_url):
     # Will return the new SMC url or empty string if an error occurs
     ret = ""
@@ -1932,7 +2028,6 @@ def find_replace_post_process_text(course_id, txt):
 
 
 # This should be public
-#@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def flashcard_player():
     ret = dict()
     ret["error_msg"] = ""
