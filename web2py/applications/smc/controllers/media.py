@@ -1788,10 +1788,6 @@ def find_replace_google_re_download_docs():
     docs = db(db.document_files).select()
     for d in docs:
         ret += "<br />Checking doc: " + d["title"]
-        g_url = d["google_url"]
-        if g_url is None:
-            ret += " - no google url"
-            continue
 
         original_file_name = d['original_file_name']
         (root_file_name, export_format) = os.path.splitext(original_file_name)
@@ -1818,8 +1814,31 @@ def find_replace_google_re_download_docs():
 
         target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
 
+        # Write the JSON file
+        output_meta = target_file + ".json"
+
+        meta = {'title': d['title'], 'document_guid': file_guid,
+                'description': d['description'], 'original_file_name': d['original_file_name'],
+                'media_type': d['media_type'], 'category': d['category'],
+                'tags': d['tags'], 'google_url': d['google_url']}
+
+        meta_json = dumps(meta)
+
+        try:
+            f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+            os.write(f, meta_json)
+            os.close(f)
+        except Exception as ex:
+            print("ERROR SAVING JSON for google doc download " + str(output_meta) + " - " + str(ex))
+            ret += " ---- ERROR SAVING JSON " + str(ex)
+
         if os.path.exists(target_file):
-            ret += " - File already downloaded..."
+            ret += " - File already downloaded... " + file_guid
+            continue
+
+        g_url = d["google_url"]
+        if g_url is None:
+            ret += " - no google url " + file_guid
             continue
 
         # Need the document id from the google url
