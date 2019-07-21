@@ -4,8 +4,76 @@ import os
 import time
 import subprocess
 from gluon.contrib.simplejson import loads, dumps
-import urllib
+import sys
 import shutil
+
+PY2 = sys.version_info[0] == 2
+PY3 = sys.version_info[0] == 3
+PY33 = sys.version_info[0:2] >= (3, 3)
+if PY2:
+    reload(sys)
+    sys.setdefaultencoding('utf8')
+    import urllib2
+    from urllib import urlencode
+    from urllib2 import URLError
+    from urllib2 import quote
+    from urllib2 import unquote
+    from urllib2 import urlopen
+    from urllib2 import Request
+    from urlparse import parse_qsl
+    from urllib2 import HTTPError
+    from HTMLParser import HTMLParser
+
+    def install_proxy(proxy_handler):
+        """
+        install global proxy.
+        :param proxy_handler:
+            :samp:`{"http":"http://my.proxy.com:1234", "https":"https://my.proxy.com:1234"}`
+        :return:
+        """
+        proxy_support = urllib2.ProxyHandler(proxy_handler)
+        opener = urllib2.build_opener(proxy_support)
+        urllib2.install_opener(opener)
+
+    def unescape(s):
+        """Strip HTML entries from a string."""
+        html_parser = HTMLParser()
+        return html_parser.unescape(s)
+
+    def unicode(s):
+        """Encode a string to utf-8."""
+        return s.encode('utf-8')
+
+elif PY3:
+    from urllib.error import URLError
+    from urllib.parse import parse_qsl
+    from urllib.parse import quote
+    from urllib.parse import unquote
+    from urllib.parse import urlencode
+    from urllib.request import urlopen
+    from urllib.error import HTTPError
+    from urllib.request import Request
+    from urllib import request
+
+    def install_proxy(proxy_handler):
+        proxy_support = request.ProxyHandler(proxy_handler)
+        opener = request.build_opener(proxy_support)
+        request.install_opener(opener)
+
+    def unicode(s):
+        """No-op."""
+        return s
+
+    if PY33:
+        from html.parser import HTMLParser
+
+        def unescape(s):
+            """Strip HTML entries from a string."""
+            html_parser = HTMLParser()
+            return html_parser.unescape(s)
+    else:
+        from html import unescape
+
 
 # For finding number of CPUs
 import multiprocessing
@@ -357,7 +425,57 @@ def process_media_file(media_id):
     return dict(mp4_ret=mp4_ret, ogv_ret=ogv_ret, webm_ret=webm_ret, poster_ret=poster_ret, thumb_ret=thumb_ret)
 
 
-def pull_youtube_video(yt_url, media_guid, res, thumbnail_url):
+def find_best_yt_stream(yt_url):
+    yt = None
+    res = '480p'
+
+    if yt_url is None:
+        print("ERROR: yt_url was none?")
+        yt_url = ""
+
+    # print("Looking for YT: " + yt_url)
+
+    if session.yt_urls_error_msg is None:
+        session.yt_urls_error_msg = ""
+
+    # Change out embed for watch so the link works properly
+    try:
+        yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
+    except HTTPError as ex:
+        if ex.code == 429:
+            # Need to try again later
+            # Pass this exception up the stack
+            raise ex
+    except Exception as ex:
+        msg = "Bad YT URL? " + yt_url + " -- " + str(ex)
+        session.yt_urls_error_msg += msg
+        print(msg)
+
+    s = None
+    try:
+        s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+        if s is None:
+            # Try 360p
+            res = '360p'
+            s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+        if s is None:
+            # Try 720p
+            res = '720p'
+            s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
+        if s is None:
+            # If that doesn't exist, then get the first one in the list
+            s = yt.streams.filter(file_extension='mp4', progressive=True).first()
+        # s.download()  # put in folder name
+    except Exception as ex:
+        msg = "Error grabbing yt video info! " + str(ex)
+        session.yt_urls_error_msg += msg
+        print(msg)
+
+    stream = s
+    return yt, stream, res
+
+
+def pull_youtube_video(yt_url, media_guid):
     # Download the specified movie.
     had_errors = False
 
@@ -395,44 +513,67 @@ def pull_youtube_video(yt_url, media_guid, res, thumbnail_url):
     output_thumb = target_file + ".thumb.png"
 
     from pytube import YouTube
-    yt = None
-    res = '480p'
+    try:
+        yt, stream, res = find_best_yt_stream(yt_url)
+    except HTTPError as ex:
+        if ex.code == 429:
+            # Too many requests - have this try again later...
+
+            sleep_time = 300  # sleep for 5 mins?
+            if "Retry-After" in ex.headers:
+                sleep_time = int(ex.headers["Retry-After"])
+            print("Too many requests - sleeping for a few... " + str(sleep_time))
+            # print("Too many requests! " + str(ex.headers["Retry-After"]))
+            time.sleep(sleep_time)
+            raise Exception("HTTP 429 - Retry after sleep")
+            return False
+        else:
+            print("Unknown HTTP error? " + str(ex))
+            return False
 
     try:
-        # Change out embed for watch so the link works properly
-        yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
-        s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
-        if s is None:
-            # Try 360p
-            res = '360p'
-            s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
-        if s is None:
-            # Try 720p
-            res = '720p'
-            s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
-        if s is None:
-            # If that doesn't exist, then get the first one in the list
-            s = yt.streams.filter(file_extension='mp4', progressive=True).first()
         print("Downloading " + str(yt_url))
-        s.download(output_path=target_folder, filename=output_mp4_filename)  # put in folder name
+        stream.download(output_path=target_folder, filename=output_mp4_filename)  # put in folder name
         print("Download Complete!")
+    except HTTPError as ex:
+        if ex.code == 429:
+            # Too many requests - have this try again later...
+
+            sleep_time = 300  # sleep for 5 mins?
+            if "Retry-After" in ex.headers:
+                sleep_time = int(ex.headers["Retry-After"])
+            print("Too many requests - sleeping for a few... " + str(sleep_time))
+            # print("Too many requests! " + str(ex.headers["Retry-After"]))
+            time.sleep(sleep_time)
+            raise Exception("HTTP 429 - Retry after sleep")
+            return False
+        else:
+            print("Unknown HTTP error? " + str(ex))
+            return False
     except Exception as ex:
         # TODO - Schedule it to try again? Or just let it die?
         print("Error Downloading YouTube Video!  Are you online? " + str(ex))
         return False
 
-    print("TN File: " + output_thumb)
-    # Download the thumbnail file
+    # print("TN File: " + output_thumb)
     make_own_thumbnail = False
+    thumbnail_url = ""
     try:
-        tn = urllib.urlopen(thumbnail_url)
-        with open(output_thumb, 'wb') as f:
-            f.write(tn.read())
-        # Copy the thumbnail to the poster
-        shutil.copy(output_thumb, output_poster)
-    except Exception as ex:
-        print("Error trying to save thumbnail file: " + str(thumbnail_url) + " - " + str(ex))
+        thumbnail_url = yt.thumbnail_url
+    except:
         make_own_thumbnail = True
+
+    # Download the thumbnail file if its set
+    if thumbnail_url != "":
+        try:
+            tn = urllib.urlopen(thumbnail_url)
+            with open(output_thumb, 'wb') as f:
+                f.write(tn.read())
+            # Copy the thumbnail to the poster
+            shutil.copy(output_thumb, output_poster)
+        except Exception as ex:
+            print("Error trying to save thumbnail file: " + str(thumbnail_url) + " - " + str(ex))
+            make_own_thumbnail = True
 
     if make_own_thumbnail is True:
         # Unable to pull thumbnail - make our own.
@@ -465,6 +606,15 @@ def pull_youtube_video(yt_url, media_guid, res, thumbnail_url):
             except Exception as ex:
                 print("Error generating poster: " + str(output_poster) + " - " + str(ex))
 
+    # Update media file to show it has been downloaded
+    title = yt.title
+    description = yt.description
+
+    media_file.update_record(needs_downloading=False, title=title, description=description)
+    db.commit()
+    # pull w updated info
+    media_file = db(db.media_files.media_guid == media_guid).select().first()
+
     # Save JSON info
     meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),
             'description': media_file.description, 'original_file_name': media_file.original_file_name,
@@ -477,10 +627,8 @@ def pull_youtube_video(yt_url, media_guid, res, thumbnail_url):
     os.write(f, meta_json)
     os.close(f)
 
-    # Update media file to show it has been downloaded
-    media_file.update_record(needs_downloading=False)
-    db.commit()
-
+    # Throw a little delay in here to help keep from getting blocked by youtube
+    time.sleep(10)
     return True
 
 

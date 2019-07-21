@@ -1,5 +1,5 @@
 {{extend 'minimal_layout.html'}}
-
+<!-- TODO TODO TODO - Narrow down width so it doesn't run off the page on quizes -->
 <!-- using flip library to change card https://nnattawat.github.io/flip/ -->
 
 <script>
@@ -135,21 +135,21 @@ function draw_current_slide() {
         // Photo but no definition - make photo bigger
         // 424/550?
         console.log("big photo");
-        $("#flashcard_picture").width(500);
+        $("#flashcard_picture").width(400);
         $("#def_text").hide();
     }
     if (curr_item['photo'] != '' && curr_item['def'] != '') {
         // Both photo and definition are on
         console.log("Both def and photo");
-        $("#flashcard_picture").width(350);
-        $("#def_text").width(400);
+        $("#flashcard_picture").width(250);
+        $("#def_text").width(300);
         $("#def_text").show();
     }
     if (curr_item['photo'] == '' && curr_item['def'] != '') {
         // No photo - make it smaller
         console.log("def + photo");
         $("#flashcard_picture").width(0);
-        $("#def_text").width(600);
+        $("#def_text").width(500);
     }
     // Make sure the front card is showing
     $('#flashcard_body').flip(false);
@@ -213,8 +213,8 @@ div {
     /* border: 1px solid green; */
 }
 #flashcard_container {
-    width: 800px;
-    height: 500px;
+    width: 600px;
+    height: 450px;
     /* border: 1px solid purple; */
 }
 #flashcard_header {
@@ -290,7 +290,7 @@ div {
 
 #flashcard_body {
     width: auto;
-    height: 400px;
+    height: 350px;
     /* border: 1px solid green; */
 
 }
@@ -305,7 +305,7 @@ div {
 
 .card_face {
     width: auto;
-    height: 480px;
+    height: 380px;
     /*margin: 10px;*/
     overflow: auto;
     /*display: inline-block;*/
@@ -319,7 +319,7 @@ div {
 }
 
 #flashcard_picture {
-    width: 440px;
+    width: 340px;
     height: auto;
     float: left;
     background-repeat: no-repeat;
@@ -329,7 +329,7 @@ div {
 }
 #def_text {
     float: left;
-    width: 340px;
+    width: 300px;
     height: 100%;
     /* border: 1px solid green; */
     display: inline-block;

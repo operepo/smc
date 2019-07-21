@@ -1369,8 +1369,8 @@ def pull_from_youtube_step_2():
         response.flash = "Error getting YouTube Video - Are you online?"  # + str(yt_url) + " " + str(ex)
         return dict(form2=XML("<span style='color: red; font-weight:bold;'>" +
                               "Error Downloading video</span> (" + str(yt_url) +
-                              ") - reload page and try again.<br /> " + \
-                              "<span style='font-size: 10px; font-weight: bold;'>" + \
+                              ") - reload page and try again.<br /> " +
+                              "<span style='font-size: 10px; font-weight: bold;'>" +
                               "Error: " +
                               str(ex) + "</span>"))
 
@@ -1397,9 +1397,10 @@ def pull_from_youtube_step_2():
 
     if form.process(formname="yt_step2").accepted:
         # Start download or get current db entry for this video
-        media_file = queue_up_yt_video(yt_url, yt, res, form.vars.category)
+        # media_file = queue_up_yt_video(yt_url, yt, res, form.vars.category)
+        media_file = queue_up_yt_video(yt_url, form.vars.category)
         # Override the values we collected
-        media_file.update_record(title=form.vars.title, description=form.vars.desc)
+        media_file.update_record(title=form.vars.title, description=form.vars.desc, category=form.vars.category)
         db.commit()
 
         response.flash = 'Video queued for download.'  # + str(result)
@@ -2688,17 +2689,18 @@ def find_replace_step_youtube_progress():
             try:
                 # Get yt video info
                 # session.yt_urls_error_msg += "A"
-                yt, stream, res = find_best_yt_stream(yt_url)
+                # yt, stream, res = find_best_yt_stream(yt_url)
                 # session.yt_urls_error_msg += "AB"
 
                 # Start download or get current db entry for this video
-                media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                # media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                media_file = queue_up_yt_video(yt_url, current_course_name)
                 # session.yt_urls_error_msg += "B"
                 vid_guid = media_file.media_guid
-                title = media_file.title
-                description = media_file.description
-                category = media_file.category
-                tags = media_file.tags
+                # title = media_file.title
+                # description = media_file.description
+                # category = media_file.category
+                # tags = media_file.tags
 
                 # Now replace the value in the canvas page
                 smc_url = URL('media', 'player', args=[vid_guid], host=True)
@@ -2717,17 +2719,18 @@ def find_replace_step_youtube_progress():
             try:
                 # Get yt video info
                 # session.yt_urls_error_msg += "A"
-                yt, stream, res = find_best_yt_stream(yt_url)
+                # yt, stream, res = find_best_yt_stream(yt_url)
                 # session.yt_urls_error_msg += "AB"
 
                 # Start download or get current db entry for this video
-                media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                # media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                media_file = queue_up_yt_video(yt_url, current_course_name)
                 # session.yt_urls_error_msg += "B"
                 vid_guid = media_file.media_guid
-                title = media_file.title
-                description = media_file.description
-                category = media_file.category
-                tags = media_file.tags
+                # title = media_file.title
+                # description = media_file.description
+                # category = media_file.category
+                # tags = media_file.tags
 
                 # Now replace the value in the canvas page
                 smc_url = URL('media', 'player', args=[vid_guid], host=True)
@@ -2763,17 +2766,18 @@ def find_replace_step_youtube_progress():
             try:
                 # Get yt video info
                 # session.yt_urls_error_msg += "A"
-                yt, stream, res = find_best_yt_stream(yt_url)
+                # yt, stream, res = find_best_yt_stream(yt_url)
                 # session.yt_urls_error_msg += "AB"
 
                 # Start download or get current db entry for this video
-                media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                # media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                media_file = queue_up_yt_video(yt_url, current_course_name)
                 # session.yt_urls_error_msg += "B"
                 vid_guid = media_file.media_guid
-                title = media_file.title
-                description = media_file.description
-                category = media_file.category
-                tags = media_file.tags
+                # title = media_file.title
+                # description = media_file.description
+                # category = media_file.category
+                # tags = media_file.tags
 
                 # Now replace the value in the canvas page
                 smc_url = URL('media', 'player', args=[vid_guid], host=True)
@@ -2793,17 +2797,18 @@ def find_replace_step_youtube_progress():
             try:
                 # Get yt video info
                 # session.yt_urls_error_msg += "A"
-                yt, stream, res = find_best_yt_stream(yt_url)
+                # yt, stream, res = find_best_yt_stream(yt_url)
                 # session.yt_urls_error_msg += "AB"
 
                 # Start download or get current db entry for this video
-                media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                # media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                media_file = queue_up_yt_video(yt_url, current_course_name)
                 # session.yt_urls_error_msg += "B"
                 vid_guid = media_file.media_guid
-                title = media_file.title
-                description = media_file.description
-                category = media_file.category
-                tags = media_file.tags
+                # title = media_file.title
+                # description = media_file.description
+                # category = media_file.category
+                # tags = media_file.tags
 
                 # Now replace the value in the canvas page
                 smc_url = URL('media', 'player', args=[vid_guid], host=True)
@@ -2823,17 +2828,18 @@ def find_replace_step_youtube_progress():
             try:
                 # Get yt video info
                 # session.yt_urls_error_msg += "A"
-                yt, stream, res = find_best_yt_stream(yt_url)
+                # yt, stream, res = find_best_yt_stream(yt_url)
                 # session.yt_urls_error_msg += "AB"
 
                 # Start download or get current db entry for this video
-                media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                # media_file = queue_up_yt_video(yt_url, yt, res, current_course_name)
+                media_file = queue_up_yt_video(yt_url, current_course_name)
                 # session.yt_urls_error_msg += "B"
                 vid_guid = media_file.media_guid
-                title = media_file.title
-                description = media_file.description
-                category = media_file.category
-                tags = media_file.tags
+                # title = media_file.title
+                # description = media_file.description
+                # category = media_file.category
+                # tags = media_file.tags
 
                 # Now replace the value in the canvas page
                 smc_url = URL('media', 'player', args=[vid_guid], host=True)
@@ -2910,12 +2916,11 @@ def find_replace_step_youtube_progress_dl_queue():
     return dict(process_grid=process_grid)
 
 
-def queue_up_yt_video(yt_url, yt, res, category=None):
+def queue_up_yt_video(yt_url, category=None):
     # Find the current video, or queue it up for download and return the db info
-
     vid_guid = str(uuid.uuid4()).replace('-', '')
-    title = yt.title
-    description = yt.description
+    title = "Downloading from: " + yt_url
+    description = ""
     if category is None:
         category = "YouTube"
     tags = ["YouTube"]
@@ -2929,19 +2934,11 @@ def queue_up_yt_video(yt_url, yt, res, category=None):
         db.commit()
 
         # Launch the background process to download the video
-
-        yt_thumbnail = None
-        try:
-            yt_thumbnail = yt.thumbnail_url
-        except:
-            pass
-
         result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=yt_url,
-                                                                       media_guid=vid_guid,
-                                                                       res=res,
-                                                                       thumbnail_url=yt_thumbnail),
+                                                                       media_guid=vid_guid
+                                                                       ),
                                       timeout=18000, immediate=True, sync_output=5,
-                                      group_name="download_videos")
+                                      group_name="download_videos", retry_failed=30, period=300)
 
         # Make sure to grab the new record now that it has been inserted
         media_file = db(db.media_files.youtube_url == yt_url).select().first()
@@ -2952,46 +2949,4 @@ def queue_up_yt_video(yt_url, yt, res, category=None):
     return media_file
 
 
-def find_best_yt_stream(yt_url):
-    yt = None
-    res = '480p'
 
-    if yt_url is None:
-        print("ERROR: yt_url was none?")
-        yt_url = ""
-
-    # print("Looking for YT: " + yt_url)
-
-    if session.yt_urls_error_msg is None:
-        session.yt_urls_error_msg = ""
-
-    # Change out embed for watch so the link works properly
-    try:
-        yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
-    except Exception as ex:
-        msg = "Bad YT URL? " + yt_url + " -- " + str(ex)
-        session.yt_urls_error_msg += msg
-        print(msg)
-
-    s = None
-    try:
-        s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
-        if s is None:
-            # Try 360p
-            res = '360p'
-            s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
-        if s is None:
-            # Try 720p
-            res = '720p'
-            s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
-        if s is None:
-            # If that doesn't exist, then get the first one in the list
-            s = yt.streams.filter(file_extension='mp4', progressive=True).first()
-        # s.download()  # put in folder name
-    except Exception as ex:
-        msg = "Error grabbing yt video info! " + str(ex)
-        session.yt_urls_error_msg += msg
-        print(msg)
-
-    stream = s
-    return yt, stream, res
