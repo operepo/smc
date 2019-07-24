@@ -1,67 +1,1 @@
-{{extend 'layout.html'}}
-<script>
-    function DeletePrevImport(delete_id)
-    {
-        //alert('delete excel id: ' + delete_id);
-        var ret = confirm('Are you sure you want to completely delete this import?');
-        if (ret == true)
-        {
-            web2py_component( "{{=URL('import', 'faculty_pick_excel_prev_workbooks.load')}}" + "?delete_id=" + delete_id
-                        , target='prev_imports');
-        }
-    }
-    
-</script>
-
-
-<h1>Import Faculty from Excel</h1>
-
-<div class="well">
-    <h3>
-        Getting Started
-    </h3>
-    <p>
-        Here is an <a href='{{=URL('static', 'import/faculty_enrollment_template.xlsx')}}'>Excel Template</a> to get you started. It has the columns you need setup for you. Just download it and put your faculty in.
-    </p>
-    <p style='background-color: '>
-        <b>CAUTION</b> - Things to be aware of...
-        <ul>
-            <li><b>DO NOT</b> rearange the first five columns. The columns are in a specific order. If you rearrange them, they will not work properly.</li>
-            <li><b>You CAN </b> add your own columns to the right. We just need the first five columns at the begining and in that order.</li>
-            <li><b>Disabling Faculty Accounts - Row full of *** </b>-  All faculty you put under this row will be DISABLED!! This is for turning off accounts for faculty who have left.</li>
-            <li><b>DO NOT</b> set an Excel password. We don't support passworded documents at this time</li>
-            <li><b>Import Classes Vs. Classes</b> - The Import Classes field is where you list classes faculty should be made teachers of. Any other Classes field is for your own use.</li>
-            <li><b>Format of Import Classes</b> - Use commas and list each class you want the faculty to control. (e.g. CSE101, CSE102, CSE103)</li>
-            <li><b>Simple Vs. Complex</b> - There are two example sheets. The simple sheet is all you need. Just put your information into those columns.  If you would like to keep more information on your faculty you can add columns to the right and add any information you want. The complex work sheet is an example of a sheet with additional information.</li>
-        </ul>
-
-    </p>
-    <p>
-        <b>Fields</b>
-        <ul>
-            <li><b>User ID</b> The id number of the faculty.</li>
-            <li><b>Name</b> The name of the faculty: e.g. Smith, Bob</li>
-            <li><b>Password</b> The password you want to assign the faculty. If you leave this blank and it will generate one for you.</li>
-            <li><b>Import Classes</b> This is a list of classes you want the faculty to teach. Create a list seprated by commas: e.g. CSE101,ACCT110,MATH090</li>
-			<li><b>Program</b> This sets the program you want the faculty teaching in. This can be used to place faculty in specific OU containers in Active Directory.</li>
-        </ul>
-</ul>
-    </p>
-</p>
-</div>
-
-<div class="well">
-    <p>
-        <h3>Upload New Spreadsheet</h3>
-        {{=form}}
-    </p>
-</div>
-
-<div class="well">
-    <p>
-    <h3>Import Previous Spreadsheet</h3>
-    <div id="prev_imports">
-    {{=LOAD('import', 'faculty_pick_excel_prev_workbooks.load',content=DIV(IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='float: left;'), P('Reading Spreadsheet')), ajax=True)}}
-    </div>
-    </p>
-</div>
+{{extend 'layout.html'}}<script>    function DeletePrevImport(delete_id)    {        //alert('delete excel id: ' + delete_id);        var ret = confirm('Are you sure you want to completely delete this import?');        if (ret == true)        {            web2py_component( "{{=URL('import', 'faculty_pick_excel_prev_workbooks.load')}}" + "?delete_id=" + delete_id                        , target='prev_imports');        }    }</script><h1>Import Faculty from Excel</h1><div class="well">    <h3>        Getting Started    </h3>    <p>        Here is an <a href='{{=URL('static', 'import/faculty_enrollment_template.xlsx')}}'>Excel Template</a> to get you started. It has the columns you need setup for you. Just download it and put your faculty in.    </p>    <p style='background-color: '>        <b>CAUTION</b> - Things to be aware of...        <ul>            <li><b>DO NOT</b> rearange the first five columns. The columns are in a specific order. If you rearrange them, they will not work properly.</li>            <li><b>You CAN </b> add your own columns to the right. We just need the first five columns at the begining and in that order.</li>            <li><b>Disabling Faculty Accounts - Row full of *** </b>-  All faculty you put under this row will be DISABLED!! This is for turning off accounts for faculty who have left.</li>            <li><b>DO NOT</b> set an Excel password. We don't support passworded documents at this time</li>            <li><b>Import Classes Vs. Classes</b> - The Import Classes field is where you list classes faculty should be made teachers of. Any other Classes field is for your own use.</li>            <li><b>Format of Import Classes</b> - Use commas and list each class you want the faculty to control. (e.g. CSE101, CSE102, CSE103)</li>            <li><b>Simple Vs. Complex</b> - There are two example sheets. The simple sheet is all you need. Just put your information into those columns.  If you would like to keep more information on your faculty you can add columns to the right and add any information you want. The complex work sheet is an example of a sheet with additional information.</li>        </ul>    </p>    <p>        <b>Fields</b>        <ul>            <li><b>User ID</b> The id number of the faculty.</li>            <li><b>Name</b> The name of the faculty: e.g. Smith, Bob</li>            <li><b>Password</b> The password you want to assign the faculty. If you leave this blank and it will generate one for you.</li>            <li><b>Import Classes</b> This is a list of classes you want the faculty to teach. Create a list seprated by commas: e.g. CSE101,ACCT110,MATH090</li>			<li><b>Program</b> This sets the program you want the faculty teaching in. This can be used to place faculty in specific OU containers in Active Directory.</li>        </ul></ul>    </p></p></div><div class="well">    <p>        <h3>Upload New Spreadsheet</h3>        {{=form}}    </p></div><div class="well">    <p>    <h3>Import Previous Spreadsheet</h3>    <div id="prev_imports">    {{=LOAD('import', 'faculty_pick_excel_prev_workbooks.load',content=DIV(IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='float: left;'), P('Reading Spreadsheet')), ajax=True)}}    </div>    </p></div>

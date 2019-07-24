@@ -21,7 +21,7 @@ def index():
     links = []
     if auth.has_membership('Faculty') or auth.has_membership('Administrators'):
         links.append(dict(header=T(''),body=lambda row: A('[Delete]', _style='font-size: 10px; color: red;', _href=URL('media', 'delete_media', args=[row.media_guid], user_signature=True)) ) )
-    links.append(dict(header=T(''),body=lambda row: A(IMG(_src=getMediaThumb(row.media_guid), _style="width: 128px;"), _href=URL('media', 'player', args=[row.media_guid], user_signature=True)) ) )
+    links.append(dict(header=T(''),body=lambda row: A(IMG(_src=getMediaThumb(row.media_guid), _style="width: 128px; height: auto; max-width: 128px;"), _href=URL('media', 'player', args=[row.media_guid], user_signature=True)) ) )
     fields = [db.media_files.id, db.media_files.title, db.media_files.tags, db.media_files.description, db.media_files.media_guid, db.media_files.category] #[db.media_files.title]
     maxtextlengths = {'media_files.title': '150', 'media_files.tags': '50', 'media_files.description': '150'}
     
@@ -35,7 +35,7 @@ def index():
     db.media_files.quality.readable=False
     
     # rows = db(query).select()
-    media_grid = SQLFORM.grid(query,editable=False, create=False, deletable=False,
+    media_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False,
                               csv=False, details=False,
                               searchable=True, orderby=[~db.media_files.modified_on],
                               fields=fields, paginate=15,
@@ -218,6 +218,7 @@ def player():
     
     title = ""
     description = ""
+    category = ""
     tags = ""
     # default to off
     autoplay = "false"
@@ -244,6 +245,7 @@ def player():
         if media_file is not None:
             title = media_file.title
             description = media_file.description
+            category = media_file.category
             tags = ",".join(media_file.tags)
             views = media_file.views
             if views is None:
@@ -257,7 +259,7 @@ def player():
                 source_mobile_mp4=source_mobile_mp4, source_webm=source_webm,
                 movie_id=movie_id, width=width, height=height, title=title,
                 description=description, tags=tags, autoplay=autoplay,
-                iframe_width=iframe_width, iframe_height=iframe_height, views=views)
+                iframe_width=iframe_width, iframe_height=iframe_height, views=views, category=category)
 
 
 def view_document():
@@ -331,9 +333,10 @@ def upload_media():
         # Saved
         new_id = form.vars.id
         original_file_name = form.vars.media_file
-        db(db.media_file_import_queue.id==new_id).update(original_file_name=original_file_name)
+        db(db.media_file_import_queue.id == new_id).update(original_file_name=original_file_name)
         db.commit()
-        result = scheduler.queue_task('process_media_file', pvars=dict(media_id=new_id), timeout=18000, immediate=True, sync_output=5, group_name="process_videos")
+        result = scheduler.queue_task('process_media_file', pvars=dict(media_id=new_id), timeout=18000,
+                                      immediate=True, sync_output=5, group_name="process_videos")
         response.flash = "Media File Queued!"  # + str(result)
         pass
     elif form.errors:
@@ -1062,39 +1065,37 @@ def find_wamap_videos():
     return locals()
 
 
-def getURLS(txt):
-    # Extract the list of urls from the string
-    ret = []
-    # pat = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
-    pat = re.compile(
-                     'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-                    )
-    res = pat.findall(txt)
-    for r in res:
-        if 'youtu' in r:
-            ret.append(r)
-    return ret
-
-
-def getPDFURLS(txt):
-    # Extract the list of urls from the string
-    ret = []
-    # pat = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
-    pat = re.compile(
-                     'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-                    )
-    res = pat.findall(txt)
-    # pdf, swf, png, doc, ?
-    for r in res:
-        if 'pdf' in r:
-            ret.append(r)
-    return ret
-
-
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def utilities():
     # Just a landing page
     return locals()
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def yt_requeue():
+    """
+        Re-queue any failed youtube video downloads - good for dealing with 429 failures
+    :return:
+    """
+    msg = ""
+
+    # Get a list of media files w yt links
+    media_files = db((db.media_files.youtube_url is not None) &
+                     (db.media_files.youtube_url is not False) &
+                     (db.media_files.youtube_url != "")).select()
+    for m in media_files:
+        file_guid = m["media_guid"]
+        if is_media_file_present(file_guid) is not True:
+            # Media file isn't here? Re-schedule the task
+            msg += "Re-queue missing YT File : " + m["youtube_url"] + " <br />"
+            result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=m["youtube_url"],
+                                                                           media_guid=file_guid
+                                                                           ),
+                                          timeout=18000, immediate=True, sync_output=5,
+                                          group_name="download_videos", retry_failed=30, period=300)
+
+    response.flash = "Failed youtube downloads re-queued."
+    return dict(msg=XML(msg))
 
 
 def scan_media_files():
@@ -2915,38 +2916,6 @@ def find_replace_step_youtube_progress_dl_queue():
                   "', target='process_queue_view_dl_progress');}, 3000);"
     return dict(process_grid=process_grid)
 
-
-def queue_up_yt_video(yt_url, category=None):
-    # Find the current video, or queue it up for download and return the db info
-    vid_guid = str(uuid.uuid4()).replace('-', '')
-    title = "Downloading from: " + yt_url
-    description = ""
-    if category is None:
-        category = "YouTube"
-    tags = ["YouTube"]
-    media_file = db(db.media_files.youtube_url == yt_url).select().first()
-    if media_file is None:
-        # Create db entry
-        db.media_files.insert(title=title, youtube_url=yt_url,
-                              description=description, original_file_name=title,
-                              category=category, tags=tags,
-                              media_guid=vid_guid, needs_downloading=True)
-        db.commit()
-
-        # Launch the background process to download the video
-        result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=yt_url,
-                                                                       media_guid=vid_guid
-                                                                       ),
-                                      timeout=18000, immediate=True, sync_output=5,
-                                      group_name="download_videos", retry_failed=30, period=300)
-
-        # Make sure to grab the new record now that it has been inserted
-        media_file = db(db.media_files.youtube_url == yt_url).select().first()
-    else:
-        # Video exists, just return the db record
-        pass
-
-    return media_file
 
 
 

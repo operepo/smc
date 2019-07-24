@@ -37,6 +37,7 @@ response.menu = [
          ]),
         (T('Media Utilities'), False, URL('media', 'utilities'), [
             (T('Scan Media Files'), False, URL('media', 'scan_media_files')),
+            (T('Re-try failed YouTube Videos'), False, URL('media', 'yt_requeue')),
             (T('WAMAP Import'), False, URL('media', 'wamap_import')),
         ]),
 

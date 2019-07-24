@@ -86,128 +86,26 @@ from ednet import Faculty
 from ednet import Student
 
 
-def get_app_folders():
-    # Will return calculated folders we will need
-    # see return statement for values returned
-
-    # Get the full path for this file
-    this_file = os.path.abspath(__file__)
-    # Get the models folder
-    models_folder = os.path.dirname(this_file)
-    # app folder
-    app_folder = os.path.dirname(models_folder)
-
-    # Applications folder (app parent folder)
-    applications_folder = os.path.dirname(app_folder)
-    # w2py Root folder
-    w2py_folder = os.path.dirname(applications_folder)
-
-    # static folder
-    # static_folder = os.path.join(app_folder, "static")
-    # media folder
-    # media_folder = os.path.join(static_folder, "media")
-
-    #controllers_folder = os.path.join(app_folder, "controllers")
-    #cron_folder = os.path.join(app_folder, "cron")
-    #databases_folder = os.path.join(app_folder, "databases")
-    #errors_folder = os.path.join(app_folder, "errors")
-    #languages_folder = os.path.join(app_folder, "languages")
-    #private_folder = os.path.join(app_folder, "private")
-    #modules_folder = os.path.join(app_folder, "modules")
-    #sessions_folder = os.path.join(app_folder, "sessions")
-    #uploads_folder = os.path.join(app_folder, "uploads")
-    #views_folder = os.path.join(app_folder, "views")
-
-    # win ffmpeg folder
-    #win_ffmpeg_folder = os.path.join(w2py_folder, "ffmpeg", "bin")
-
-    return w2py_folder, applications_folder, app_folder
-
-def find_ffmpeg():
-    # Find the ffmpeg folder and return it
-    (w2py_folder, applications_folder, app_folder) = get_app_folders()
-
-    acodec = "aac"
-
-    # Find ffmpeg binary
-    ffmpeg = "/usr/bin/ffmpeg"
-    if os.path.isfile(ffmpeg) is not True:
-        ffmpeg = "/usr/local/bin/ffmpeg"
-    if os.path.isfile(ffmpeg) is not True:
-        # Try windows path
-        ffmpeg = os.path.join(w2py_folder, "ffmpeg", "bin", "ffmpeg.exe")
-        acodec = "libvo_aacenc"
-    if os.path.isfile(ffmpeg) is not True:
-        ret = "ERROR - NO FFMPEG APP FOUND! " + ffmpeg
-        ffmpeg = None
-        acodec = None
-        print(ret)
-        # raise an exception so it is marked as failed
-        # failed to find, will return None now
-
-    return ffmpeg, acodec
-
 # Task Scheduler Code
-
-
-def update_media_meta_data(media_file):
-    print("Found Json: ", media_file)
-    
-    # Open the json file
-    try:
-        f = open(media_file, "r")
-        tmp = f.read()
-        meta = loads(tmp)
-        f.close()
-        
-        # See if the item is in the database
-        item = db.media_files(media_guid=meta['media_guid'])
-        if item is None:
-            # Record not found!
-            print("Record not found: ", meta['media_guid'])
-            db.media_files.insert(media_guid=meta['media_guid'], title=meta['title'], description=meta['description'],
-                                  category=meta['category'], tags=loads(meta['tags']), width=meta['width'],
-                                  height=meta['height'], quality=meta['quality'], media_type=meta['media_type'])
-            db.commit()
-        else:
-            print("Record FOUND: ", meta['media_guid'])
-            item.update_record(title=meta['title'], description=meta['description'], category=meta['category'],
-                               tags=loads(meta['tags']), width=meta['width'], height=meta['height'],
-                               quality=meta['quality'], media_type=meta['media_type'])
-            db.commit()
-    except Exception as ex:
-        print("Error processing media file: ", media_file, str(ex))
-        db.rollback()
-
-
 def update_media_database_from_json_files():
     # Go through the media files and find json files that aren't
     # already in the database.
     # This is useful for when we copy movie files back and forth between systems
     # Starts in the Models folder
-    w2py_folder = os.path.abspath(__file__)
-    # print("Running File: " + app_folder)
-    w2py_folder = os.path.dirname(w2py_folder)
-    # app folder
-    w2py_folder = os.path.dirname(w2py_folder)
-    app_folder = w2py_folder
-    # Applications folder
-    w2py_folder = os.path.dirname(w2py_folder)
-    # Root folder
-    w2py_folder = os.path.dirname(w2py_folder)
-    # print("W2Py Folder: " + w2py_folder)
-    target_folder = os.path.join(app_folder, 'static')
-    
-    # base folder for media files
-    target_folder = os.path.join(target_folder, 'media')
+
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+    target_folder = os.path.join(app_folder, "static/media")
     
     # Walk the folders/files
     print("looking in: " + target_folder)
     for root, dirs, files in os.walk(target_folder):
         for f in files:
-            if f.endswith("json"):
-                f_path = os.path.join(root, f)
-                update_media_meta_data(f_path)
+            # Don't process flashcard data files
+            if f.endswith("json") and f != "data.json":
+                # f_path = os.path.join(root, f)
+                # update_media_meta_data(f_path)
+                file_guid, ext = os.path.splitext(f)
+                load_media_file_json(file_guid)
     pass
     return True
 
@@ -215,34 +113,9 @@ def update_media_database_from_json_files():
 def process_media_file(media_id):
     ret = ""
 
-    w2py_folder = os.path.abspath(__file__)
-    # print("Running File: " + app_folder)
-    w2py_folder = os.path.dirname(w2py_folder)
-    # app folder
-    w2py_folder = os.path.dirname(w2py_folder)
-    app_folder = w2py_folder
-    # Applications folder
-    w2py_folder = os.path.dirname(w2py_folder)
-    # Root folder
-    w2py_folder = os.path.dirname(w2py_folder)
-
-    acodec = "aac"
-
     # Find ffmpeg binary
-    ffmpeg = "/usr/bin/ffmpeg"
-    if os.path.isfile(ffmpeg) is not True:
-        ffmpeg = "/usr/local/bin/ffmpeg"
-    if os.path.isfile(ffmpeg) is not True:
-        # Try windows path
-        ffmpeg = os.path.join(w2py_folder, "ffmpeg", "bin", "ffmpeg.exe")
-        acodec = "libvo_aacenc"
-    if os.path.isfile(ffmpeg) is not True:
-        ret = "ERROR - NO FFMPEG APP FOUND! " + ffmpeg
-        print(ret)
-        # raise an exception so it is marked as failed
-        raise Exception(ret)
-        return ret
-    
+    (ffmpeg, acodec) = find_ffmpeg()
+
     # Find number of CPUs
     cpus = int(multiprocessing.cpu_count())
     # Drop the number of threads so we don't use up all CPU power
@@ -257,23 +130,12 @@ def process_media_file(media_id):
         return dict(error="Invalid Media File")
     else:
         print("Processing media file: " + str(media_id) + " [" + str(time.time()) + "]")
-        
-    db(db.media_file_import_queue.id==media_id).update(status='processing')
+
+    media_guid = media_file.media_guid
+
+    db(db.media_file_import_queue.id == media_id).update(status='processing')
     # Make sure to do this and unlock the db
     db.commit()
-    
-    # Starts in the Models folder
-    w2py_folder = os.path.abspath(__file__)
-    # print("Running File: " + app_folder)
-    w2py_folder = os.path.dirname(w2py_folder)
-    # app folder
-    w2py_folder = os.path.dirname(w2py_folder)
-    app_folder = w2py_folder
-    # Applications folder
-    w2py_folder = os.path.dirname(w2py_folder)
-    # Root folder
-    w2py_folder = os.path.dirname(w2py_folder)
-    # print("W2Py Folder: " + w2py_folder)
     
     # Get the uploads path
     # (something like /var/www/clients/client1/web1/web/applications/smc/uploads/media_files.media_file/b6)
@@ -285,40 +147,19 @@ def process_media_file(media_id):
     uploads_folder = os.path.join(w2py_folder, tmp_path)
     # print("Upload Path: " + uploads_folder)
     input_file = os.path.join(uploads_folder, media_file.media_file).replace("\\", "/")
-    
-    # print("Processing media file: " + input_file + " [" + str(time.time()) + "]")
-    
-    # Figure out output file name (use media guid)
-    # static/media/01/010102alj29vsor3.webm
-    file_guid = media_file.media_guid.replace('-', '')
-    # print("File GUID: " + str(file_guid))
-    target_folder = os.path.join(app_folder, 'static')
-    
-    target_folder = os.path.join(target_folder, 'media')
-        
-    file_prefix = file_guid[0:2]
-    
-    target_folder = os.path.join(target_folder, file_prefix)
-    # print("Target Dir: " + target_folder)
-    
-    try:
-        os.makedirs(target_folder)
-    except OSError as message:
-        pass
-    
-    target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
-    
-    output_webm = target_file + ".webm"
-    output_ogv = target_file + ".ogv"
-    output_mp4 = target_file + ".mp4"
-    output_mobile_mp4 = target_file + ".mobile.mp4"
-    output_meta = target_file + ".json"
-    output_poster = target_file + ".poster.png"
-    output_thumb = target_file + ".thumb.png"
+
+    # Get the output file paths
+    output_webm = get_media_file_path(media_guid, ".webm")  # target_file + ".webm"
+    output_ogv = get_media_file_path(media_guid, ".ogv")  # target_file + ".ogv"
+    output_mp4 = get_media_file_path(media_guid, ".mp4")  # target_file + ".mp4"
+    output_mobile_mp4 = get_media_file_path(media_guid, ".mobile.mp4")  # target_file + ".mobile.mp4"
+    output_meta = get_media_file_path(media_guid, ".json")  # target_file + ".json"
+    output_poster = get_media_file_path(media_guid, ".poster.png")  # target_file + ".poster.png"
+    output_thumb = get_media_file_path(media_guid, ".thumb.png")  # target_file + ".thumb.png"
     
     print("Output files: ")
-    print(output_webm)
-    print(output_ogv)
+    # print(output_webm)
+    # print(output_ogv)
     print(output_mp4)
     
     webm_ret = ""
@@ -330,21 +171,27 @@ def process_media_file(media_id):
     # Run ffmpeg to process file
     
     # Do webm - NOTE No webm support in ffmpeg right now - # TODO unknown encoder libvpx
-    # cmd = ffmpeg + " -i '" + input_file + "' -vcodec libvpx -qscale 6 -acodec libvorbis -ab 128k -vf scale='480:-1' '" + output_webm + "'"
+    # cmd = ffmpeg + " -i '" + input_file + "' -vcodec libvpx -qscale 6 -acodec libvorbis
+    # -ab 128k -vf scale='480:-1' '" + output_webm + "'"
     # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     # webm_ret = p.communicate()[0]
     
     # Do OGV
-    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale 6 -acodec libvorbis -ab 192k -vf scale='640:-1' '" + output_ogv + "'"
-    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale:v 5 -acodec libvorbis -ab 128k '" + output_ogv + "'"
+    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale 6
+    # -acodec libvorbis -ab 192k -vf scale='640:-1' '" + output_ogv + "'"
+    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale:v 5
+    # -acodec libvorbis -ab 128k '" + output_ogv + "'"
     # print("Creating OGV..."  + " [" + str(time.time()) + "]")
     print("!clear!10%")
     # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     # ogv_ret = p.communicate()[0]
 
     # Do MP4
-    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -profile main -crf 20 -acodec libfaac -ab 192k -vf scale='720:-1' '" + output_mp4 + "'"
-    cmd = ffmpeg + " -y -i \"" + input_file + "\" -vcodec libx264 -preset slow -movflags faststart -profile:v main -crf 20 -acodec " + acodec + " -ab 128k -threads " + str(cpus) + " \"" + output_mp4 + "\""
+    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -profile main
+    # -crf 20 -acodec libfaac -ab 192k -vf scale='720:-1' '" + output_mp4 + "'"
+    cmd = ffmpeg + " -y -i \"" + input_file + \
+          "\" -vcodec libx264 -preset slow -movflags faststart -profile:v main -crf 20 -acodec " + \
+          acodec + " -ab 128k -threads " + str(cpus) + " \"" + output_mp4 + "\""
     # print("Creating MP4..."  + " [" + str(time.time()) + "]")
     print("MP4: " + cmd)
     print("!clear!30%")
@@ -352,7 +199,10 @@ def process_media_file(media_id):
     mp4_ret = p.communicate()[0]
     
     # Do MP4 with mobile quality
-    cmd = ffmpeg + " -y -i \"" + input_file + "\" -vcodec libx264 -preset slow -movflags faststart -profile main -crf 20 -acodec " + acodec + " -ab 128k -vf scale='2*trunc(oh*a/2):480' -threads " + str(cpus) + " \"" + output_mobile_mp4 + "\""
+    cmd = ffmpeg + " -y -i \"" + input_file + \
+          "\" -vcodec libx264 -preset slow -movflags faststart -profile main -crf 20 -acodec " +\
+          acodec + " -ab 128k -vf scale='2*trunc(oh*a/2):480' -threads " + str(cpus) + " \"" +\
+          output_mobile_mp4 + "\""
     # print("Creating mobile MP4..."  + " [" + str(time.time()) + "]")
     print("!clear!70%")
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
@@ -373,10 +223,13 @@ def process_media_file(media_id):
     thumb_ret = p.communicate()[0]
 
     # -vf scale="480:2*trunc(ow*a/2)"
-    # ffmpeg -i [your video] [encoding options as specified above] [your output video with appropriate extension - eg output.mp4, output.ogv or output.webm]
+    # ffmpeg -i [your video] [encoding options as specified above]
+    # [your output video with appropriate extension - eg output.mp4, output.ogv or output.webm]
     
     # Make webm file - 480p
-    # cmd = ffmpeg + " -i 'input_file.avi' -codec:v libvpx -quality good -cpu-used 0 -movflags faststart -b:v 600k -maxrate 600k -bufsize 1200k -qmin 10 -qmax 42 -vf scale=-1:480 -threads 4 -codec:a vorbis -b:a 128k output_file.webm"
+    # cmd = ffmpeg + " -i 'input_file.avi' -codec:v libvpx -quality good -cpu-used
+    # 0 -movflags faststart -b:v 600k -maxrate 600k -bufsize 1200k -qmin 10 -qmax 42 -vf
+    # scale=-1:480 -threads 4 -codec:a vorbis -b:a 128k output_file.webm"
     # -vcodec libvpx -qscale 6 -acodec libvorbis -ab 128k
 
     # Make ogv file
@@ -384,7 +237,9 @@ def process_media_file(media_id):
     # -vcodec libtheora -qscale 6 -acodec libvorbis -ab 128k
     
     # Make mp4 file - 480p
-    # cmd = ffmpeg + " -i inputfile.avi -codec:v libx264 -profile:v main -preset slow -movflags faststart -b:v 400k -maxrate 400k -bufsize 800k -vf scale=-1:480 -threads 0 -codec:a libfdk_aac -b:a 128k output.mp4"  #codec:a libfdk_aac  codec:a mp3
+    # cmd = ffmpeg + " -i inputfile.avi -codec:v libx264 -profile:v main -preset slow
+    # -movflags faststart -b:v 400k -maxrate 400k -bufsize 800k -vf scale=-1:480 -threads 0
+    # -codec:a libfdk_aac -b:a 128k output.mp4"  #codec:a libfdk_aac  codec:a mp3
     # -vcodec libx264 -preset slow -profile main -crf 20 -acodec libfaac -ab 128k
     
     # Update file info
@@ -409,16 +264,17 @@ def process_media_file(media_id):
     
     # Dump meta data to the folder along side the video files
     # This can be used for export/import
-    meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),
-            'description': media_file.description, 'original_file_name': media_file.original_file_name,
-            'media_type': media_file.media_type, 'category': media_file.category,
-            'tags': dumps(media_file.tags), 'width': media_file.width,
-            'height': media_file.height, 'quality': media_file.quality}
-
-    meta_json = dumps(meta)
-    f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-    os.write(f, meta_json)
-    os.close(f)
+    # meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),
+    #         'description': media_file.description, 'original_file_name': media_file.original_file_name,
+    #         'media_type': media_file.media_type, 'category': media_file.category,
+    #         'tags': dumps(media_file.tags), 'width': media_file.width,
+    #         'height': media_file.height, 'quality': media_file.quality}
+    #
+    # meta_json = dumps(meta)
+    # f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+    # os.write(f, meta_json)
+    # os.close(f)
+    save_media_file_json(media_guid)
     
     print("!clear!100%")
     
@@ -628,7 +484,7 @@ def pull_youtube_video(yt_url, media_guid):
     os.close(f)
 
     # Throw a little delay in here to help keep from getting blocked by youtube
-    time.sleep(10)
+    time.sleep(30)
     return True
 
 
