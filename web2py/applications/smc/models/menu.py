@@ -31,15 +31,15 @@ response.menu = [
         # (T('Playlists'), False, URL('media','playlists')),
         (T('Upload Media'), False, URL('media', 'upload_media')),
         (T('Upload Document'), False, URL('media', 'upload_document')),
-        (T('Offline Conversion'), False, URL('media', 'conversion'), [
-            (T('Pull From YouTube (single url)'), False, URL('media', 'pull_from_youtube')),
-            (T('Find/Replace (mass edit course)'), False, URL('media', 'find_replace')),
-         ]),
-        (T('Media Utilities'), False, URL('media', 'utilities'), [
-            (T('Scan Media Files'), False, URL('media', 'scan_media_files')),
-            (T('Re-try failed YouTube Videos'), False, URL('media', 'yt_requeue')),
-            (T('WAMAP Import'), False, URL('media', 'wamap_import')),
-        ]),
+        # (T('Offline Conversion'), False, URL('media', 'conversion'), [
+            (T(u'Offline Conversion \u2bc8 Pull From YouTube (single url)'), False, URL('media', 'pull_from_youtube')),
+            (T(u'Offline Conversion \u2bc8 Find/Replace (mass edit course)'), False, URL('media', 'find_replace')),
+         # ]),
+        #(T('Media Utilities'), False, URL('media', 'utilities'), [
+            (T(u'Media Utilities \u2bc8 Scan Media Files'), False, URL('media', 'scan_media_files')),
+            (T(u'Media Utilities \u2bc8 Re-try failed YouTube Videos'), False, URL('media', 'yt_requeue')),
+            (T(u'Media Utilities \u2bc8 WAMAP Import'), False, URL('media', 'wamap_import')),
+        #]),
 
     ]),
     (SPAN('Students', _class='highlighted'), False, URL('student', 'index'), [
@@ -56,18 +56,18 @@ response.menu = [
         ]),
     (SPAN('Admin', _class='highlighted'), False, URL('admin', 'index'), [
             (T('Change Password'), False, URL('admin', 'changepassword')),
-            (T('Configure App'), False, URL('admin', 'config'), [
-                (T('App Settings'), False, URL('admin', 'config_app_settings')),
-                (T('Active Directory Settings'), False, URL('admin', 'config_ad_settings')),
-                (T('File Server Settings'), False, URL('admin', 'config_file_settings')),
-                (T('Faculty Settings'), False, URL('admin', 'config_faculty_settings')),
-                (T('Student Settings'), False, URL('admin', 'config_student_settings')),
-                (T('Canvas Settings'), False, URL('admin', 'config_canvas_settings')),
-                (T('ZFS Settings'), False, URL('admin', 'config_zfs_settings')),
-                (T('Verify Settings'), False, URL('admin', 'config_verify')),
-                (T('Verify Settings (auto create)'), False, URL('admin', 'config_verify_auto')),
-                (T('Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
-            ]),
+            # (T('Configure App'), False, URL('admin', 'config'), [
+                (T(u'Configure App \u2bc8 App Settings'), False, URL('admin', 'config_app_settings')),
+                (T(u'Configure App \u2bc8 Active Directory Settings'), False, URL('admin', 'config_ad_settings')),
+                (T(u'Configure App \u2bc8 File Server Settings'), False, URL('admin', 'config_file_settings')),
+                (T(u'Configure App \u2bc8 Faculty Settings'), False, URL('admin', 'config_faculty_settings')),
+                (T(u'Configure App \u2bc8 Student Settings'), False, URL('admin', 'config_student_settings')),
+                (T(u'Configure App \u2bc8 Canvas Settings'), False, URL('admin', 'config_canvas_settings')),
+                # (T(u'Configure App \u2bc8 ZFS Settings'), False, URL('admin', 'config_zfs_settings')),
+                (T(u'Configure App \u2bc8 Verify Settings'), False, URL('admin', 'config_verify')),
+                (T(u'Configure App \u2bc8 Verify Settings (auto create)'), False, URL('admin', 'config_verify_auto')),
+                (T(u'Configure App \u2bc8 Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
+            # ]),
             # (T('Manage Users'), False, URL('admin', 'users')),
             # (T('Switch Mode'), False, URL('admin', 'switchmode')),
             (T('Switch AD Quota'), False, URL('admin', 'switchquota')),

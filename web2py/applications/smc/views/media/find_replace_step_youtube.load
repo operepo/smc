@@ -38,7 +38,7 @@ Finding YouTube links, downloading them and switching links for local SMC links.
 </div>
 <div id="process_queue" class='well'>
 	<div id="process_queue_view">
-		<img id="process_queue_progress_img" src="{{=URL('static', 'images/progress.gif') }}" />
+		<!-- img id="process_queue_progress_img" src="{{=URL('static', 'images/progress.gif') }}" / -->
 		{{=LOAD('media', 'find_replace_step_youtube_progress.load', ajax=True, user_signature=True)}}
 	</div>
 </div>
@@ -46,7 +46,7 @@ Finding YouTube links, downloading them and switching links for local SMC links.
 <div id="process_queue_dl_progress" class='well'>
 <h5>Video Download Progress</h5>
 	<div id="process_queue_view_dl_progress">
-		<!--img src="{{=URL('static', 'images/progress.gif') }}" /-->
+		<!-- img src="{{=URL('static', 'images/progress.gif') }}" / -->
 		{{=LOAD('media', 'find_replace_step_youtube_progress_dl_queue.load', ajax=True, user_signature=True)}}
 	</div>
 </div>
