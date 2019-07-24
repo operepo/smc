@@ -15,7 +15,6 @@
   <!-- Always force latest IE rendering engine
        (even in intranet) & Chrome Frame
        Remove this if you use the .htaccess -->
-
   <meta charset="utf-8" />
   <!-- http://dev.w3.org/html5/markup/meta.name.html -->
   <meta name="application-name" content="{{=request.application}}" />
@@ -64,7 +63,6 @@
             background-image:none;
             background-repeat:repeat-x;
         }
-
         .navbar-inner
         {
             border: 1px solid #E3E3E3;
@@ -75,14 +73,12 @@
         {
             line-height: 30px;
         }
-
         .navbar-inverse .brand, .navbar-inverse .nav > li > a,
         .navbar-inverse .nav > li > a:hover
         {
             color: #529450;
             text-shadow: 0 -1px 0 rgba(0,0,0,0.15)
         }
-
         .navbar-inverse .nav li.dropdown.open>.dropdown-toggle,
         .navbar-inverse .nav li.dropdown.active>.dropdown-toggle,
         .navbar-inverse .nav li.dropdwon.open.active>.dropdown-toggle
@@ -103,7 +99,6 @@
   {{block head}}{{end}}
 </head>
 <body>
-
 <style>
     /* CUSTOM - turn off extras for minimal style
      */
@@ -116,9 +111,7 @@
     .footer {
         display: none;
     }
-
 </style>
-
 <!-- Navbar ================================================== -->
   <div class="navbar navbar-inverse">
     <div class="flash">{{=response.flash or ''}}</div>
@@ -197,9 +190,6 @@
   </div> <!-- /container -->
 
 
-
-
-
 <!-- The javascript =============================================
    (Placed at the end of the document so the pages load faster) -->
 <script src="{{=URL('static','js/bootstrap.min.js')}}"></script>
@@ -208,5 +198,6 @@
   <script src="{{=URL('static','js/dd_belatedpng.js')}}"></script>
   <script> DD_belatedPNG.fix('img, .png_bg'); //fix any <img> or .png_bg background-images </script>
   <![endif]-->
+{{block page_js}}{{end page_js}}
 </body>
 </html>

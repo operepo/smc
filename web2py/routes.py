@@ -106,6 +106,7 @@ routers = dict(
     BASE=dict(
         default_application='smc',
     ),
+    #smc=dict(default_controller='default', default_function='index'),
 )
 
 # Specify log level for rewrite's debug logging

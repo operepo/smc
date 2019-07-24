@@ -102,9 +102,6 @@ def student_show_excel_contents_sheet_grid():
 @auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
 def student_do_import():
     AD.Close()
-
-    from module_reload import ReloadModules
-    ReloadModules()
     
     sheet_name = request.vars.sheet_name
     erase_current_password = False

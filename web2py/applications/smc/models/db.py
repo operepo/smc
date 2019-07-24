@@ -24,7 +24,7 @@ if request.global_settings.web2py_version < "2.14.1":
 
 ## if SSL/HTTPS is properly configured and you want all HTTP requests to
 ## be redirected to HTTPS, uncomment the line below:
-#print(request.application, request.controller, request.function, request.extension, request.view, request.folder)
+# print(request.application, request.controller, request.function, request.extension, request.view, request.folder)
 if request.controller == 'default' and request.function == 'index' and request.extension == 'html':
     # Skip https here
     pass
@@ -156,7 +156,7 @@ response.form_label_separator = myconf.get('forms.separator') or ''
 from gluon.tools import Auth, Crud, Service, PluginManager, prettydate
 # auth = Auth(db)
 # auth = Auth(db, host_names=myconf.get('host.names'))
-auth = Auth(db, hmac_key=Auth.get_or_create_key(), signature=True) # secure=True
+auth = Auth(db, hmac_key=Auth.get_or_create_key(), signature=True)  # secure=True
 crud, service, plugins = Crud(db), Service(), PluginManager()
 
 ## create all tables needed by auth if not custom tables

@@ -112,6 +112,7 @@ def ad_test():
 
     return locals()
 
+
 @auth.requires_membership("Administrators")
 def test():
 
@@ -124,6 +125,7 @@ def test():
     initial_run = cache.ram("startup", lambda:True, time_expire=3600)
     cache_time = cache.ram("tmptime", lambda:time.ctime(), time_expire=30)
     return locals()
+
 
 @auth.requires_membership("Administrators")
 def index():

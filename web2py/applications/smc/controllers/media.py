@@ -46,7 +46,6 @@ def index():
 
 
 def documents():
-
     query = (db.document_files)
     links = []
     if auth.has_membership('Faculty') or auth.has_membership('Administrators'):
@@ -263,7 +262,6 @@ def player():
 
 
 def view_document():
-
     width = '100%'  # '724'  # '640'  # '720' ,'640'
     height = '700'  # '385'  # '433' ,'385'
     iframe_width = '100%'  # '734'  # '650'
@@ -349,8 +347,8 @@ def upload_media():
     return dict(form=form, ret=ret)
 
 
-@auth.requires(
-    auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
+@auth.requires(auth.has_membership('Faculty') or
+               auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
 def upload_document():
     last_doc = ""
     w2py_folder = request.env.web2py_path
@@ -1068,7 +1066,7 @@ def find_wamap_videos():
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def utilities():
     # Just a landing page
-    return locals()
+    return dict()
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
@@ -1098,6 +1096,7 @@ def yt_requeue():
     return dict(msg=XML(msg))
 
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def scan_media_files():
     # Find all media files and make sure they are in the database.
     form = SQLFORM.factory(submit_button="Import Videos", _name="import_videos").process(
@@ -1110,6 +1109,7 @@ def scan_media_files():
     return dict(form=form)
 
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def wamap_import_run():
     result = find_wamap_videos()  # wamap_import_run()
     return True
@@ -1138,6 +1138,7 @@ def wamap_import_run():
     return dict(new_vids=new_vids)
 
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def wamap_import_status():
     # Number of new vids found
     new_vids = 0
@@ -1148,6 +1149,7 @@ def wamap_import_status():
     return dict(process_status=process_status)
 
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def start_process_queue():
     return "Deprecated"
     # Start the worker process
@@ -1164,6 +1166,7 @@ def start_process_queue():
     return ret
 
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def start_process_queue_wamap_delete():
     # Start the worker process
     # cmd = "/usr/bin/nohup /usr/bin/python " + \
@@ -1179,6 +1182,7 @@ def start_process_queue_wamap_delete():
     return ret
 
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def start_process_videos():
     # Start the worker process
     # cmd = "/usr/bin/nohup /usr/bin/python " + \
@@ -1194,6 +1198,7 @@ def start_process_videos():
     return ret
 
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def start_wamap_videos():
     # Start the worker process
     # cmd = "/usr/bin/nohup /usr/bin/python " + \
@@ -1210,15 +1215,12 @@ def start_wamap_videos():
 
 
 def getMediaThumb(media_guid):
-    if media_guid is None or media_guid =="":
+    if media_guid is None or media_guid == "":
         return ""
+
     prefix = media_guid[0:2]
     url = URL('static', 'media/' + prefix + '/' + media_guid + '.thumb.png')
-    thumb = os.path.join(request.folder, 'static')
-    thumb = os.path.join(thumb, 'media')
-    thumb = os.path.join(thumb, prefix)
-    thumb = os.path.join(thumb, media_guid)
-    thumb += '.thumb.png'
+    thumb = get_media_file_path(media_guid, ".thumb.png")
     if os.path.exists(thumb) is not True:
         url = URL('static', 'images/media_file.png')
     return url
@@ -1229,11 +1231,8 @@ def getDocumentThumb(document_guid):
         return ""
     prefix = document_guid[0:2]
     url = URL('static', 'documents/' + prefix + '/' + document_guid + '.thumb.png')
-    thumb = os.path.join(request.folder, 'static')
-    thumb = os.path.join(thumb, 'documents')
-    thumb = os.path.join(thumb, prefix)
-    thumb = os.path.join(thumb, document_guid)
-    thumb += '.thumb.png'
+    thumb = get_document_file_path(document_guid, ".thumb.png")
+
     if os.path.exists(thumb) is not True:
         url = URL('static', 'images/document_file.png')
     return url
@@ -1244,11 +1243,7 @@ def getMediaPoster(media_guid):
         return ""
     prefix = media_guid[0:2]
     url = URL('static', 'media/' + prefix + '/' + media_guid + '.poster.png')
-    thumb = os.path.join(request.folder, 'static')
-    thumb = os.path.join(thumb, 'media')
-    thumb = os.path.join(thumb, prefix)
-    thumb = os.path.join(thumb, media_guid)
-    thumb += '.thumb.png'
+    thumb = get_media_file_path(media_guid, ".thumb.png")
     if os.path.exists(thumb) is not True:
         url = URL('static', 'images/media_file.png')
     return url
