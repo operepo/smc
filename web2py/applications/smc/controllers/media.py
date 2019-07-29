@@ -2861,9 +2861,9 @@ def find_replace_step_youtube_progress():
     if finished is not True:
         response.js = "web2py_component('" + \
                       URL('media', 'find_replace_step_youtube_progress.load', user_signature=True) +\
-                      "', target='process_queue_view');"
+                      "', 'process_queue_view');"
     else:
-        response.js = "$('#process_queue_progress_img').hide();"
+        # response.js = "$('#process_queue_progress_img').hide();"
         response.js = "$('#process_queue_progress_img').hide();"
 
     return dict(output=XML(session.yt_urls_msg), status=XML(session.yt_urls_status),
@@ -2908,7 +2908,7 @@ def find_replace_step_youtube_progress_dl_queue():
 
     response.js = "setTimeout(function() {web2py_component('" + \
                   URL('media', 'find_replace_step_youtube_progress_dl_queue.load', user_signature=True) + \
-                  "', target='process_queue_view_dl_progress');}, 3000);"
+                  "', 'process_queue_view_dl_progress');}, 3000);"
     return dict(process_grid=process_grid)
 
 
