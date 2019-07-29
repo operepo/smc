@@ -100,8 +100,12 @@ function draw_current_slide() {
     }
 
     // Put the attributes in for the current slide
-    $('#term_text').text(curr_item["word"]);
-    $('#def_text').text(curr_item["def"]);
+    var term_text = curr_item["word"];
+    if (term_text === undefined) { term_text = ""; }
+    var def_text = curr_item["def"];
+    if (def_text === undefined) { def_text = ""; }
+    $('#term_text').html(term_text.replace("\n", "<br />"));
+    $('#def_text').html(def_text.replace("\n", "<br />"));
     if (curr_item["def_audio"] != "") {
         // Set the click event to play the sound
         $('#def_audio').off('click');  // Remove old events
@@ -213,7 +217,7 @@ div {
     /* border: 1px solid green; */
 }
 #flashcard_container {
-    width: 600px;
+    width: 596px;
     height: 450px;
     /* border: 1px solid purple; */
 }

@@ -1092,7 +1092,7 @@ def yt_requeue():
                                           timeout=18000, immediate=True, sync_output=5,
                                           group_name="download_videos", retry_failed=30, period=300)
 
-    response.flash = "Failed youtube downloads re-queued."
+    response.flash = "YouTube downloads re-queued."
     return dict(msg=XML(msg))
 
 
