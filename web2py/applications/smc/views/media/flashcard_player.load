@@ -217,7 +217,7 @@ div {
     /* border: 1px solid green; */
 }
 #flashcard_container {
-    width: 596px;
+    width: 585px;
     height: 450px;
     /* border: 1px solid purple; */
 }
