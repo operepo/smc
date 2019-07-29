@@ -1149,7 +1149,6 @@ def wamap_import_status():
     return dict(process_status=process_status)
 
 
-@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def start_process_queue():
     return "Deprecated"
     # Start the worker process
@@ -1166,7 +1165,6 @@ def start_process_queue():
     return ret
 
 
-@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def start_process_queue_wamap_delete():
     # Start the worker process
     # cmd = "/usr/bin/nohup /usr/bin/python " + \
@@ -1182,7 +1180,6 @@ def start_process_queue_wamap_delete():
     return ret
 
 
-@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def start_process_videos():
     # Start the worker process
     # cmd = "/usr/bin/nohup /usr/bin/python " + \
