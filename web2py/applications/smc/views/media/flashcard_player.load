@@ -146,14 +146,14 @@ function draw_current_slide() {
         // Both photo and definition are on
         console.log("Both def and photo");
         $("#flashcard_picture").width(250);
-        $("#def_text").width(300);
+        $("#def_text").width(290);
         $("#def_text").show();
     }
     if (curr_item['photo'] == '' && curr_item['def'] != '') {
         // No photo - make it smaller
         console.log("def + photo");
         $("#flashcard_picture").width(0);
-        $("#def_text").width(500);
+        $("#def_text").width(480);
     }
     // Make sure the front card is showing
     $('#flashcard_body').flip(false);
@@ -218,7 +218,7 @@ div {
 }
 #flashcard_container {
     width: 585px;
-    height: 450px;
+    height: 425px;
     /* border: 1px solid purple; */
 }
 #flashcard_header {
