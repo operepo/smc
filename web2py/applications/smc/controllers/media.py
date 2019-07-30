@@ -11,7 +11,6 @@ from gluon.contrib.simplejson import loads, dumps
 import requests
 
 from ednet.canvas import Canvas
-
 from pytube import YouTube
 
 
