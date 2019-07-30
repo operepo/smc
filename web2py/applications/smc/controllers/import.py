@@ -1,4 +1,5 @@
-# coding: utf8
+# -*- coding: utf-8 -*-
+
 from ednet.util import Util
 from ednet.ad import AD
 from ednet.student import Student

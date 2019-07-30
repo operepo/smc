@@ -1,1 +1,1 @@
-__VERSION__ = "0.0.1"
+# -*- coding: utf-8 -*-__VERSION__ = "0.0.1"

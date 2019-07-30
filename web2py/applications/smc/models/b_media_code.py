@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
     Functions/helpers for media files, helps minimize the footprint of the media controller file
 """

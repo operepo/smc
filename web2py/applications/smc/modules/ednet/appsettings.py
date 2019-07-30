@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from gluon import *
 from gluon import current
 

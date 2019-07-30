@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Make sure web2py reloads modules
 from gluon.custom_import import track_changes
 track_changes(True)
@@ -23,6 +25,7 @@ if os.name is 'nt' and request.is_scheduler is False:
         os.path.dirname(os.path.abspath(__file__))))))
     bat_path = os.path.join(curr_path, "kill_smc.bat")
     if os.path.exists(bat_path) is not True:
+        print("Writing " + str(bat_path))
         f = open(bat_path, 'w')
         f.write("@echo off\r\ntaskkill /f /pid ")
         f.write(str(os.getpid()))

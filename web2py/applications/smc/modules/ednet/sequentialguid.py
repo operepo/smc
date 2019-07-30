@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 ###### SequentialGUID
 import os
 import datetime

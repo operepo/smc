@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Web2py settings
 from gluon import *
 from gluon import current
