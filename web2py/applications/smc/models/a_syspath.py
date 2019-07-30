@@ -89,7 +89,7 @@ def get_app_version():
             except Exception as ex:
                 print("Error reading the app version file, using default: " + str(APP_VERSION) + "<br />" + str(ex))
         else:
-            # print("No private/app_version.txt exists... Setting to " + str(APP_VERSION))
+            print("No app_version.txt exists... Setting to " + str(APP_VERSION))
             pass
 
     return APP_VERSION
