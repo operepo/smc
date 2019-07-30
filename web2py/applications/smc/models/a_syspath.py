@@ -80,7 +80,7 @@ def get_app_version():
 
         (w2py_folder, applications_folder, app_folder) = get_app_folders()
 
-        app_ver_path = os.path.join(app_folder, 'private', 'app_version.txt')
+        app_ver_path = os.path.join(app_folder, 'app_version.txt')
         if os.path.exists(app_ver_path):
             try:
                 app_ver_path_f = open(app_ver_path, 'r')
