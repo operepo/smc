@@ -1468,6 +1468,10 @@ def find_replace_step_1():
     course_list = []
     course_dict = dict()
 
+    if Canvas._canvas_integration_enabled is not True:
+        form = "<b style='color: red; font-size: 48px;'>Canvas Integration needs to be Enabled in the admin menu before this tool will work.</b>"
+        return dict(form1=XML(form))
+
     courses = Canvas.get_courses_for_faculty(auth.user.username)
 
     for c in courses:

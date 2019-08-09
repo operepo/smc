@@ -195,6 +195,7 @@ db.define_table("my_app_settings",
                 Field("zpool_server_address", default=""),
                 Field("laptop_admin_user", default="huskers"),
                 Field("laptop_admin_password", "password", default="", required=True),
+                Field("canvas_integration_enabled", "boolean", default="False"),
 
                 )
 

@@ -255,11 +255,12 @@ def config_canvas_settings():
 
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False, _name="canvas_config",
-                   fields=["canvas_import_enabled", "canvas_access_token", "canvas_secret",
+                   fields=["canvas_import_enabled", "canvas_integration_enabled", "canvas_auto_create_courses",
+                           "canvas_access_token", "canvas_secret",
                            "canvas_database_server_url",
                            "canvas_database_password", "canvas_server_url",
                            "canvas_student_quota", "canvas_faculty_quota",
-                           "canvas_auto_create_courses"]).process(formname="canvas_config")
+                           ]).process(formname="canvas_config")
 
     if form.accepted:
         # Saved
@@ -301,18 +302,18 @@ def switchquota():
     
     enforcing = SQLFORM.factory(submit_button="Set Quota Enforcing", _name="enforcing").process(formname="enforcing")
     
-    if (disabled.accepted):
-        if (AD.SetQuotaEnabled(False, False) != True):
+    if disabled.accepted:
+        if AD.SetQuotaEnabled(False, False) is not True:
             response.flash = "Error setting quota mode to disabled: " + AD.GetErrorString()
         else:
             response.flash = "Quota set to disabled" # + str(ret)
-    if (tracking.accepted):
-        if (AD.SetQuotaEnabled(True, False) != True):
+    if tracking.accepted:
+        if AD.SetQuotaEnabled(True, False) is not True:
             response.flash = "Error setting quota mode to tracking: " + AD.GetErrorString()
         else:
             response.flash = "Quota set to tracking" # + str(ret)
-    if (enforcing.accepted):
-        if (AD.SetQuotaEnabled(True, True) != True):
+    if enforcing.accepted:
+        if AD.SetQuotaEnabled(True, True) is not True:
             response.flash = "Error setting quota mode to enforcing: " + AD.GetErrorString()
         else:
             response.flash = "Quota set to enforcing" # + str(ret)

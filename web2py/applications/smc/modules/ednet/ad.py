@@ -786,6 +786,13 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             # except ldap.LDAPError as error_message:
             AD._errors.append("<b>Error setting password for user:</b> " + str(user_dn) + " %s" % error_message)
             return ret
+        except ldap3.core.exceptions.LDAPUnwillingToPerformResult as error_message:
+            AD._errors.append("<b>LDAP Unwilling to perform - likely weak password?:</b> " + str(user_dn) + " %s" % error_message)
+            # AD._errors.append("<B>" + new_pw + "</B>")
+            return ret
+        except Exception as error_message:
+            AD._errors.append("<b>Unknown LDAP Error:</b> " + str(user_dn) + " %s" % error_message)
+            return ret
         return True
 
     @staticmethod

@@ -142,7 +142,7 @@ def student_do_import_ad():
 
 @auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
 def student_do_import_canvas():
-    session.forget(response) # Don't need the session so don't block on it
+    session.forget(response)  # Don't need the session so don't block on it
     # session._unlock(response)
     # Pop off the list an item and process it
     result = Student.ProcessCanvasStudent()

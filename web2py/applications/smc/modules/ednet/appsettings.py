@@ -3,7 +3,8 @@
 from gluon import *
 from gluon import current
 
-###### Settings Class
+
+# Settings Class
 class AppSettings:
 
     def __init__(self):
@@ -19,21 +20,21 @@ class AppSettings:
 
     @staticmethod
     def GetValue(key, default):
-        db = current.db # Grab the current db object
+        db = current.db  # Grab the current db object
         ret = ""
 
         settings = dict()
 
-        if (len(settings) < 1):
+        if len(settings) < 1:
             # Need to load the settings
-            rows = db(db.my_app_settings).select(limitby=(0,1))
+            rows = db(db.my_app_settings).select(limitby=(0, 1))
             for row in rows:
                 for col in db.my_app_settings.fields:
                     settings[col] = row[col]
         
-        if (key in settings):
-            if (settings[key] != None and len(str(settings[key])) > 0):
-                ret = settings[key] # t1
+        if key in settings:
+            if settings[key] is not None and len(str(settings[key])) > 0:
+                ret = settings[key]  # t1
             else:
                 ret = default
         else:
@@ -41,4 +42,4 @@ class AppSettings:
             
         return ret
     
-###### End MySettings
+# End MySettings

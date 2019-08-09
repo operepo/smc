@@ -101,7 +101,7 @@ class Util:
     @staticmethod
     def encrypt(data, lkey=None):
         Util.ensure_key()
-        if not lkey is None:
+        if lkey is not None:
             key = lkey
         else:
             key = Util.aes_key
@@ -113,12 +113,12 @@ class Util:
     @staticmethod
     def decrypt(data, lkey=None):
         Util.ensure_key()
-        if not lkey is None:
+        if lkey is not None:
             key = lkey
         else:
             key = Util.aes_key
         key = pad(key[:32])
-        if data == None:
+        if data is None:
             data = ""
         try:
             data = base64.urlsafe_b64decode(data)
@@ -146,9 +146,9 @@ class Util:
     def GetModList(attr_list, mod_op=None):
         modlist = []
         for attrtype in attr_list.keys():
-            attrvaluelist = filter(lambda x: x!=None, attr_list[attrtype])
+            attrvaluelist = filter(lambda x: x is not None, attr_list[attrtype])
             if attrvaluelist:
-                if (mod_op != None):
+                if mod_op is not None:
                     modlist.append((mod_op, attrtype, attr_list[attrtype]))
                 else:
                     modlist.append((attrtype, attr_list[attrtype]))
@@ -160,7 +160,7 @@ class Util:
         try:
             val = str(sheet.cell(row, col).value)
             # Strips off the .0 at the end of numbers
-            if (val.endswith(".0")):
+            if val.endswith(".0"):
                 val = val[:-2]
             ret = val
         except:
@@ -183,7 +183,7 @@ class Util:
     def ParseName(full_name):
         # Split name into parts
         pos = full_name.find(",")
-        if (pos != -1):
+        if pos != -1:
             # Found comma, should be last name first
             parts = full_name.split(',', 2)
             parts = (parts[1].strip(), parts[0].strip())
@@ -191,8 +191,8 @@ class Util:
 
         # Assume first <space> last format
         parts = full_name.split(None, 2)
-        if (len(parts) > 1):
+        if len(parts) > 1:
             parts = (parts[0].strip(), parts[1].strip())
-        elif (len(parts) == 1):
+        elif len(parts) == 1:
             parts = (parts[0].strip())
         return parts

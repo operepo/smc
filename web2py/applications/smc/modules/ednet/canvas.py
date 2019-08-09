@@ -25,12 +25,15 @@ import uuid
 import hashlib
 from Crypto.Hash import SHA, HMAC
 
+
 class Canvas:
     # When needing to do paged requests, this will get filled in after APICall
     _api_next = ""
     
     # Config Values
     _canvas_enabled = False
+    _canvas_import_enabled = False
+    _canvas_integration_enabled = False
     _canvas_access_token = ""
     _canvas_server_url = ""
     _canvas_auto_create_courses = False
@@ -49,12 +52,19 @@ class Canvas:
     @staticmethod
     def Init():
         if Canvas._init_run is not True:
-            Canvas._canvas_enabled = AppSettings.GetValue('canvas_import_enabled', False)
+            Canvas._canvas_import_enabled = AppSettings.GetValue('canvas_import_enabled', False)
+            Canvas._canvas_integration_enabled = AppSettings.GetValue('canvas_integration_enabled', False)
             Canvas._canvas_access_token = AppSettings.GetValue('canvas_access_token', '')
             Canvas._canvas_secret = AppSettings.GetValue('canvas_secret', '')
             Canvas._canvas_server_url = AppSettings.GetValue('canvas_server_url', 'https://canvas.correctionsed.com')
             Canvas._canvas_auto_create_courses = AppSettings.GetValue('canvas_auto_create_courses', True)
             Canvas._init_run = True
+
+            # Decide if canvas is on...
+            if Canvas._canvas_integration_enabled is True or Canvas._canvas_import_enabled is True:
+                Canvas._canvas_enabled = True
+            else:
+                Canvas._canvas_enabled = False
     
     @staticmethod
     def Close():
@@ -90,6 +100,9 @@ class Canvas:
 
     @staticmethod
     def ConnectDB():
+        if Canvas._canvas_enabled is not True:
+            return None  # Canvas disabled, not an error
+
         # Grab the environ pw firs, if that isn't set, then grab the admin pw
         canvas_db_pw = AppSettings.GetValue('canvas_database_password', "<ENV>")
         # canvas.ed, postgresql will also work in docker
@@ -114,6 +127,9 @@ class Canvas:
         except RuntimeError as ex:
             # Error connecting, move on and return None
             print("Canvas DB Error: " + str(ex))
+            Canvas._errors.append(
+                "<b>Canvas DB Error</b> - Unable to connect to posgresql database (" +
+                str(pg_hostname) + ")")
             db_canvas = None
         return db_canvas
 
@@ -401,14 +417,25 @@ class Canvas:
         
         # Ensure that you can connect to canvas properly
         if Canvas._canvas_enabled is not True:
-            Canvas._errors.append("<B>Canvas Disabled - Checks skipped</B>")
+            Canvas._errors.append("<B>Canvas Account Import Disabled - API checks skipped</B>")
             return True
         
         if con is True:
-            Canvas._errors.append("<b>Canvas Connection Successful</b> " + Canvas._canvas_server_url + "<br />")
+            Canvas._errors.append("<b>Canvas Integration Connection Successful</b> " + Canvas._canvas_server_url +
+                                  "<br />")
             Canvas._errors.append("<b>Dev Key Verified</b> <br />")
             ret = True
-        
+
+        db = Canvas.ConnectDB()
+        if db is not None:
+            Canvas._errors.append(
+                "<b>Canvas DB Connection Successful</b><br />")
+            ret = True
+        else:
+            Canvas._errors.append(
+                "<b>Canvas DB Connection Failed</b><br />")
+            ret = False
+
         return ret
     
     @staticmethod

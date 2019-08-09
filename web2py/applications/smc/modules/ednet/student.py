@@ -108,9 +108,9 @@ class Student:
             count += 1
             
             # Gather info for this user
-            user_name = Student.GetUsername(row.user_id)
-            password = Student.GetPassword(row.user_id, row.student_password, override_password)
-            user_email = Student.GetEmail(row.user_id)
+            user_name = Student.GetUsername(row.user_id, row=row)
+            password = Student.GetPassword(row.user_id, row.student_password, override_password, row=row)
+            user_email = Student.GetEmail(row.user_id, row=row)
             (first_name, last_name) = Util.ParseName(row.student_name)
             user_ad_quota = Student.GetADQuota(row.user_id, override_current_quota)
             user_canvas_quota = Student.GetCanvasQuota(row.user_id, override_current_quota)
@@ -191,7 +191,7 @@ class Student:
         return ret
 
     @staticmethod
-    def process_config_params(student_id, txt, is_username=False):
+    def process_config_params(student_id, txt, is_username=False, row=None):
         db = current.db  # Grab the current db object
         ret = ""
 
@@ -208,6 +208,9 @@ class Student:
         user = db(db.student_info.user_id == student_id).select(db.student_info.student_name).first()
         if user is not None:
             (first_name, last_name) = Util.ParseName(user.student_name)
+
+        if row is not None:
+            (first_name, last_name) = Util.ParseName(row.student_name)
 
         if first_name != "":
             first_name_first_letter = first_name[:1]
@@ -233,11 +236,11 @@ class Student:
         return str(ret)
     
     @staticmethod
-    def GetUsername(student_id):
+    def GetUsername(student_id, row=None):
         ret = ""
 
         pattern = AppSettings.GetValue('student_id_pattern', '<user_id>')
-        ret = Student.process_config_params(student_id, pattern, is_username=True)
+        ret = Student.process_config_params(student_id, pattern, is_username=True, row=row)
 
         return str(ret)
     
@@ -253,7 +256,7 @@ class Student:
         return ret
 
     @staticmethod
-    def GetPassword(student_id, import_password="", override_password=False):
+    def GetPassword(student_id, import_password="", override_password=False, row=None):
         db = current.db
         # Get current password if student exists so we don't
         # reset it if the student has already changed it unless override_password == True
@@ -266,7 +269,7 @@ class Student:
         # Default - add SID to beginning and ! to end (e.g. SID1888182!)
         if ret == "":
             pattern = AppSettings.GetValue('student_password_pattern', 'SID<user_id>!')
-            ret = Student.process_config_params(student_id, pattern)
+            ret = Student.process_config_params(student_id, pattern, row=row)
         return str(ret)
 
     @staticmethod
@@ -300,10 +303,10 @@ class Student:
         return ret
     
     @staticmethod
-    def GetEmail(student_id):
+    def GetEmail(student_id, row=None):
         # Default -Prepend user_name @domain.com (e.g. s1888182@correctionsed.com)
         pattern = AppSettings.GetValue('student_email_pattern', '<user_name>@correctionsed.com')
-        ret = Student.process_config_params(student_id, pattern)
+        ret = Student.process_config_params(student_id, pattern, row=row)
         return str(ret)
     
     @staticmethod
@@ -644,7 +647,7 @@ class Student:
             ret += "Done!"
             return ret
         
-        if Canvas._canvas_enabled is not True:
+        if Canvas._canvas_enabled is not True or Canvas._canvas_import_enabled is not True:
             return "Done! - Canvas Import Disabled"
 
         # Pop one off the queue

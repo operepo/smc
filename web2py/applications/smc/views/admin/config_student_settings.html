@@ -1,72 +1,1 @@
-{{extend 'layout.html'}}
-<div>
-	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a>
-</div>
-
-<h1>Change Student Import Settings</h1>
-
-<div>
-    <div style="float: left; width: 600px; overflow: initial;">
-        {{=form}}
-    </div>
-    <div class="well" style="float: left; width: 400px; ">
-        <h3>
-            Help
-        </h3>
-		<p>
-			Set parameters for importing Student users. These settings determine where accounts are created and how profile settings are set.  Some parameters can use wildcards.
-		</p>
-		<div>
-			<b>&lt;user_id&gt;: </b> The &lt;user_id&gt; place holder will be replaced with the User ID column in the import spreadsheet when indicated. This works in the following fields (Student ID Pattern, Student Password Pattern)
-		</div>
-		<div>
-			<b>&lt;first_name&gt;: </b> The &lt;first_name&gt; place holder will be replaced with the first name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)
-		</div>
-		<div>
-			<b>&lt;last_name&gt;: </b> The &lt;last_name&gt; place holder will be replaced with the last name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)
-		</div>
-		<div>
-			<b>&lt;first_name_first_letter&gt;: </b> The &lt;first_name_first_letter&gt; place holder will be replaced with the first letter of the first name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)
-		</div>
-		<div>
-			<b>&lt;first_name_last_letter&gt;: </b> The &lt;first_name_last_letter&gt; place holder will be replaced with the last letter of the first name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)
-		</div>
-		<div>
-			<b>&lt;last_name_first_letter&gt;: </b> The &lt;last_name_first_letter&gt; place holder will be replaced with the first letter of the last name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)
-		</div>
-		<div>
-			<b>&lt;last_name_last_letter&gt;: </b> The &lt;last_name_last_letter&gt; place holder will be replaced with the last letter of the last name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)
-		</div>
-		<div>
-			<b>&lt;user_name&gt;: </b> The &lt;user_name&gt; place holder will be replaced with the calculated user name when indicated. This is calculated by using the Student ID Pattern. E.g. if you want to add a <b>s</b> infront of all student user accounts, then use <b>S&lt;user_id&gt;</b> for the pattern and it will create s username similar to this: <b>s882923</b>.
-		</div>
-		<div>
-			<b>&lt;program&gt;: </b> The &lt;program&gt; place holder will be replaced with the program field from the import spreadsheet. This place holder works in the following fields (AD Student CN).
-		</div>
-		<div>&nbsp;</div>
-		<div>
-			<b>Student Id Pattern: </b> Pattern to create the user name from your User ID column. The patterns like &lt;user_id&gt; will be replaced with the current data from the spreadsheet. Leave this blank to use the User ID column from your spread sheet as is with no changes.<br /><b> E.g. Bob Smith with the user name bsmith = &lt;first_name_first_letter&gt;&lt;last_name&gt;<br /> E.g. S + user id = S&lt;user_id&gt; <br />E.g. Bob smith with the user name smithb = &lt;last_name&gt;&lt;first_name_first_letter&gt;</b>
-		</div>
-		<div>
-			<b>Student Password Pattern: </b> Pattern to create the user password. This is used when the password column is left blank. When there is something in the password column, this won't be used. The pattern &lt;user_id&gt; will be replaced with the current users ID and &lt;user_name&gt; will be replaced with the username.
-		</div>
-		<div>
-			<b>Student Email Pattern: </b> Pattern to create the email from the user id. The pattern &lt;user_id&gt; will be replaced with the current users ID and &lt;user_name&gt; will be replaced with the username.
-		</div>
-		<div>
-			<b>AD Student CN: </b> The location where student accounts should be created. Default is OU=Student,DC=ad,DC=correctionsed,DC=com <br />Example with program: OU=&lt;program&gt;,OU=Student,DC=ad,DC=correctionsed,DC=com
-		</div>
-		<div>
-			<b>AD Student Group CN: </b> The location where student groups should be created. Default is OU=StudentGroups,DC=ad,DC=correctionsed,DC=com
-		</div>
-		<div>
-			<b>AD Student Home Directory: </b> The path to the home folder. You can use %username% or &lt;user_id&gt; or  &lt;user_name&gt; as a place holder. If the file server import option is enabled, the folder will be created and permissions set. Default is \\files\student\%username%
-		</div>
-		<div>
-			<b>AD Student Profile Directory: </b> The path to the profile folder. You can use %username% or &lt;user_id&gt; or  &lt;user_name&gt; as a place holder. Default is \\files\student\%username%
-		</div>
-		<div>
-			<b>AD Student Home Directory Quota: </b> Set how much space should the user have in the home folder.
-		</div>
-	</div>
-</div>
+{{extend 'layout.html'}}<div>	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a></div><h1>Change Student Import Settings</h1><div>    <div style="float: left; width: 600px; overflow: initial;">        {{=form}}    </div>    <div class="well" style="float: left; width: 400px; ">        <h3>            Help        </h3>		<p>			Set parameters for importing Student users. These settings determine where accounts are created and how profile settings are set.  Some parameters can use wildcards.		</p>		<div>			<b>&lt;user_id&gt;: </b> The &lt;user_id&gt; place holder will be replaced with the User ID column in the import spreadsheet when indicated. This works in the following fields (Student ID Pattern, Student Password Pattern)		</div>		<div>			<b>&lt;first_name&gt;: </b> The &lt;first_name&gt; place holder will be replaced with the first name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)		</div>		<div>			<b>&lt;last_name&gt;: </b> The &lt;last_name&gt; place holder will be replaced with the last name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)		</div>		<div>			<b>&lt;first_name_first_letter&gt;: </b> The &lt;first_name_first_letter&gt; place holder will be replaced with the first letter of the first name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)		</div>		<div>			<b>&lt;first_name_last_letter&gt;: </b> The &lt;first_name_last_letter&gt; place holder will be replaced with the last letter of the first name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)		</div>		<div>			<b>&lt;last_name_first_letter&gt;: </b> The &lt;last_name_first_letter&gt; place holder will be replaced with the first letter of the last name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)		</div>		<div>			<b>&lt;last_name_last_letter&gt;: </b> The &lt;last_name_last_letter&gt; place holder will be replaced with the last letter of the last name from the name column in the import spreadsheet. This works in the following fields (Student ID Pattern)		</div>		<div>			<b>&lt;user_name&gt;: </b> The &lt;user_name&gt; place holder will be replaced with the calculated user name when indicated. This is calculated by using the Student ID Pattern. E.g. if you want to add a <b>s</b> infront of all student user accounts, then use <b>S&lt;user_id&gt;</b> for the pattern and it will create s username similar to this: <b>s882923</b>.		</div>		<div>			<b>&lt;program&gt;: </b> The &lt;program&gt; place holder will be replaced with the program field from the import spreadsheet. This place holder works in the following fields (AD Student CN).		</div>		<div>&nbsp;</div>		<div>			<b>Student Id Pattern: </b> Pattern to create the user name from your User ID column. The patterns like &lt;user_id&gt; will be replaced with the current data from the spreadsheet. Leave this blank to use the User ID column from your spread sheet as is with no changes.<br /><b> E.g. Bob Smith with the user name bsmith = &lt;first_name_first_letter&gt;&lt;last_name&gt;<br /> E.g. S + user id = S&lt;user_id&gt; <br />E.g. Bob smith with the user name smithb = &lt;last_name&gt;&lt;first_name_first_letter&gt;</b>		</div>		<div>			<b>Student Password Pattern: </b> Pattern to create the user password. This is used when the password            column is left blank. When there is something in the password column, this won't be used. The pattern            &lt;user_id&gt; will be replaced with the current users ID and &lt;user_name&gt; will be replaced with the            username. <br /> <B>NOTE: </B> - AD Password complexity says you cant NOT use the full name or username in the            password and you need at least one of the following: upper case, lower case, number, symbol, and at least 8            characters.		</div>		<div>			<b>Student Email Pattern: </b> Pattern to create the email from the user id. The pattern &lt;user_id&gt; will be replaced with the current users ID and &lt;user_name&gt; will be replaced with the username.		</div>		<div>			<b>AD Student CN: </b> The location where student accounts should be created. Default is OU=Student,DC=ad,DC=correctionsed,DC=com <br />Example with program: OU=&lt;program&gt;,OU=Student,DC=ad,DC=correctionsed,DC=com		</div>		<div>			<b>AD Student Group CN: </b> The location where student groups should be created. Default is OU=StudentGroups,DC=ad,DC=correctionsed,DC=com		</div>		<div>			<b>AD Student Home Directory: </b> The path to the home folder. You can use %username% or &lt;user_id&gt; or  &lt;user_name&gt; as a place holder. If the file server import option is enabled, the folder will be created and permissions set. Default is \\files\student\%username%		</div>		<div>			<b>AD Student Profile Directory: </b> The path to the profile folder. You can use %username% or &lt;user_id&gt; or  &lt;user_name&gt; as a place holder. Default is \\files\student\%username%		</div>		<div>			<b>AD Student Home Directory Quota: </b> Set how much space should the user have in the home folder.		</div>	</div></div>

@@ -98,8 +98,8 @@ class Faculty:
     @staticmethod
     def CreateW2PyAccounts(sheet_name, override_password=False, override_current_quota=False):
         # Create web2py accounts for this faculty
-        db = current.db # Grab the current db object
-        auth = current.auth # Grab the current auth object
+        db = current.db  # Grab the current db object
+        auth = current.auth  # Grab the current auth object
         count = 0
     
         # Get the users to import
@@ -108,9 +108,9 @@ class Faculty:
             count += 1
             
             # Gather info for this user
-            user_name = Faculty.GetUsername(row.user_id)
-            password = Faculty.GetPassword(row.user_id, row.faculty_password, override_password)
-            user_email = Faculty.GetEmail(row.user_id)
+            user_name = Faculty.GetUsername(row.user_id, row=row)
+            password = Faculty.GetPassword(row.user_id, row.faculty_password, override_password, row=row)
+            user_email = Faculty.GetEmail(row.user_id, row=row)
             (first_name, last_name) = Util.ParseName(row.faculty_name)
             user_ad_quota = Faculty.GetADQuota(row.user_id, override_current_quota)
             user_canvas_quota = Faculty.GetCanvasQuota(row.user_id, override_current_quota)
@@ -190,7 +190,7 @@ class Faculty:
         return ret
 
     @staticmethod
-    def process_config_params(faculty_id, txt, is_username=False):
+    def process_config_params(faculty_id, txt, is_username=False, row=None):
         db = current.db  # Grab the current db object
         ret = ""
 
@@ -207,6 +207,9 @@ class Faculty:
         user = db(db.faculty_info.user_id == faculty_id).select(db.faculty_info.faculty_name).first()
         if user is not None:
             (first_name, last_name) = Util.ParseName(user.faculty_name)
+
+        if row is not None:
+            (first_name, last_name) = Util.ParseName(row.faculty_name)
 
         if first_name != "":
             first_name_first_letter = first_name[:1]
@@ -232,11 +235,11 @@ class Faculty:
         return str(ret)
 
     @staticmethod
-    def GetUsername(faculty_id):
+    def GetUsername(faculty_id, row=None):
         ret = ""
 
         pattern = AppSettings.GetValue('faculty_id_pattern', '<user_id>')
-        ret = Faculty.process_config_params(faculty_id, pattern, is_username=True)
+        ret = Faculty.process_config_params(faculty_id, pattern, is_username=True, row=row)
 
         return str(ret)
     
@@ -252,7 +255,7 @@ class Faculty:
         return ret
 
     @staticmethod
-    def GetPassword(faculty_id, import_password="", override_password=False):
+    def GetPassword(faculty_id, import_password="", override_password=False, row=None):
         db = current.db
         # Get current password if faculty exists so we don't
         # reset it if the faculty has already changed it unless override_password == True
@@ -265,7 +268,7 @@ class Faculty:
         # Default - add SID to beginning and ! to end (e.g. SID1888182!)
         if ret == "":
             pattern = AppSettings.GetValue('faculty_password_pattern', 'FID<user_id>!')
-            ret = Faculty.process_config_params(faculty_id, pattern)
+            ret = Faculty.process_config_params(faculty_id, pattern, row=row)
         return str(ret)
     
     @staticmethod
@@ -299,10 +302,10 @@ class Faculty:
         return ret
 
     @staticmethod
-    def GetEmail(faculty_id):
+    def GetEmail(faculty_id, row=None):
         # Default - append username and @domain.com (e.g. bobsmith@correctionsed.com)
         pattern = AppSettings.GetValue('faculty_email_pattern', '<user_name>@correctionsed.com')
-        ret = Faculty.process_config_params(faculty_id, pattern)
+        ret = Faculty.process_config_params(faculty_id, pattern, row=row)
         return str(ret)
     
     @staticmethod
@@ -531,7 +534,8 @@ class Faculty:
             
             # Create the faculty
             if AD.CreateUser(faculty_user_name, faculty_cn) is not True:
-                ret += "<b>Error creating faculty account:</b> " + str(faculty_user_name) + " - " + str(faculty_cn) + "<br />Done!" # + AD.GetErrorString()
+                ret += "<b>Error creating faculty account:</b> " + str(faculty_user_name) + " - " + str(faculty_cn) +\
+                       "<br />Done!"  # + AD.GetErrorString()
                 return ret
             db.commit()
             # Update user with current info
@@ -545,8 +549,7 @@ class Faculty:
             db.commit()
             # Set password
             if AD.SetPassword(faculty_dn, faculty_password) is not True:
-                ret += "<b>Error setting password for user:</b> " + str(faculty_user_name) + \
-                       "/" + str(faculty_password) + "<br />"
+                ret += "<b>Error setting password for user:</b> " + str(faculty_user_name) + "<br />"
             db.commit()
             # Add to the faculty group
             if AD.AddUserToGroup(faculty_dn, ad_faculty_group_dn) is not True:
@@ -615,7 +618,7 @@ class Faculty:
     
     @staticmethod
     def ProcessCanvasFaculty():
-        db = current.db # Grab the current db object
+        db = current.db  # Grab the current db object
         ret = ""
         log = ""
         Canvas.Close()
@@ -627,7 +630,7 @@ class Faculty:
             ret += "Done!"
             return ret
         
-        if Canvas._canvas_enabled is not True:
+        if Canvas._canvas_enabled is not True or Canvas._canvas_import_enabled is not True:
             return "Done! - Canvas Import Disabled"
 
         # Pop one off the queue
