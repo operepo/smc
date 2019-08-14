@@ -38,6 +38,7 @@ def changepassword():
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def index(): return dict(message="hello from faculty.py")
 
+
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def manage_students():
     

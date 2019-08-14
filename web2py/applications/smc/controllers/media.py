@@ -201,7 +201,7 @@ def dl_document():
 
 
 def player():
-    ret = start_process_videos()
+    ret = ""  # start_process_videos()
     
     poster = URL('static', 'projekktor-1.3.09') + '/media/intro.png'
     source_ogg = URL('static', 'projekktor-1.3.09') + '/media/intro.ogv'
@@ -318,7 +318,8 @@ def view_document():
                 can_preview=can_preview, is_image=is_image, dl_link=dl_link)
 
 
-@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or auth.has_membership('Media Upload'))
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators') or
+               auth.has_membership('Media Upload'))
 def upload_media():
     ret = start_process_videos()
     
