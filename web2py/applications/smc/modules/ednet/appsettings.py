@@ -2,6 +2,7 @@
 
 from gluon import *
 from gluon import current
+import json
 
 
 # Settings Class
@@ -39,7 +40,15 @@ class AppSettings:
                 ret = default
         else:
             ret = default
-            
+        
+        # Test to see if this is a password that decoded properly - don't send back bad unicode passwords
+        # Protects against 500 errors when enc key is wrong
+        try:
+            json.dumps(dict(k=ret))
+        except UnicodeDecodeError:
+            # This error means error decoding the value - common w decrypting with invalid key
+            ret = default
+
         return ret
     
 # End MySettings

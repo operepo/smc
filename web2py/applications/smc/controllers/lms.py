@@ -60,13 +60,13 @@ def verify_ope_account_in_smc():
             msg = "Found"
         else:
             # User doesn't exit!
-            msg = "Invalid User!"
+            msg = "Invalid User! - User name is CASE SENSITIVE - verify that you typed it exactly as it is in the system."
 
     if msg == "Found":
         # Pull the laptop admin info
         laptop_admin_user = AppSettings.GetValue("laptop_admin_user", "")
         laptop_admin_password = AppSettings.GetValue("laptop_admin_password", "")
-
+        
     return dict(msg=msg, student_full_name=student_full_name,
                 laptop_admin_user=laptop_admin_user, laptop_admin_password=laptop_admin_password)
 
