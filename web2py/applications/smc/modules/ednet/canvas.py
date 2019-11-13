@@ -100,6 +100,9 @@ class Canvas:
 
     @staticmethod
     def ConnectDB():
+        # Make sure to Init canvas before using _canvas?? variables
+        Canvas.Init()
+        
         if Canvas._canvas_enabled is not True:
             return None  # Canvas disabled, not an error
 
