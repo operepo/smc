@@ -11,7 +11,7 @@ pycryptodome
 urllib3
 psycopg2
 PyMySQL
-tempfile
-re
-shutil
+#tempfile
+#re
+#shutil
 pycanvas

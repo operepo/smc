@@ -114,7 +114,7 @@ def ad_test():
     return locals()
 
 
-@auth.requires_membership("Administrators")
+# @auth.requires_membership("Administrators")
 def test():
 
     #db_canvas = current.db_canvas
@@ -123,8 +123,16 @@ def test():
     #test = Canvas.EnsureAdminAccessToken()
     #student_test = Canvas.EnsureStudentAccessToken("s777777")
 
-    initial_run = cache.ram("startup", lambda:True, time_expire=3600)
-    cache_time = cache.ram("tmptime", lambda:time.ctime(), time_expire=30)
+    #initial_run = cache.ram("startup", lambda:True, time_expire=3600)
+    #cache_time = cache.ram("tmptime", lambda:time.ctime(), time_expire=30)
+    
+    students = current.db(db.student_info).select()
+    student_list = []
+    for student in students:
+        student_list.append(student)
+        print(str(student.student_name) + " => " + str(student.student_password))
+    
+    student_list = None
     return locals()
 
 

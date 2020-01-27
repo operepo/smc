@@ -185,14 +185,16 @@ class DerObject(object):
                 """Decode DER length octets from a file."""
 
                 length = s.read_byte()
-                if length <= 127:
-                        return length
-                payloadLength = bytes_to_long(s.read(length & 0x7F))
-                # According to DER (but not BER) the long form is used
-                # only when the length doesn't fit into 7 bits.
-                if payloadLength <= 127:
-                        raise ValueError("Not a DER length tag (but still valid BER).")
-                return payloadLength
+
+                if length > 127:
+                    encoded_length = s.read(length & 0x7F)
+                    if bord(encoded_length[0]) == 0:
+                        raise ValueError("Invalid DER: length has leading zero")
+                    length = bytes_to_long(encoded_length)
+                    if length <= 127:
+                        raise ValueError("Invalid DER: length in long form but smaller than 128")
+
+                return length
 
         def decode(self, der_encoded, strict=False):
                 """Decode a complete DER element, and re-initializes this
@@ -650,11 +652,14 @@ class DerObjectId(DerObject):
             raise ValueError("Not a valid Object Identifier string")
         self.payload = bchr(40*comps[0]+comps[1])
         for v in comps[2:]:
-            enc = []
-            while v:
-                enc.insert(0, (v & 0x7F) | 0x80)
-                v >>= 7
-            enc[-1] &= 0x7F
+            if v == 0:
+                enc = [0]
+            else:
+                enc = []
+                while v:
+                    enc.insert(0, (v & 0x7F) | 0x80)
+                    v >>= 7
+                enc[-1] &= 0x7F
             self.payload += b''.join([bchr(x) for x in enc])
         return DerObject.encode(self)
 

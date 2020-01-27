@@ -12,8 +12,11 @@ REM - Start the virtual env
 REM venv\scripts\activate.bat
 
 REM echo Running Python Virtual Env
-SET PYEXE=%~dp0venv\scripts\python.exe
+rem SET PYEXE=%~dp0venv\scripts\python.exe
+SET PYEXE=python36.exe
 rem echo %PYEXE%
+
+
 
 echo [32mRemoving PYC files...[0m
 %PYEXE% clear_pyc_files.py
@@ -35,7 +38,8 @@ rem If running standalone - set enc key by setting env variable
 rem SET "CANVAS_SECRET=ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O"
 
 echo [32mStarting Web2Py...[0m
-%PYEXE% -B web2py/web2py.py -p 8000 -i "0.0.0.0" -e  -s "SMC Server" --minthreads=4 --maxthreads=8 --timeout=60 -K smc --with-scheduler --ssl_certificate="test.crt" --ssl_private_key="test.key" -a "<recycle>"
+%PYEXE% -B web2py/web2py.py -p 8000 -i "0.0.0.0" -e  -s "SMC Server" --minthreads=4 --maxthreads=8 --timeout=60 -K smc --with-scheduler 
+rem --ssl_certificate="test.crt" --ssl_private_key="test.key" -a "<recycle>"
 rem  # --ca-cert="ca.crt" --nogui 
 
 rem venv\scripts\deactivate.bat

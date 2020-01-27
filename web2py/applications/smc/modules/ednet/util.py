@@ -4,8 +4,25 @@ import re
 import uuid
 import threading
 import os
+import sys
 import base64
 
+# Add gluon module folder to syspath
+if __name__ == "__main__":
+
+    w2py_folder = os.path.dirname(
+                    os.path.dirname(
+                    os.path.dirname(
+                    os.path.dirname(
+                    os.path.dirname(
+                        os.path.abspath(__file__))))))
+
+    import_path = w2py_folder
+    print(import_path)
+    if import_path not in sys.path:
+        
+        sys.path.append(import_path)
+    
 # Deal with change to web2py - moved AES to pyaes folder
 # import gluon.contrib.aes as AES
 import gluon.contrib.pyaes as AES
@@ -67,7 +84,8 @@ def pad(s, n=32, padchar=' '):
 
 class Util:
     aes_key = None
-    default_aes_key = 'ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O'
+    default_encoding = "ascii"  # utf-8 or ascii
+    default_aes_key = 'ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O'    
     
     def __init__(self):
         pass
@@ -77,13 +95,14 @@ class Util:
         # Set AES Key for the app - load canvas secret if available
         if Util.aes_key is None:
             try:
-                Util.aes_key = str(os.environ["CANVAS_SECRET"]) + ""
+                k = str(os.environ["CANVAS_SECRET"]) + ""
                 # Make sure its 32 characters
                 # Util.aes_key = Util.aes_key[:32]
                 # Util.aes_key = Util.aes_key.ljust(32, "0")
-                Util.aes_key = pad(Util.aes_key[:32])
+                k = pad(k[:32])
+                Util.aes_key = k.encode(Util.default_encoding)
             except KeyError as ex:
-                Util.aes_key = Util.default_aes_key
+                Util.aes_key = Util.default_aes_key.encode(Util.default_encoding)
 
     @staticmethod
     def AES_new(key, iv=None):
@@ -96,6 +115,8 @@ class Util:
         # Util.aes = pyaes.AESModeOfOperationCBC(key, iv = iv)
         # plaintext = "TextMustBe16Byte"
         # ciphertext = aes.encrypt(plaintext)
+        if not isinstance(key, bytes):
+            key = key.encode(Util.default_encoding)
         return AES.AESModeOfOperationOFB(key, iv=iv), iv
     
     @staticmethod
@@ -107,7 +128,8 @@ class Util:
             key = Util.aes_key
         key = pad(key[:32])
         cipher, iv = Util.AES_new(key)
-        encrypted_data = iv + cipher.encrypt(pad(data, 16))
+        data_bytes = pad(data, 16).encode(Util.default_encoding)
+        encrypted_data = iv + cipher.encrypt(data_bytes)
         return base64.urlsafe_b64encode(encrypted_data)
 
     @staticmethod
@@ -133,13 +155,14 @@ class Util:
             cipher, _ = Util.AES_new(key, iv=iv)
         except:
             # bad IV = bad data
+            print("BAD IV DATA!")
             return data
         try:
             data = cipher.decrypt(data)
         except:
             # Don't let error blow things up
             pass
-        data = data.rstrip(' ')
+        data = data.decode(Util.default_encoding).rstrip(' ')
         return data
 
     @staticmethod
@@ -196,3 +219,23 @@ class Util:
         elif len(parts) == 1:
             parts = (parts[0].strip())
         return parts
+
+if __name__ == "__main__":
+    
+    source_str = "The quick brown fox"
+    enc_str = Util.encrypt(source_str)
+    final_str = Util.decrypt(enc_str)
+    
+    print("Source: " + str(source_str))
+    print("Enc: " + str(enc_str))
+    print("Final: " + str(final_str))
+    
+    enc_pw = b'\x18V\xd4b\xb7\x04\x82t\x83\x9f\xaaz\xa8x%\x10'
+    
+    s1 = base64.urlsafe_b64decode(enc_pw)
+    
+    dec_pw = Util.decrypt(enc_pw)
+    print("DecPW: " + dec_pw)
+    
+    
+    

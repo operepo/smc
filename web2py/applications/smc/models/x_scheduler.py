@@ -53,7 +53,8 @@ elif PY3:
     from urllib.request import urlopen
     from urllib.error import HTTPError
     from urllib.request import Request
-    from urllib import request
+    # NOTE - Leave off!! - will override web2py request object
+    #from urllib import request
 
     def install_proxy(proxy_handler):
         proxy_support = request.ProxyHandler(proxy_handler)
