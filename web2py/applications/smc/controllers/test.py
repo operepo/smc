@@ -126,13 +126,33 @@ def test():
     #initial_run = cache.ram("startup", lambda:True, time_expire=3600)
     #cache_time = cache.ram("tmptime", lambda:time.ctime(), time_expire=30)
     
-    students = current.db(db.student_info).select()
-    student_list = []
-    for student in students:
-        student_list.append(student)
-        print(str(student.student_name) + " => " + str(student.student_password))
+    #students = current.db(db.student_info).select()
+    #student_list = []
+    #for student in students:
+    #    student_list.append(student)
+    #    print(str(student.student_name) + " => " + str(student.student_password))
     
-    student_list = None
+    #student_list = None
+    
+    record = db(db.media_files.id==14).select().first()
+    form = SQLFORM(db["media_files"], record).process()
+    
+    if form.accepted:
+        print("OK!!!")
+        response.flash = "It Worked!"
+    elif form.errors:
+        print("Err: " + str(form.errors))
+        response.flash = "ERR"
+    else:
+        print("NONE")
+
+    #print("App: " + AppSettings.GetValue("app_name", "NO!"))
+    #AppSettings.SetValue("app_name", "SMC")
+    #AppSettings.SetValue("ad_service_pw", "SMC")
+    #AppSettings.SetValue("app_logo", "")
+    #AppSettings.SetValue("file_server_login_pass", "")
+    #AppSettings.SetValue("canvas_server_password", "")
+    
     return locals()
 
 

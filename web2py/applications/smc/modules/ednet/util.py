@@ -6,6 +6,7 @@ import threading
 import os
 import sys
 import base64
+import traceback
 
 # Add gluon module folder to syspath
 if __name__ == "__main__":
@@ -27,6 +28,7 @@ if __name__ == "__main__":
 # import gluon.contrib.aes as AES
 import gluon.contrib.pyaes as AES
 # import ednet.aes as AES
+#from appsettings import AppSettings
 
 # Python 2/3 compatibility - remaps range to xrange in python3
 try:
@@ -84,7 +86,7 @@ def pad(s, n=32, padchar=' '):
 
 class Util:
     aes_key = None
-    default_encoding = "ascii"  # utf-8 or ascii
+    default_encoding = "utf-8"  # utf-8 or ascii
     default_aes_key = 'ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O'    
     
     def __init__(self):
@@ -100,9 +102,9 @@ class Util:
                 # Util.aes_key = Util.aes_key[:32]
                 # Util.aes_key = Util.aes_key.ljust(32, "0")
                 k = pad(k[:32])
-                Util.aes_key = k.encode(Util.default_encoding)
+                Util.aes_key = k
             except KeyError as ex:
-                Util.aes_key = Util.default_aes_key.encode(Util.default_encoding)
+                Util.aes_key = Util.default_aes_key
 
     @staticmethod
     def AES_new(key, iv=None):
@@ -128,7 +130,7 @@ class Util:
             key = Util.aes_key
         key = pad(key[:32])
         cipher, iv = Util.AES_new(key)
-        data_bytes = pad(data, 16).encode(Util.default_encoding)
+        data_bytes = pad(data, 16) # .encode(Util.default_encoding)
         encrypted_data = iv + cipher.encrypt(data_bytes)
         return base64.urlsafe_b64encode(encrypted_data)
 
@@ -140,29 +142,47 @@ class Util:
         else:
             key = Util.aes_key
         key = pad(key[:32])
-        if data is None:
-            data = ""
+        if data is None or data == "":
+            #print("empty data.")
+            #traceback.print_stack(limit=2)
+            return ""
         try:
             data = base64.urlsafe_b64decode(data)
         except TypeError as ex:
             # Don't let error blow things up
-            pass
+            print("error decoding base64 value")
+            return data
         except Exception as ex:
-            print("Unkown error! " + str(ex))
-            pass
+            print("Base64 error! " + str(ex) + " - " + str(data))
+            return data
+            
         iv, data = data[:16], data[16:]
         try:
             cipher, _ = Util.AES_new(key, iv=iv)
-        except:
+        except Exception as ex:
             # bad IV = bad data
-            print("BAD IV DATA!")
-            return data
+            print("BAD IV DATA! " + str(iv) + " - " + str(data) + " - " + str(ex))
+            return ""
         try:
             data = cipher.decrypt(data)
         except:
             # Don't let error blow things up
+            print("Decryption error!")
+            return ""
             pass
-        data = data.decode(Util.default_encoding).rstrip(' ')
+        if isinstance(data, bytes):
+            #print("is bytes")
+            try:
+                data = data.decode('utf-8')
+            except:
+                print("err decoding encrypted data as utf-8")
+                try:
+                    data = data.decode('ascii')
+                except:
+                    print("err decoding encrypted data as ascii")
+                    pass
+        #print("DAT: " + data)
+        data = data.rstrip(" ")
         return data
 
     @staticmethod
@@ -230,12 +250,17 @@ if __name__ == "__main__":
     print("Enc: " + str(enc_str))
     print("Final: " + str(final_str))
     
-    enc_pw = b'\x18V\xd4b\xb7\x04\x82t\x83\x9f\xaaz\xa8x%\x10'
+    enc_pw = "hKYGehoeNkJek5-Q_yTkmiZZwa18L7Rzalqog6pnLCI="
+    #enc_pw = "-WOCXgY9fxhOwQ3OAbqziuCXKYdwf6OoEyjuWdq0r0Y="
+    #enc_pw = ""
+    enc_str = str(enc_pw)
     
-    s1 = base64.urlsafe_b64decode(enc_pw)
+    s1 = base64.urlsafe_b64decode(enc_str)
     
     dec_pw = Util.decrypt(enc_pw)
-    print("DecPW: " + dec_pw)
+    print("DecPW: " + str(dec_pw))
+    
+    print("DecTest: " + str(Util.decrypt("super secret pw")))
     
     
     

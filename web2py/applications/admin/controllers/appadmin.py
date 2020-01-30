@@ -337,10 +337,13 @@ def update():
                                                       f='download', args=request.args[:1]))
 
     if form.accepts(request.vars, session):
+        print("YES!")
         session.flash = T('done!')
         qry = query_by_table_type(table, db)
         redirect(URL('select', args=request.args[:1],
                  vars=dict(query=qry)))
+    else:
+        print("NO!")
     return dict(form=form, table=db[table])
 
 
