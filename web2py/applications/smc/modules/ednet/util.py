@@ -136,6 +136,7 @@ class Util:
 
     @staticmethod
     def decrypt(data, lkey=None):
+        return ""
         Util.ensure_key()
         if lkey is not None:
             key = lkey

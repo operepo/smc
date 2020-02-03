@@ -10,13 +10,14 @@
 """
 
 import warnings
+import re
 
 
 class RemovedInNextVersionWarning(DeprecationWarning):
     pass
 
 
-warnings.simplefilter('always', RemovedInNextVersionWarning)
+warnings.simplefilter("always", RemovedInNextVersionWarning)
 
 
 def warn_of_deprecation(old_name, new_name, prefix=None, stack=2):
@@ -24,8 +25,10 @@ def warn_of_deprecation(old_name, new_name, prefix=None, stack=2):
     if prefix:
         msg = "%(prefix)s." + msg
     warnings.warn(
-        msg % {'old': old_name, 'new': new_name, 'prefix': prefix},
-        RemovedInNextVersionWarning, stack)
+        msg % {"old": old_name, "new": new_name, "prefix": prefix},
+        RemovedInNextVersionWarning,
+        stack,
+    )
 
 
 class deprecated(object):
@@ -38,7 +41,33 @@ class deprecated(object):
     def __call__(self, f):
         def wrapped(*args, **kwargs):
             warn_of_deprecation(
-                self.old_method_name, self.new_method_name, self.class_name,
-                3 + self.additional_stack)
+                self.old_method_name,
+                self.new_method_name,
+                self.class_name,
+                3 + self.additional_stack,
+            )
             return f(*args, **kwargs)
+
         return wrapped
+
+
+def split_uri_args(query, separators="&?", need_equal=False):
+    """
+    Split the args in the query string of a db uri.
+
+    Returns a dict with splitted args and values.
+    """
+    if need_equal:
+        regex_arg_val = "(?P<argkey>[^=]+)=(?P<argvalue>[^%s]*)[%s]?" % (
+            separators,
+            separators,
+        )
+    else:
+        regex_arg_val = "(?P<argkey>[^=%s]+)(=(?P<argvalue>[^%s]*))?[%s]?" % (
+            separators,
+            separators,
+            separators,
+        )
+    return dict(
+        [m.group("argkey", "argvalue") for m in re.finditer(regex_arg_val, query)]
+    )

@@ -10,6 +10,7 @@ class Dispatcher(object):
         def wrap(dispatch_class):
             self._registry_[target] = dispatch_class
             return dispatch_class
+
         return wrap
 
     def get_for(self, obj):
@@ -18,18 +19,4 @@ class Dispatcher(object):
             if target in self._registry_:
                 return self._registry_[target](obj)
         else:
-            raise ValueError(
-                "no %s found for object: %s" % (self.namespace, obj))
-
-
-class Cursor(object):
-    def __init__(self, connection):
-        self.connection = connection
-        self.cursor = connection.cursor()
-        self.release()
-
-    def lock(self):
-        self.available = False
-
-    def release(self):
-        self.available = True
+            raise ValueError("no %s found for object: %s" % (self.namespace, obj))

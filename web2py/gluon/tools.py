@@ -1754,7 +1754,7 @@ class Auth(AuthAPI):
         # _next variable in the request.
         if next:
             parts = next.split('/')
-            if ':' not in parts[0]:
+            if ':' not in parts[0] and parts[:2] != ['', '']:
                 return next
             elif len(parts) > 2 and parts[0].endswith(':') and parts[1:3] == ['', host]:
                 return next
@@ -2301,7 +2301,7 @@ class Auth(AuthAPI):
         # in this case they will have to reset their password to login
         if fields.get(settings.passfield):
             fields[settings.passfield] = \
-                settings.table_user[settings.passfield].validate(fields[settings.passfield])[0]
+                settings.table_user[settings.passfield].validate(fields[settings.passfield], None)[0]
         if not fields.get(settings.userfield):
             raise ValueError('register_bare: userfield not provided or invalid')
         user = self.get_or_create_user(fields, login=False, get=False,
@@ -2638,9 +2638,7 @@ class Auth(AuthAPI):
                         # invalid login
                         session.flash = specific_error if self.settings.login_specify_error else self.messages.invalid_login
                         callback(onfail, None)
-                        if 'password' in request.post_vars:
-                            del request.post_vars['password']
-                        redirect(self.url(args=request.args, vars=request.vars),client_side=settings.client_side)
+                        redirect(self.url(args=request.args, vars=request.get_vars),client_side=settings.client_side)
 
             else:  # use a central authentication server
                 cas = settings.login_form
@@ -3173,12 +3171,12 @@ class Auth(AuthAPI):
                         formname='retrieve_password', dbio=False,
                         onvalidation=onvalidation, hideerror=self.settings.hideerror):
             user = table_user(email=form.vars.email)
-            key = user.registration_key
             if not user:
                 current.session.flash = \
                     self.messages.invalid_email
                 redirect(self.url(args=request.args))
-            elif key in ('pending', 'disabled', 'blocked') or (key or '').startswith('pending'):
+            key = user.registration_key
+            if key in ('pending', 'disabled', 'blocked') or (key or '').startswith('pending'):
                 current.session.flash = \
                     self.messages.registration_pending
                 redirect(self.url(args=request.args))
@@ -3728,7 +3726,7 @@ class Auth(AuthAPI):
         are passed to the constructor of class AuthJWT. Look there for documentation.
         """
         if not self.jwt_handler:
-            raise HTTP(400, "Not authorized")
+            raise HTTP(401, "Not authorized")
         else:
             rtn = self.jwt_handler.jwt_token_manager()
             raise HTTP(200, rtn, cookies=None, **current.response.headers)
@@ -3822,7 +3820,7 @@ class Auth(AuthAPI):
 
     def allows_jwt(self, otherwise=None):
         if not self.jwt_handler:
-            raise HTTP(400, "Not authorized")
+            raise HTTP(401, "Not authorized")
         else:
             return self.jwt_handler.allows_jwt(otherwise=otherwise)
 

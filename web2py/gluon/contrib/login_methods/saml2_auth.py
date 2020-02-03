@@ -118,7 +118,7 @@ def saml2_handler(session, request, config_filename = None, entityid = None):
     elif request.env.request_method == 'POST':
         binding = BINDING_HTTP_POST
     if not request.vars.SAMLResponse:
-        req_id, req = client.create_authn_request(destination, binding=binding)
+        req_id, req = client.create_authn_request(destination, binding=BINDING_HTTP_POST)
         relay_state = web2py_uuid().replace('-','')
         session.saml_outstanding_queries = {req_id: request.url}    
         session.saml_req_id = req_id
@@ -150,14 +150,14 @@ class Saml2Auth(object):
         self.config_file = config_file
         self.maps = maps
 
-    # URL for redirecting users to when they sign out
+        # URL for redirecting users to when they sign out
         self.saml_logout_url = logout_url
 
         # URL to let users change their password in the IDP system
         self.saml_change_password_url = change_password_url
     
-    # URL to specify an IDP if using federation metadata or an MDQ
-    self.entityid = entityid
+        # URL to specify an IDP if using federation metadata or an MDQ
+        self.entityid = entityid
 
     def login_url(self, next="/"):
         d = saml2_handler(current.session, current.request, entityid=self.entityid)

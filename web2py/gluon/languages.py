@@ -16,7 +16,6 @@ import re
 import sys
 import pkgutil
 import logging
-from cgi import escape
 from threading import RLock
 
 from pydal._compat import copyreg, PY2, maketrans, iterkeys, unicodeT, to_unicode, to_bytes, iteritems, to_native, pjoin
@@ -391,6 +390,12 @@ class lazyT(object):
 
     def __eq__(self, other):
         return str(self) == str(other)
+
+    def __lt__(self, other):
+        return str(self) < str(other)
+
+    def __gt__(self, other):
+        return str(self) > str(other)
 
     def __ne__(self, other):
         return str(self) != str(other)
