@@ -5,6 +5,10 @@ import uuid
 from ednet.appsettings import AppSettings
 from ednet.util import Util
 
+# Do we need to do initial init? (e.g. creating indexes.....)
+db_init_needed = cache.ram('db_init_needed', lambda: True, time_expire=3600)
+
+
 db.define_table("quota_sizes",
                 Field("int_size", "bigint"),
                 Field("display_size"),
@@ -12,7 +16,8 @@ db.define_table("quota_sizes",
                 )
 
 # db(db.quota_sizes).delete()
-if db(db.quota_sizes).count() < 1:
+
+if db_init_needed and db(db.quota_sizes).count() < 1:
         # Add a row
         db.quota_sizes.insert(int_size='0',
                               display_size='0 Meg',
@@ -108,16 +113,19 @@ if db(db.quota_sizes).count() < 1:
 db.define_table("zpool_datasets",
                 Field("name"),
                 )
-if db(db.zpool_datasets).count() < 1:
+
+if db_init_needed and db(db.zpool_datasets).count() < 1:
     db.zpool_datasets.insert(name="")
 
 db.define_table("zpool_sync",
                 Field("name"),
                 )
-if db(db.zpool_sync).count() < 1:
+
+if db_init_needed and db(db.zpool_sync).count() < 1:
     db.zpool_sync.insert(name="disabled")
     db.zpool_sync.insert(name="standard")
     db.zpool_sync.insert(name="always")
+
 
 db.define_table("my_app_settings",
                 Field("app_name", default="SMC"),
@@ -241,8 +249,9 @@ db.student_info.student_password.filter_in = lambda value : Util.encrypt(value)
 db.student_info.student_password.filter_out = lambda value : Util.decrypt(value)
 
 # Indexes
-db.executesql('CREATE INDEX IF NOT EXISTS account_id_idx ON student_info (account_id);')
-db.executesql('CREATE INDEX IF NOT EXISTS user_id_idx ON student_info (user_id);')
+if db_init_needed:
+      db.executesql('CREATE INDEX IF NOT EXISTS account_id_idx ON student_info (account_id);')
+      db.executesql('CREATE INDEX IF NOT EXISTS user_id_idx ON student_info (user_id);')
 
 db.define_table("student_enrollment",
                 Field("parent_id", "reference student_info"),
@@ -322,8 +331,9 @@ db.faculty_info.faculty_password.filter_in = lambda value : Util.encrypt(value)
 db.faculty_info.faculty_password.filter_out = lambda value : Util.decrypt(value)
 
 # Indexes
-db.executesql('CREATE INDEX IF NOT EXISTS account_id_idx ON faculty_info (account_id);')
-db.executesql('CREATE INDEX IF NOT EXISTS user_id_idx ON faculty_info (user_id);')
+if db_init_needed:
+      db.executesql('CREATE INDEX IF NOT EXISTS account_id_idx ON faculty_info (account_id);')
+      db.executesql('CREATE INDEX IF NOT EXISTS user_id_idx ON faculty_info (user_id);')
 
 db.define_table("faculty_enrollment",
                 Field("parent_id", "reference faculty_info"),
@@ -408,8 +418,10 @@ db.define_table('media_files',
                 Field('needs_downloading', 'boolean', default=False),
                 auth.signature
                 )
+
 # Indexes
-db.executesql('CREATE INDEX IF NOT EXISTS media_guid_idx ON media_files (media_guid);')
+if db_init_needed:
+      db.executesql('CREATE INDEX IF NOT EXISTS media_guid_idx ON media_files (media_guid);')
 
 
 db.define_table('document_import_queue',
@@ -439,8 +451,10 @@ db.define_table('document_files',
                 Field('google_url', 'string', default=''),
                 auth.signature
                 )
+
 # Indexes
-db.executesql('CREATE INDEX IF NOT EXISTS document_guid_idx ON document_files (document_guid);')
+if db_init_needed:
+      db.executesql('CREATE INDEX IF NOT EXISTS document_guid_idx ON document_files (document_guid);')
 
 
 db.define_table('playlist',
@@ -473,9 +487,11 @@ db.define_table('wamap_videos',
                 Field('old_player_id', 'integer', default=0),
                 auth.signature
                 )
-db.executesql('CREATE INDEX IF NOT EXISTS media_guid_idx ON wamap_videos (media_guid);')
-db.executesql('CREATE INDEX IF NOT EXISTS source_url_idx ON wamap_videos (source_url);')
-db.executesql('CREATE INDEX IF NOT EXISTS downloaded_idx ON wamap_videos (downloaded);')
+
+if db_init_needed:
+      db.executesql('CREATE INDEX IF NOT EXISTS media_guid_idx ON wamap_videos (media_guid);')
+      db.executesql('CREATE INDEX IF NOT EXISTS source_url_idx ON wamap_videos (source_url);')
+      db.executesql('CREATE INDEX IF NOT EXISTS downloaded_idx ON wamap_videos (downloaded);')
 
 db.define_table('wamap_qimages',
                 Field('source_id', 'integer', default=0),
@@ -486,7 +502,9 @@ db.define_table('wamap_qimages',
                 Field('downloaded', 'boolean', default=False),
                 auth.signature
                 )
-db.executesql('CREATE INDEX IF NOT EXISTS source_id_idx ON wamap_qimages (source_id);')
+
+if db_init_needed:
+      db.executesql('CREATE INDEX IF NOT EXISTS source_id_idx ON wamap_qimages (source_id);')
 
 db.define_table('wamap_pdfs',
                 Field('source_url', 'string'),
@@ -495,9 +513,10 @@ db.define_table('wamap_pdfs',
                 Field('media_guid', 'string'),
                 auth.signature
                 )
-db.executesql('CREATE INDEX IF NOT EXISTS media_guid_idx ON wamap_pdfs (media_guid);')
-db.executesql('CREATE INDEX IF NOT EXISTS source_url_idx ON wamap_pdfs (source_url);')
-db.executesql('CREATE INDEX IF NOT EXISTS downloaded_idx ON wamap_pdfs (downloaded);')
+if db_init_needed:
+      db.executesql('CREATE INDEX IF NOT EXISTS media_guid_idx ON wamap_pdfs (media_guid);')
+      db.executesql('CREATE INDEX IF NOT EXISTS source_url_idx ON wamap_pdfs (source_url);')
+      db.executesql('CREATE INDEX IF NOT EXISTS downloaded_idx ON wamap_pdfs (downloaded);')
 
 
 # Tables for inmate laptop firewall rules
@@ -539,3 +558,7 @@ response.logo = app_logo
 response.title = AppSettings.GetValue('app_name', request.application.replace('_',' ').title())
 response.subtitle = AppSettings.GetValue('app_description',
                                     'Student Management Console - Import/Enrollment for Active Directory and Canvas')
+
+
+
+### NOTE - db_init_needed is turned off in x_fixtures

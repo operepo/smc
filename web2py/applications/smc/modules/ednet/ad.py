@@ -185,8 +185,19 @@ class AD:
                 # AD._ldap.simple_bind_s(AD._ldap_login_user, AD._ldap_login_pass)
                 # AD._ldap.simple_bind_s(AD._ldap_login_user.encode(AD._ad_encoding),
                 #  AD._ldap_login_pass.encode(AD._ad_encoding))
-                AD._ldap = Connection(AD._ldap_session, AD._ldap_login_user.encode(AD._ad_encoding),
-                                      AD._ldap_login_pass.encode(AD._ad_encoding),
+                #AD._ldap = Connection(AD._ldap_session, AD._ldap_login_user.encode(AD._ad_encoding),
+                #                      AD._ldap_login_pass.encode(AD._ad_encoding),
+                #                      authentication=ldap3.NTLM,
+                #                      auto_bind=True,
+                #                      raise_exceptions=True,
+                #                      auto_referrals=False,
+                #                      client_strategy=ldap3.RESTARTABLE,
+                #                      #receive_timeout=60,
+                #                      
+                #                      )
+                
+                AD._ldap = Connection(AD._ldap_session, AD._ldap_login_user,
+                                      AD._ldap_login_pass,
                                       authentication=ldap3.NTLM,
                                       auto_bind=True,
                                       raise_exceptions=True,
@@ -195,6 +206,7 @@ class AD:
                                       #receive_timeout=60,
                                       
                                       )
+                
                 ret = True
                 AD._ldap_connect_time = datetime.today()
             # except ldap3.core.exceptions.LDAPUnknownAuthenticationMethodError as message:
@@ -214,12 +226,14 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             except ldap3.core.exceptions.LDAPSocketOpenError as message:
                 # except ldap.SERVER_DOWN as message:
                 AD.Close()
+                err_msg = str(message) + " " + str(AD._ldap_server)
                 err = """
 <h1>Active Directory Connection error </h1>
-<p style="font-size: 10px;">%s</p>
+<p style="font-size: 10px;"><err_msg></p>
 Active Directory is required to create user accounts for Windows. <br />
 Please check your Active Directory server information on the config page and that your server is on.<br />
-For more information, please view the <a target='docs' href='""" % str(str(message) + " " + AD._ldap_server)
+For more information, please view the <a target='docs' href='"""
+                err = err.replace("<err_msg>", err_msg)
                 err += URL('docs', 'ad', extension=False)
                 err += "'>Active Directory Documentation Page</a><br/>"
                 AD._errors.append(err)
@@ -425,13 +439,14 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         # group_attrs['groupType'] = "0x80000002"
         # group_attrs['name'] = 'Students'
         # group_attrs['objectCategory'] = 'CN=Group,CN=Schema,CN=Configuration,DC=cbcc,DC=pencollege,DC=net'
-        group_attrs['sAMAccountName'] = gname.encode(AD._ad_encoding)
+        group_attrs['sAMAccountName'] = gname  #  gname.encode(AD._ad_encoding)
         group_ldif = Util.GetModList(group_attrs, None)
 
         try:
             # AD._ldap.add_s(group_dn.encode(AD._ad_encoding), group_ldif)
             # ret = True
-            AD._ldap.add(group_dn.encode(AD._ad_encoding), attributes=group_attrs)
+            #AD._ldap.add(group_dn.encode(AD._ad_encoding), attributes=group_attrs)
+            AD._ldap.add(group_dn, attributes=group_attrs)
             ret = True
         except ldap3.core.exceptions.LDAPOperationsErrorResult as error_message:
             # except ldap.LDAPError as error_message:
@@ -519,11 +534,15 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         ou_name = AD.GetNameFromLDAPPath(ou_dn)
 
         ou_attrs = dict()
-        ou_attrs['name'] = ou_name.encode(AD._ad_encoding)
+        ou_attrs['name'] = ou_name  #  ou_name.encode(AD._ad_encoding)
 
         try:
             # AD._ldap.add_s(ou_dn.encode(AD._ad_encoding), ou_ldif)
-            AD._ldap.add(ou_dn.encode(AD._ad_encoding),
+            #AD._ldap.add(ou_dn.encode(AD._ad_encoding),
+            #             object_class=['top', 'organizationalUnit'],
+            #             attributes=ou_attrs,
+            #             )
+            AD._ldap.add(ou_dn,
                          object_class=['top', 'organizationalUnit'],
                          attributes=ou_attrs,
                          )
@@ -604,16 +623,20 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
 
         user_attrs = dict()
         user_attrs['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
-        user_attrs['sAMAccountName'] = user_name.encode(AD._ad_encoding)
+        #user_attrs['sAMAccountName'] = user_name.encode(AD._ad_encoding)
+        user_attrs['sAMAccountName'] = user_name
         uac = 514  # normal user account
         # Can't use other options until a password is set
         # uac = 0x10200  # normal account, enabled, don't expire password
-        user_attrs['userAccountControl'] = str(uac).encode(AD._ad_encoding)
+        #user_attrs['userAccountControl'] = str(uac).encode(AD._ad_encoding)
+        user_attrs['userAccountControl'] = str(uac)
         # user_ldif = Util.GetModList(user_attrs, None)
 
         try:
             # AD._ldap.add_s(new_user_dn.encode(AD._ad_encoding), user_ldif)
-            AD._ldap.add(new_user_dn.encode(AD._ad_encoding),
+            #AD._ldap.add(new_user_dn.encode(AD._ad_encoding),
+            #             attributes=user_attrs)
+            AD._ldap.add(new_user_dn,
                          attributes=user_attrs)
 
         except ldap3.core.exceptions.LDAPExceptionError as error_message:
@@ -639,24 +662,37 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             return False
 
         u_attrs = dict()
-        u_attrs['userPrincipalName'] = [(ldap3.MODIFY_REPLACE, [email_address.encode(AD._ad_encoding)])]
-        u_attrs['givenName'] = [(ldap3.MODIFY_REPLACE, [first_name.encode(AD._ad_encoding)])]
-        u_attrs['sn'] = [(ldap3.MODIFY_REPLACE, [last_name.encode(AD._ad_encoding)])]
-        u_attrs['displayName'] = [(ldap3.MODIFY_REPLACE, [display_name.encode(AD._ad_encoding)])]
-        u_attrs['description'] = [(ldap3.MODIFY_REPLACE, [description.encode(AD._ad_encoding)])]
-        u_attrs['mail'] = [(ldap3.MODIFY_REPLACE, [email_address.encode(AD._ad_encoding)])]
-        u_attrs['employeeID'] = [(ldap3.MODIFY_REPLACE, [id_number.encode(AD._ad_encoding)])]
+        
+        #u_attrs['userPrincipalName'] = [(ldap3.MODIFY_REPLACE, [email_address.encode(AD._ad_encoding)])]
+        #u_attrs['givenName'] = [(ldap3.MODIFY_REPLACE, [first_name.encode(AD._ad_encoding)])]
+        #u_attrs['sn'] = [(ldap3.MODIFY_REPLACE, [last_name.encode(AD._ad_encoding)])]
+        #u_attrs['displayName'] = [(ldap3.MODIFY_REPLACE, [display_name.encode(AD._ad_encoding)])]
+        #u_attrs['description'] = [(ldap3.MODIFY_REPLACE, [description.encode(AD._ad_encoding)])]
+        #u_attrs['mail'] = [(ldap3.MODIFY_REPLACE, [email_address.encode(AD._ad_encoding)])]
+        #u_attrs['employeeID'] = [(ldap3.MODIFY_REPLACE, [id_number.encode(AD._ad_encoding)])]
+        #u_attrs['msTSAllowLogon'] = [(ldap3.MODIFY_REPLACE, [ts_allow_login])]
+        u_attrs['userPrincipalName'] = [(ldap3.MODIFY_REPLACE, [email_address])]
+        u_attrs['givenName'] = [(ldap3.MODIFY_REPLACE, [first_name])]
+        u_attrs['sn'] = [(ldap3.MODIFY_REPLACE, [last_name])]
+        u_attrs['displayName'] = [(ldap3.MODIFY_REPLACE, [display_name])]
+        u_attrs['description'] = [(ldap3.MODIFY_REPLACE, [description])]
+        u_attrs['mail'] = [(ldap3.MODIFY_REPLACE, [email_address])]
+        u_attrs['employeeID'] = [(ldap3.MODIFY_REPLACE, [id_number])]
         u_attrs['msTSAllowLogon'] = [(ldap3.MODIFY_REPLACE, [ts_allow_login])]
+
         # TODO - Figure out how to duplicate userParameters so we can have better control of Terminal Services settings
         # Just setting this value doesn't seem to be working - need different encoding?
-        up = u"                                                PCtxCfgPresent㔵攱戰ぢCtxCfgFlags1〰てㄲ〹CtxShadow㈰〰〰〰*CtxMinEncryptionLevel㄰".decode("utf-8")
+        #up = u"                                                PCtxCfgPresent㔵攱戰ぢCtxCfgFlags1〰てㄲ〹CtxShadow㈰〰〰〰*CtxMinEncryptionLevel㄰".decode("utf-8")
+        up = u"                                                PCtxCfgPresent㔵攱戰ぢCtxCfgFlags1〰てㄲ〹CtxShadow㈰〰〰〰*CtxMinEncryptionLevel㄰"
         u_attrs['userParameters'] = [(ldap3.MODIFY_REPLACE, [up])]
         # u_ldif = Util.GetModList(u_attrs, ldap3.MODIFY_REPLACE)
 
         # Update Base info
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), u_ldif)
-            AD._ldap.modify(user_dn.encode(AD._ad_encoding),
+            #AD._ldap.modify(user_dn.encode(AD._ad_encoding),
+            #                u_attrs)
+            AD._ldap.modify(user_dn,
                             u_attrs)
         except ldap3.core.exceptions.LDAPExceptionError as error_message:
             # except ldap.LDAPError as error_message:
@@ -664,13 +700,15 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             ret = False
 
         # Set drive letter
-        home_drive = {'homeDrive': [(ldap3.MODIFY_REPLACE, [home_drive_letter.encode(AD._ad_encoding)])]}
+        #home_drive = {'homeDrive': [(ldap3.MODIFY_REPLACE, [home_drive_letter.encode(AD._ad_encoding)])]}
+        home_drive = {'homeDrive': [(ldap3.MODIFY_REPLACE, [home_drive_letter])]}
         if home_drive_letter == '':
             # home_drive = [(ldap.MOD_DELETE, 'homeDrive', None)]
             home_drive = {'homeDrive': [ldap3.MODIFY_DELETE, []]}
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), home_drive)
-            AD._ldap.modify(user_dn.encode(AD._ad_encoding), home_drive)
+            #AD._ldap.modify(user_dn.encode(AD._ad_encoding), home_drive)
+            AD._ldap.modify(user_dn, home_drive)
         except ldap3.core.exceptions.LDAPNoSuchAttributeResult as error_message:
             # Normal if attribute is already missing
             # print("NO SUCH ATTRIBUTE - homeDrive")
@@ -686,13 +724,15 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
 
         # Set home directory
         # home_dir = [(ldap.MOD_REPLACE, 'homeDirectory', [home_directory.encode(AD._ad_encoding)])]
-        home_dir = {'homeDirectory': [(ldap3.MODIFY_REPLACE, [home_directory.encode(AD._ad_encoding)])]}
+        #home_dir = {'homeDirectory': [(ldap3.MODIFY_REPLACE, [home_directory.encode(AD._ad_encoding)])]}
+        home_dir = {'homeDirectory': [(ldap3.MODIFY_REPLACE, [home_directory])]}
         if home_directory == '':
             # home_dir = [(ldap.MOD_DELETE, 'homeDirectory', None)]
             home_dir = {'homeDirectory': [(ldap3.MODIFY_DELETE, [])]}
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), home_dir)
-            AD._ldap.modify(user_dn.encode(AD._ad_encoding), home_dir)
+            #AD._ldap.modify(user_dn.encode(AD._ad_encoding), home_dir)
+            AD._ldap.modify(user_dn, home_dir)
         except ldap3.core.exceptions.LDAPNoSuchAttributeResult as error_message:
             # Normal if attribute is already missing
             # print("NO SUCH ATTRIBUTE - homeDirectory")
@@ -708,13 +748,15 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
 
         # Save login script path
         # script_path = [(ldap.MOD_REPLACE, 'scriptPath', [login_script.encode(AD._ad_encoding)])]
-        script_path = {'scriptPath': [(ldap3.MODIFY_REPLACE, [login_script.encode(AD._ad_encoding)])]}
+        #script_path = {'scriptPath': [(ldap3.MODIFY_REPLACE, [login_script.encode(AD._ad_encoding)])]}
+        script_path = {'scriptPath': [(ldap3.MODIFY_REPLACE, [login_script])]}
         if login_script == '':
             # script_path = [(ldap.MOD_DELETE, 'scriptPath', None)]
             script_path = {'scriptPath': [(ldap3.MODIFY_DELETE, [])]}
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), script_path)
-            AD._ldap.modify(user_dn.encode(AD._ad_encoding), script_path)
+            #AD._ldap.modify(user_dn.encode(AD._ad_encoding), script_path)
+            AD._ldap.modify(user_dn, script_path)
         except ldap3.core.exceptions.LDAPNoSuchAttributeResult as error_message:
             # Normal if attribute is already missing
             # print("NO SUCH ATTRIBUTE - scriptPath")
@@ -730,13 +772,15 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
 
         # Save Profile Path
         # profile = [(ldap.MOD_REPLACE, 'profilePath', [profile_path.encode(AD._ad_encoding)])]
-        profile = {'profilePath': [(ldap3.MODIFY_REPLACE, [profile_path.encode(AD._ad_encoding)])]}
+        #profile = {'profilePath': [(ldap3.MODIFY_REPLACE, [profile_path.encode(AD._ad_encoding)])]}
+        profile = {'profilePath': [(ldap3.MODIFY_REPLACE, [profile_path])]}
         if profile_path == '':
             # profile = [(ldap.MOD_DELETE, 'profilePath', None)]
             profile = {'profilePath': [(ldap3.MODIFY_DELETE, [])]}
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), profile)
-            AD._ldap.modify(user_dn.encode(AD._ad_encoding), profile)
+            #AD._ldap.modify(user_dn.encode(AD._ad_encoding), profile)
+            AD._ldap.modify(user_dn, profile)
         except ldap3.core.exceptions.LDAPNoSuchAttributeResult as error_message:
             # Normal if attribute is already missing
             # print("NO SUCH ATTRIBUTE - profilePath")
@@ -766,6 +810,7 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             return ret
 
         try:
+            #unicode_pw = ('\"' + password + '\"').encode('utf-16-le', 'replace')  # unicode('\"' + password + '\"', 'iso-8859-1')
             unicode_pw = ('\"' + password + '\"').encode('utf-16-le', 'replace')  # unicode('\"' + password + '\"', 'iso-8859-1')
         except:
             # Error - probly encryption key changed? Reset pw back to default
@@ -809,11 +854,13 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         if enabled is not True:
             uac = 0x10202  # normal account, DISABLED, don't expire password
         # mod_acct = [(ldap.MOD_REPLACE, 'userAccountControl', str(uac).encode(AD._ad_encoding))]
-        mod_acct = {'userAccountControl': [(ldap3.MODIFY_REPLACE, [str(uac).encode(AD._ad_encoding)])]}
+        #mod_acct = {'userAccountControl': [(ldap3.MODIFY_REPLACE, [str(uac).encode(AD._ad_encoding)])]}
+        mod_acct = {'userAccountControl': [(ldap3.MODIFY_REPLACE, [str(uac)])]}
 
         try:
             # AD._ldap.modify_s(user_dn.encode(AD._ad_encoding), mod_acct)
-            ret = AD._ldap.modify(user_dn.encode(AD._ad_encoding), mod_acct)
+            #ret = AD._ldap.modify(user_dn.encode(AD._ad_encoding), mod_acct)
+            ret = AD._ldap.modify(user_dn, mod_acct)
             ret = True
         except ldap3.core.exceptions.LDAPNoSuchObjectResult as error_message:
             AD._errors.append("<b>Unable to find object :</b> " + str(user_dn) + " %s" % error_message)
@@ -913,8 +960,13 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             # r = AD._ldap.search_s(cn.encode(AD._ad_encoding), ldap.SCOPE_SUBTREE,
             #  "(name=" + str(cn_name).encode(AD._ad_encoding) + ")" , ret_arr) # ['distinguishedName'])
 
-            AD._ldap.search(cn.encode(AD._ad_encoding),
-                                "(name=" + str(cn_name).encode(AD._ad_encoding) + ")",
+            #AD._ldap.search(cn.encode(AD._ad_encoding),
+            #                    "(name=" + str(cn_name).encode(AD._ad_encoding) + ")",
+            #                    search_scope=ldap3.SUBTREE,
+            #                    attributes=ret_arr,  # ['distinguishedName']
+            #                    )
+            AD._ldap.search(cn,
+                                "(name=" + str(cn_name) + ")",
                                 search_scope=ldap3.SUBTREE,
                                 attributes=ret_arr,  # ['distinguishedName']
                                 )
@@ -925,8 +977,13 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
                 ret = r
             else:
                 # Try sAMAccountName Search...
-                r = AD._ldap.search(cn.encode(AD._ad_encoding),
-                                    "(sAMAccountName=" + str(cn_name).encode(AD._ad_encoding) + ")",
+                #r = AD._ldap.search(cn.encode(AD._ad_encoding),
+                #                    "(sAMAccountName=" + str(cn_name).encode(AD._ad_encoding) + ")",
+                #                    ldap3.SUBTREE,
+                #                    attributes=ret_arr,  # ['distinguishedName'],
+                #                    )
+                r = AD._ldap.search(cn,
+                                    "(sAMAccountName=" + str(cn_name) + ")",
                                     ldap3.SUBTREE,
                                     attributes=ret_arr,  # ['distinguishedName'],
                                     )

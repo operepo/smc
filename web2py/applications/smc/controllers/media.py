@@ -14,6 +14,7 @@ from ednet.canvas import Canvas
 from pytube import YouTube
 
 
+
 def index():
     ret = start_process_videos()
     
@@ -23,7 +24,7 @@ def index():
         links.append(dict(header=T(''),body=lambda row: A('[Delete]', _style='font-size: 10px; color: red;', _href=URL('media', 'delete_media', args=[row.media_guid], user_signature=True)) ) )
     links.append(dict(header=T(''),body=lambda row: A(IMG(_src=getMediaThumb(row.media_guid), _style="width: 128px; height: auto; max-width: 128px;"), _href=URL('media', 'player', args=[row.media_guid], user_signature=True)) ) )
     fields = [db.media_files.id, db.media_files.title, db.media_files.tags, db.media_files.description, db.media_files.media_guid, db.media_files.category] #[db.media_files.title]
-    maxtextlengths = {'media_files.title': '150', 'media_files.tags': '50', 'media_files.description': '150'}
+    maxtextlengths = {'media_files.title': 150, 'media_files.tags': 50, 'media_files.description': 150}
     
     # Hide columns
     db.media_files.id.readable=False
@@ -61,7 +62,7 @@ def documents():
                                                 user_signature=True))))
     fields = [db.document_files.id, db.document_files.title, db.document_files.tags, db.document_files.description,
               db.document_files.document_guid, db.document_files.category]  # [db.document_files.title]
-    maxtextlengths = {'document_files.title': '150', 'document_files.tags': '50', 'document_files.description': '150'}
+    maxtextlengths = {'document_files.title': 150, 'document_files.tags': 50, 'document_files.description': 150}
 
     # Hide columns
     db.document_files.id.readable = False
@@ -503,7 +504,7 @@ def process_queue():
     db.media_file_import_queue.modified_on.readable = False
     headers = {'media_file_import_queue.modified_on': 'Queued On'}
     
-    maxtextlengths = {'media_file_import_queue.title': '80', 'media_file_import_queue.media_guid': '80'}
+    maxtextlengths = {'media_file_import_queue.title': 80, 'media_file_import_queue.media_guid': 80}
     
     # rows = db(query).select()
     process_grid = SQLFORM.grid(query, editable=False, create=False, deletable=True, csv=False,
@@ -1439,7 +1440,7 @@ def pull_from_youtube_download_queue():
     db.media_files.modified_on.readable = False
     headers = {'media_files.modified_on': 'Queued On'}
 
-    maxtextlengths = {'media_files.title': '80', 'media_files.media_guid': '80'}
+    maxtextlengths = {'media_files.title': 80, 'media_files.media_guid': 80}
 
     # rows = db(query).select()
     process_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False, csv=False,
@@ -2900,7 +2901,7 @@ def find_replace_step_youtube_progress_dl_queue():
     db.media_files.modified_on.readable = False
     headers = {'media_files.modified_on': 'Queued On'}
 
-    maxtextlengths = {'media_files.title': '80', 'media_files.media_guid': '80'}
+    maxtextlengths = {'media_files.title': 80, 'media_files.media_guid': 80}
 
     # rows = db(query).select()
     process_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False, csv=False,
@@ -2912,7 +2913,3 @@ def find_replace_step_youtube_progress_dl_queue():
                   URL('media', 'find_replace_step_youtube_progress_dl_queue.load', user_signature=True) + \
                   "', 'process_queue_view_dl_progress');}, 3000);"
     return dict(process_grid=process_grid)
-
-
-
-

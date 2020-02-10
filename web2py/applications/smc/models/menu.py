@@ -72,6 +72,7 @@ response.menu = [
             # (T('Switch Mode'), False, URL('admin', 'switchmode')),
             (T('Switch AD Quota'), False, URL('admin', 'switchquota')),
             (T('Reset SMC'), False, URL('admin', 'reset_smc')),
+            (T('Reload Modules'), False, URL('admin', 'reload_modules')),
             # (T('OPE Project'), False, URL('admin', 'ope'), [
             #    (T('Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
             #    # (T('Laptop Firewall'), False, URL('admin', 'laptop_firewall')),

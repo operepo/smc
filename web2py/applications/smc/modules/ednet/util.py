@@ -87,7 +87,7 @@ def pad(s, n=32, padchar=' '):
 class Util:
     aes_key = None
     default_encoding = "utf-8"  # utf-8 or ascii
-    default_aes_key = 'ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O'    
+    default_aes_key = 'ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O'
     
     def __init__(self):
         pass
@@ -136,15 +136,18 @@ class Util:
 
     @staticmethod
     def decrypt(data, lkey=None):
-        return ""
+        #return ""
+        #print("test2")
         Util.ensure_key()
+        #print("a")
         if lkey is not None:
             key = lkey
         else:
             key = Util.aes_key
         key = pad(key[:32])
+        #print("b")
         if data is None or data == "":
-            #print("empty data.")
+            # print("empty data.")
             #traceback.print_stack(limit=2)
             return ""
         try:
@@ -156,7 +159,7 @@ class Util:
         except Exception as ex:
             print("Base64 error! " + str(ex) + " - " + str(data))
             return data
-            
+        #print("c")
         iv, data = data[:16], data[16:]
         try:
             cipher, _ = Util.AES_new(key, iv=iv)
@@ -164,6 +167,7 @@ class Util:
             # bad IV = bad data
             print("BAD IV DATA! " + str(iv) + " - " + str(data) + " - " + str(ex))
             return ""
+        #print("d")
         try:
             data = cipher.decrypt(data)
         except:
@@ -171,10 +175,12 @@ class Util:
             print("Decryption error!")
             return ""
             pass
+        #print("e")
         if isinstance(data, bytes):
             #print("is bytes")
             try:
                 data = data.decode('utf-8')
+                #print("f")
             except:
                 print("err decoding encrypted data as utf-8")
                 try:
@@ -182,6 +188,7 @@ class Util:
                 except:
                     print("err decoding encrypted data as ascii")
                     pass
+        #print("g")
         #print("DAT: " + data)
         data = data.rstrip(" ")
         return data
@@ -253,15 +260,14 @@ if __name__ == "__main__":
     
     enc_pw = "hKYGehoeNkJek5-Q_yTkmiZZwa18L7Rzalqog6pnLCI="
     #enc_pw = "-WOCXgY9fxhOwQ3OAbqziuCXKYdwf6OoEyjuWdq0r0Y="
-    #enc_pw = ""
-    enc_str = str(enc_pw)
+    enc_pw = "lveDojvmqzxz1Z9xA4bqjCR__DibM6-TyN_N2k2Ptgs="
+    enc_pw = "-ahBalNC5osN5zDkKjjf8lNqcfEWJDRgIAED5nidLOU="
+    enc_str = enc_pw
     
     s1 = base64.urlsafe_b64decode(enc_str)
+    print("S1" + str(s1))
     
     dec_pw = Util.decrypt(enc_pw)
     print("DecPW: " + str(dec_pw))
     
-    print("DecTest: " + str(Util.decrypt("super secret pw")))
-    
-    
-    
+    #print("DecTest: " + str(Util.decrypt("super secret pw")))

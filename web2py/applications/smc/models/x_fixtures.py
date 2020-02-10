@@ -2,23 +2,28 @@
 import os
 from ednet.ad import AD
 
+
+# Do we need to do initial init? (e.g. creating indexes.....)
+db_init_needed = cache.ram('db_init_needed', lambda: True, time_expire=3600)
+
 ## Make sure that these entries are present in the database
 # Groups
-if db(db.auth_group.id > 0).count() == 0:
+if db_init_needed and db(db.auth_group.id > 0).count() == 0:
    db.auth_group.insert(role='Administrators', description='Users with administrative privileges')
    db.auth_group.insert(role='Import', description='Users with import privileges')
    db.auth_group.insert(role='Students', description='Users with student privileges')
    db.auth_group.insert(role='Faculty', description='Faculty members')
    db.commit()
 
-g = db(db.auth_group.role=='Media Upload').select().first()
-if (g == None):
-    db.auth_group.insert(role='Media Upload', description='Users with permission to upload media files')
-    db.commit()
+if db_init_needed:
+    g = db(db.auth_group.role=='Media Upload').select().first()
+    if (g == None):
+        db.auth_group.insert(role='Media Upload', description='Users with permission to upload media files')
+        db.commit()
 
 new_admin = False
 # Starting Users
-if db(db.auth_user.id > 0).count() == 0:
+if db_init_needed and db(db.auth_user.id > 0).count() == 0:
     db.auth_user.insert(
         first_name='admin',
         last_name='admin',
@@ -57,3 +62,8 @@ if (startup == True):
         db.commit()
     # Set the cache with the new value
     cache.ram('startup', lambda: False, 0)
+
+
+if db_init_needed:
+      # Mark that we did it so we quit doing it on every page view
+    cache.ram('db_init_needed', lambda: False, 0)

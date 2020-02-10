@@ -124,7 +124,7 @@ class Canvas:
         pg_hostname = pg_hostname.lower().replace("http://", "").replace("https://", "").replace("/", "")
 
         try:
-            db_canvas = DAL('postgres://postgres:' + urllib.quote_plus(canvas_db_pw)
+            db_canvas = DAL('postgres://postgres:' + urllib.parse.quote_plus(canvas_db_pw)
                             + '@' + pg_hostname + '/canvas_production',
                             decode_credentials=True, migrate=False)
         except RuntimeError as ex:

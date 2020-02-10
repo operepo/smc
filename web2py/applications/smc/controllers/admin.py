@@ -397,7 +397,15 @@ def changepassword():
     return dict(form=form)
 
 
-@auth.requires_membership("Administrators")
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def reload_modules():
+    session.forget(response)
+    import module_reload
+    ret = module_reload.ReloadModules()
+    #response.flash = "Python moudules reloaded..."
+    return dict(msg="Modules Reloaded!")
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def reset_smc():
     ensure_settings()
 

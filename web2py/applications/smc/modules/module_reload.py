@@ -2,6 +2,7 @@
 
 import sys
 
+
 MODULE_LIST = ["ednet.info",
                "ednet.util",
                "ednet.sequentialguid",
@@ -28,7 +29,9 @@ def ReloadModules():
             module_name = prefix + m
             if module_name in sys.modules:
                 try:
-                    reload(sys.modules[module_name])
+                    #reload(sys.modules[module_name])
+                    pass
+                    print("Python2 detected - no longer supported!")
                 except Exception as ex:
                     msg += str(ex)
             else:
@@ -45,8 +48,9 @@ def ReloadModules():
         msg = "Detected > Python 3.3: "
         import importlib
         for m in MODULE_LIST:
-            msg += " - m"
-            importlib.reload(m)
+            msg += " - " + m
+            m_obj = sys.modules[m]
+            importlib.reload(m_obj)
     else:
         msg = "Unknown Python?!?!? " + str(sys.version_info)
 

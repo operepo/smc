@@ -101,7 +101,7 @@ class Connection(object):
             # inherit from the listening socket.
             # See: http://bugs.jython.org/issue1309
             self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-
+        #print(str(self.socket))
         self.socket.settimeout(SOCKET_TIMEOUT)
 
         self.shutdown = self.socket.shutdown

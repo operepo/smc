@@ -75,7 +75,7 @@ def manage_students():
               db.student_info.account_id,
               db.student_info.ad_last_login,
               )
-    maxtextlengths = {'student_info.account_added_on': '24', 'student_info.account_updated_on': '24', 'student_info.ad_last_login': '24'}
+    maxtextlengths = {'student_info.account_added_on': 24, 'student_info.account_updated_on': 24, 'student_info.ad_last_login': 24}
     
     links = [
              #dict(header=T('Last AD Logon'),body=lambda row: Student.GetLastADLoginTime(row.user_id ) ),
@@ -129,9 +129,10 @@ def manage_faculty():
               db.faculty_info.account_enabled,
               db.faculty_info.account_added_on,
               db.faculty_info.account_updated_on,
+              db.faculty_info.account_id,
               db.faculty_info.ad_last_login,
               )
-    maxtextlengths = {'faculty_info.account_added_on': '24', 'faculty_info.account_updated_on': '24', 'faculty_info.ad_last_login': '24'}
+    maxtextlengths = {'faculty_info.account_added_on': 24, 'faculty_info.account_updated_on': 24, 'faculty_info.ad_last_login': 24}
     
     links = [
              #dict(header=T('Last AD Logon'),body=lambda row: Faculty.GetLastADLoginTime(row.user_id ) ),
@@ -140,6 +141,8 @@ def manage_faculty():
              dict(header=T('AD Quota'),body=lambda row: A(GetDisplaySize(row.faculty_ad_quota), _href=URL('faculty', 'faculty_ad_quota', args=[row.user_id])) ),
              dict(header=T('Account Enabled'),body=lambda row: A(row.account_enabled, _href=URL('faculty', 'faculty_toggle_enabled', args=[row.user_id])) ),
              dict(header=T('Change Password'),body=lambda row: A('Change Password', _href=URL('faculty', 'faculty_change_password', args=[row.user_id])) ),
+             dict(header=T('Allow Import'),body=lambda row: A(GetImportPermissionStatus(row.account_id), _href=URL('faculty', 'faculty_toggle_import', args=[row.user_id, row.account_id])) ),
+             dict(header=T('Allow Admin'),body=lambda row: A(GetAdminPermissionStatus(row.account_id), _href=URL('faculty', 'faculty_toggle_admin', args=[row.user_id, row.account_id])) ),
              ]
     
     user_grid = SQLFORM.grid(query, fields=fields, orderby=db.faculty_info.faculty_name,
@@ -155,7 +158,7 @@ def UpdateLastADLogin():
     ret = ""
     # Update the last login value for all users (students and faculty)
     if (AD.ConnectAD() != True):
-        ret = "[AD Disabled]"
+        ret = "[AD Disabled]" + AD.GetErrorString()
         return ret
     
     # Grab list of students
@@ -346,6 +349,80 @@ def GetUploadMediaStatus(account_id):
     
     return ret
 
+@auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
+def faculty_toggle_import():
+    faculty_id = request.args(0)
+    account_id = request.args(1)
+    if (faculty_id == None or account_id == None):
+        if (session.back):
+            redirect(session.back)
+        else:
+            redirect(URL('faculty', 'manage_faculty'))
+    
+    current_user = Faculty.GetUsername(faculty_id)
+    
+    status_action = "Change Status"
+    auth = current.auth # Grab the current auth object
+    
+    # Add to the group
+    if (auth.has_membership(role='Import', user_id=account_id) == True):
+        status_action = "Removing Import Rights"        
+        auth.del_membership(auth.id_group(role='Import'), user_id=account_id)
+    else:
+        status_action = "Adding Import Rights"
+        auth.add_membership('Import', user_id=account_id)
+    message = status_action
+    return dict(message=message, current_user=current_user, status_action=status_action)
+
+@auth.requires(auth.has_membership('Administrators'))
+def faculty_toggle_admin():
+    faculty_id = request.args(0)
+    account_id = request.args(1)
+    if (faculty_id == None or account_id == None):
+        if (session.back):
+            redirect(session.back)
+        else:
+            redirect(URL('faculty', 'manage_faculty'))
+    
+    current_user = Faculty.GetUsername(faculty_id)
+    
+    status_action = "Change Status"
+    auth = current.auth # Grab the current auth object
+    
+    # Add to the group
+    if (auth.has_membership(role='Administrators', user_id=account_id) == True):
+        status_action = "Removing Admin Rights"        
+        auth.del_membership(auth.id_group(role='Administrators'), user_id=account_id)
+    else:
+        status_action = "Adding Admin Rights"
+        auth.add_membership('Administrators', user_id=account_id)
+    message = status_action
+    return dict(message=message, current_user=current_user, status_action=status_action)
+
+@auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
+def GetAdminPermissionStatus(account_id):
+    ret = "True"
+    auth = current.auth # Grab the current auth object
+    
+    if (auth.has_membership(role='Administrators', user_id=account_id) == True):
+        ret = "True"
+    else:
+        ret = "False"
+    
+    return ret
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def GetImportPermissionStatus(account_id):
+    ret = "True"
+    auth = current.auth # Grab the current auth object
+    
+    if (auth.has_membership(role='Import', user_id=account_id) == True):
+        ret = "True"
+    else:
+        ret = "False"
+    
+    return ret
 
 @auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
 def faculty_toggle_enabled():

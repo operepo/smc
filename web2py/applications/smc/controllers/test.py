@@ -14,13 +14,46 @@ import os
 import ssl
 
 # import ldap
-import ldap3
+# import ldap
+import ssl
+from ldap3 import Server, Connection, ALL, NTLM, Tls
+import ldap3.core.exceptions
+from ldap3.extend.microsoft.addMembersToGroups import ad_add_members_to_groups
+from ldap3.utils.dn import safe_rdn
 
 
 import sys
 
 auth.settings.allow_basic_login = True
 
+
+@auth.requires_membership("Administrators")
+def next_test():
+    import module_reload
+    ret = module_reload.ReloadModules()
+    
+    # Get the users to import
+    sheet_name = "STUDENT USERS"
+    #rows = db(db.student_import_queue.sheet_name == sheet_name).select()
+    #rows = db(db.student_info).select()
+    #for row in rows:
+    
+    #_ad_encoding = "iso-8859-1" 
+    
+    #_ldap = Connection(AD._ldap_session, "huskers",
+    #                                  "testing",
+    #                                  authentication=ldap3.NTLM,
+    #                                  auto_bind=True,
+    #                                  raise_exceptions=True,
+    #                                  auto_referrals=False,
+    #                                  client_strategy=ldap3.RESTARTABLE,
+    #                                  #receive_timeout=60,
+    #                                  
+    #                                  )
+    
+    AD.ConnectAD()
+    
+    return locals()
 
 @auth.requires_membership("Administrators")
 def checkbox_test():
@@ -55,8 +88,8 @@ def basic_auth_test():
 def ad_test():
     # ad_pw = AppSettings.GetValue("ad_service_password", "NOT FOUND")
     # file_pw = AppSettings.GetValue("file_server_login_pass", "NOT FOUND")
-    # c = AD.Connect()
-
+    c = AD.Connect()
+        
     # Keep this off - exposes too much
     # ld = AD._ldap
 
@@ -66,10 +99,10 @@ def ad_test():
     dn = "cn=s777777,ou=cse,ou=students,dc=pencol,dc=local"
     container_dn = "ou=cse,ou=students,dc=pencol,dc=local"
 
-    current_enrollment = Canvas.GetCurrentClasses(cn_name)
-    courses = {}
-    for e in current_enrollment:
-        courses[e['id']] = e['updated_at']
+    #current_enrollment = Canvas.GetCurrentClasses(cn_name)
+    #courses = {}
+    #for e in current_enrollment:
+    #    courses[e['id']] = e['updated_at']
 
     # create_user = AD.CreateUser(cn_name, container_dn)
     # Student.SetPassword("777777", "Sid777777!")
@@ -94,7 +127,7 @@ def ad_test():
     # s = AD._ldap.response
     # ret_arr)  # ['distinguishedName'])
 
-    # ret = AD.VerifyADSettings(False)
+    #ret = AD.VerifyADSettings(False)
 
 
 
@@ -114,7 +147,7 @@ def ad_test():
     return locals()
 
 
-# @auth.requires_membership("Administrators")
+@auth.requires_membership("Administrators")
 def test():
 
     #db_canvas = current.db_canvas

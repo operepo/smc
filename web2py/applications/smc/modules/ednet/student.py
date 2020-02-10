@@ -263,8 +263,8 @@ class Student:
         ret = import_password
         if override_password is not True:
             rows = db(db.student_info.user_id == student_id).select(db.student_info.student_password)
-            for row in rows:
-                ret = row.student_password
+            for row2 in rows:
+                ret = row2.student_password
         # If password isn't set, use the pattern and set the default pw
         # Default - add SID to beginning and ! to end (e.g. SID1888182!)
         if ret == "":
