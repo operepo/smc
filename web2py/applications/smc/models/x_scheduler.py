@@ -110,6 +110,27 @@ def update_media_database_from_json_files():
     pass
     return True
 
+def update_document_database_from_json_files():
+    # Go through the document files and find json files that aren't
+    # already in the database.
+    # This is useful for when we copy document files back and forth between systems
+    # Starts in the Models folder
+
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+    target_folder = os.path.join(app_folder, "static/documents")
+    
+    # Walk the folders/files
+    print("looking in: " + target_folder)
+    for root, dirs, files in os.walk(target_folder):
+        for f in files:
+            # Don't process flashcard data files
+            if f.endswith("json") and f != "data.json":
+                file_guid, ext = os.path.splitext(f)
+                load_document_file_json(file_guid)
+    pass
+    return True
+
+
 
 def process_media_file(media_id):
     ret = ""
@@ -254,7 +275,8 @@ def process_media_file(media_id):
                           tags=media_file.tags,
                           width=media_file.width,
                           height=media_file.height,
-                          quality=media_file.quality
+                          quality=media_file.quality,
+                          youtube_url=media_file.youtube_url
                           )
     
     # media_file.update(status='done')
@@ -272,7 +294,7 @@ def process_media_file(media_id):
     #         'height': media_file.height, 'quality': media_file.quality}
     #
     # meta_json = dumps(meta)
-    # f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+    # f = os_open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
     # os.write(f, meta_json)
     # os.close(f)
     save_media_file_json(media_guid)
@@ -480,9 +502,12 @@ def pull_youtube_video(yt_url, media_guid):
             'height': media_file.height, 'quality': media_file.quality, 'youtube_url': media_file.youtube_url}
 
     meta_json = dumps(meta)
-    f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-    os.write(f, meta_json)
-    os.close(f)
+    #f = os_open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+    #os.write(f, meta_json)
+    #os.close(f)
+    f = open(output_meta, "w")
+    f.write(meta_json)
+    f.close()
 
     # Throw a little delay in here to help keep from getting blocked by youtube
     time.sleep(30)
@@ -592,10 +617,13 @@ def process_wamap_video_links():
                     # Store the original link in a link file
                     meta = {'media_guid':item.media_guid, 'yt_url':yt_url}
                     meta_json = dumps(meta)
-                    f = os.open("wamap_" + str(item.media_guid) + ".link", os.O_TRUNC|os.O_WRONLY|os.O_CREAT)
-                    os.write(f, meta_json)
-                    os.close(f)
-                    
+                    #f = os_open("wamap_" + str(item.media_guid) + ".link", os.O_TRUNC|os.O_WRONLY|os.O_CREAT)
+                    #os.write(f, meta_json)
+                    #os.close(f)
+                    f = open("wamap_" + str(item.media_guid) + ".link", "w")
+                    f.write(meta_json)
+                    f.close()
+
                     # Download the video from the internet
                     yt = YouTube()
                     yt_url = yt_url.replace("!!1", "").replace("!!0", "")  # because some urls end up with the
@@ -798,9 +826,13 @@ def download_wamap_qimages():
                 # Store the original link in a link file
                 meta = {'media_guid':row.media_guid, 'source_url':source_url}
                 meta_json = dumps(meta)
-                f = os.open("wamap_" + str(row.media_guid) + ".link", os.O_TRUNC|os.O_WRONLY|os.O_CREAT)
-                os.write(f, meta_json)
-                os.close(f)
+                #f = os_open("wamap_" + str(row.media_guid) + ".link", os.O_TRUNC|os.O_WRONLY|os.O_CREAT)
+                #os.write(f, meta_json)
+                #os.close(f)
+                f = open("wamap_" + str(row.media_guid) + ".link", "w")
+                f.write(meta_json)
+                f.close()
+
                 new_url = "https://admin.correctionsed.com/static/media/wamap/pdfs/" + str(row.media_guid) + ".pdf"
                 print(" Updating (" + str(source_url) + ") to point to (" + new_url + ")")
                 db(db.wamap_pdfs.id==row.id).update(new_url=new_url)
@@ -930,6 +962,7 @@ scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=1,
                                  refresh_all_ad_logins=refresh_all_ad_logins,
                                  update_media_database_from_json_files=update_media_database_from_json_files,
                                  pull_youtube_video=pull_youtube_video,
+                                 update_document_database_from_json_files=update_document_database_from_json_files,
                                  ))
 current.scheduler = scheduler
 

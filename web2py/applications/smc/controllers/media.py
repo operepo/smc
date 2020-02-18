@@ -21,7 +21,12 @@ def index():
     query = (db.media_files)
     links = []
     if auth.has_membership('Faculty') or auth.has_membership('Administrators'):
-        links.append(dict(header=T(''),body=lambda row: A('[Delete]', _style='font-size: 10px; color: red;', _href=URL('media', 'delete_media', args=[row.media_guid], user_signature=True)) ) )
+        links.append(dict(header=T(''),body=lambda row: (
+            A('[Edit]', _style='font-size: 10px; color: red;', _href=URL('media', 'edit_media', args=[row.media_guid], user_signature=True)),
+            ' | ',
+            A('[Delete]', _style='font-size: 10px; color: red;', _href=URL('media', 'delete_media', args=[row.media_guid], user_signature=True)),
+            ) ) )
+        #links.append(dict(header=T(''),body=lambda row:  ) )
     links.append(dict(header=T(''),body=lambda row: A(IMG(_src=getMediaThumb(row.media_guid), _style="width: 128px; height: auto; max-width: 128px;"), _href=URL('media', 'player', args=[row.media_guid], user_signature=True)) ) )
     fields = [db.media_files.id, db.media_files.title, db.media_files.tags, db.media_files.description, db.media_files.media_guid, db.media_files.category] #[db.media_files.title]
     maxtextlengths = {'media_files.title': 150, 'media_files.tags': 50, 'media_files.description': 150}
@@ -45,14 +50,80 @@ def index():
     
     return dict(media_grid=media_grid)
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def edit_media():
+    media_guid = request.args(0)
+
+    if media_guid is None:
+        form = "Invalid Media ID"
+        return dict(form=form)
+
+    media_file = db(db.media_files.media_guid==media_guid).select().first()
+    if media_file is None:
+        form = "Media ID Not Found!"
+        return dict(form=form)
+
+    db.media_files.id.readable=False
+    form = SQLFORM(db.media_files, record=media_file,
+        fields=['title', 'tags', 'description', 'category', 'youtube_url']).process()
+
+    if form.accepted:
+        # Commit info to the database (so it is updated when json file is generated)
+        db.commit()
+        # Make sure to write the updated media data to the json file
+        save_media_file_json(media_guid)
+        response.flash = "Saved!"
+    elif form.errors:
+        response.flash = "Error saving media info!"
+
+
+    return dict(form=form)
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def edit_document():
+    document_guid = request.args(0)
+
+    if document_guid is None:
+        form = "Invalid Document ID"
+        return dict(form=form)
+
+    document_file = db(db.document_files.document_guid==document_guid).select().first()
+    if document_file is None:
+        form = "Document ID Not Found!"
+        return dict(form=form)
+
+    db.document_files.id.readable=False
+    form = SQLFORM(db.document_files, record=document_file,
+        fields=['title', 'tags', 'description', 'category', 'source_url']).process()
+
+    if form.accepted:
+        # Commit info to the database (so it is updated when json file is generated)
+        db.commit()
+        # Make sure to write the updated media data to the json file
+        save_document_file_json(document_guid)
+        response.flash = "Saved!"
+    elif form.errors:
+        response.flash = "Error saving document info!"
+
+
+    return dict(form=form)
+
 
 def documents():
     query = (db.document_files)
     links = []
     if auth.has_membership('Faculty') or auth.has_membership('Administrators'):
-        links.append(dict(header=T(''), body=lambda row: A('[Delete]', _style='font-size: 10px; color: red;',
-                                                    _href=URL('media', 'delete_document', args=[row.document_guid],
-                                                    user_signature=True))))
+        links.append(dict(header=T(''), body=lambda row: (
+                A('[Edit]', _style='font-size: 10px; color: red;',
+                    _href=URL('media', 'edit_document', args=[row.document_guid],
+                    user_signature=True)),
+                " | ",
+                A('[Delete]', _style='font-size: 10px; color: red;',
+                    _href=URL('media', 'delete_document', args=[row.document_guid],
+                    user_signature=True))
+                
+                ) ) )
     links.append(dict(header=T(''), body=lambda row: A(TABLE(TR(
                                                 TD(IMG(_src=getDocumentThumb(row.document_guid), _style="width: 24px;"),
                                                    _width=26),
@@ -220,6 +291,7 @@ def player():
     description = ""
     category = ""
     tags = ""
+    youtube_url = ""
     # default to off
     autoplay = "false"
     if request.vars.autoplay == "true":
@@ -248,6 +320,9 @@ def player():
             category = media_file.category
             tags = ",".join(media_file.tags)
             views = media_file.views
+            youtube_url = media_file.youtube_url
+            if youtube_url is None:
+                youtube_url = ""
             if views is None:
                 views = 0
             db(db.media_files.media_guid == movie_id).update(views=views+1)
@@ -259,7 +334,7 @@ def player():
                 source_mobile_mp4=source_mobile_mp4, source_webm=source_webm,
                 movie_id=movie_id, width=width, height=height, title=title,
                 description=description, tags=tags, autoplay=autoplay,
-                iframe_width=iframe_width, iframe_height=iframe_height, views=views, category=category)
+                iframe_width=iframe_width, iframe_height=iframe_height, views=views, category=category, youtube_url=youtube_url)
 
 
 def view_document():
@@ -326,7 +401,7 @@ def upload_media():
     
     # rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.media_file_import_queue, showid=False,
-                   fields=['title', 'description', 'category', 'tags', 'media_file'],
+                   fields=['title', 'description', 'category', 'tags', 'youtube_url', 'media_file' ],
                    _name="queue_media").process(formname="queue_media")
 
     if form.accepted:
@@ -420,9 +495,12 @@ def upload_document():
                 'tags': dumps(document_file.tags)}
 
         meta_json = dumps(meta)
-        f = os.open(target_file + ".json", os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-        os.write(f, meta_json)
-        os.close(f)
+        #f = os.open(target_file + ".json", os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+        #os.write(f, meta_json)
+        #os.close(f)
+        f = open(target_file + ".json", "w")
+        f.write(meta_json)
+        f.close()
 
         last_doc = A(document_file.title, _href=URL('media', 'view_document', args=[file_guid]))
 
@@ -1101,10 +1179,14 @@ def yt_requeue():
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def scan_media_files():
     # Find all media files and make sure they are in the database.
-    form = SQLFORM.factory(submit_button="Import Videos", _name="import_videos").process(
-        formname="import_videos")
+    form = SQLFORM.factory(submit_button="Import Media/Document Files", _name="run_import").process(
+        formname="run_import")
     if form.accepted:
+        # Look for videos
         result = scheduler.queue_task('update_media_database_from_json_files', pvars=dict(), timeout=18000,
+                                      immediate=True, sync_output=5, group_name="process_videos")
+        # Look for documents
+        result = scheduler.queue_task('update_document_database_from_json_files', pvars=dict(), timeout=18000,
                                       immediate=True, sync_output=5, group_name="process_videos")
         response.flash = "Import process started!"  # + str(result)
 
@@ -1476,21 +1558,29 @@ def find_replace_step_1():
 
     courses = Canvas.get_courses_for_faculty(auth.user.username)
 
+    sorted_course_dict = dict()
     for c in courses:
+        sorted_course_dict[courses[c]] = str(c)
         course_dict[str(c)] = courses[c]
-        course_list.append(OPTION(courses[c], _value=c))
+    # Sort the keys and add them to the select list
+    for k in sorted(sorted_course_dict.keys()):    
+        course_list.append(OPTION(str(k), _value=str(sorted_course_dict[k])))
 
     course_select = SELECT(course_list, _name="current_course", _id="current_course", _style="width: 600px;")
 
-    form = FORM(TABLE(TR("Choose A Course: ", course_select),
+    form = FORM(TABLE(TR("Choose a course: ", course_select),
                       TR("", INPUT(_type="submit", _value="Next"))), _name="fr_step1").process(formname="fr_step1",
                                                                                                keepvalues=True)
 
     if form.accepted:
+        #try:
         cname = course_dict[str(form.vars.current_course)]
         cid = form.vars.current_course
         redirect(URL("find_replace_step_2.load", vars=dict(current_course=cid,
-                                                           current_course_name=cname)))
+                                                        current_course_name=cname)))
+        #except Exception as ex:
+        #    response.flash="Invalid course id " + str(form.vars.current_course) + str(ex) #+ str(course_dict)
+            
         # reload_str = form.vars.current_course
 
     return dict(form1=form)
@@ -1825,9 +1915,12 @@ def find_replace_google_re_download_docs():
         meta_json = dumps(meta)
 
         try:
-            f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-            os.write(f, meta_json)
-            os.close(f)
+            #f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+            #os.write(f, meta_json)
+            #os.close(f)
+            f = open(output_meta, "w")
+            f.write(meta_json)
+            f.close()
         except Exception as ex:
             print("ERROR SAVING JSON for google doc download " + str(output_meta) + " - " + str(ex))
             ret += " ---- ERROR SAVING JSON " + str(ex)
@@ -1986,9 +2079,12 @@ def find_replace_google_download_doc(current_course_name, export_format, doc_url
     meta_json = dumps(meta)
 
     try:
-        f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-        os.write(f, meta_json)
-        os.close(f)
+        #f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+        #os.write(f, meta_json)
+        #os.close(f)
+        f = open(output_meta, "w")
+        f.write(meta_json)
+        f.close()
     except Exception as ex:
         print("ERROR SAVING JSON for google doc download " + str(output_meta) + " - " + str(ex))
 
@@ -2269,6 +2365,8 @@ def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pat
     for p in pages:
         inc += 1
         p_orig_text = pages[p]
+        if p_orig_text is None:
+            p_orig_text = ""
         p_new_text, subs = re.subn(find_pattern, replace_pattern, p_orig_text)
         p_new_text = find_replace_post_process_text(current_course, p_new_text)
 
@@ -2310,6 +2408,8 @@ def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pat
         total_qq_replacements = 0
         quiz_id = q
         q_orig_text = quizzes[q]
+        if q_orig_text is None:
+            q_orig_text = ""
         q_new_text, subs = re.subn(find_pattern, replace_pattern, q_orig_text)
         q_new_text = find_replace_post_process_text(current_course, q_new_text)
 
@@ -2342,6 +2442,8 @@ def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pat
             qq_inc += 1
             qq_id = qq
             qq_orig_text = quiz_questions[qq]
+            if qq_orig_text is None:
+                qq_orig_text = ""
             qq_new_text, subs = re.subn(find_pattern, replace_pattern, qq_orig_text)
             qq_new_text = find_replace_post_process_text(current_course, qq_new_text)
 
@@ -2396,6 +2498,8 @@ def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pat
     for p in canvas_items:
         inc += 1
         p_orig_text = canvas_items[p]
+        if p_orig_text is None:
+            p_orig_text = ""
         p_new_text, subs = re.subn(find_pattern, replace_pattern, p_orig_text)
         p_new_text = find_replace_post_process_text(current_course, p_new_text)
 
@@ -2436,6 +2540,8 @@ def find_replace_step_custom_regex_run(current_course, find_pattern, replace_pat
     for p in canvas_items:
         inc += 1
         p_orig_text = canvas_items[p]
+        if p_orig_text is None:
+            p_orig_text = ""
         p_new_text, subs = re.subn(find_pattern, replace_pattern, p_orig_text)
         p_new_text = find_replace_post_process_text(current_course, p_new_text)
 

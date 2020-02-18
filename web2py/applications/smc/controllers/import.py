@@ -39,7 +39,11 @@ def student_pick_excel():
     if form.accepted:
         # session.flash = "Processing File."
         f = form.vars.excel_file
-        redirect(URL('student_show_excel_contents', vars=dict(excel_file=f)))
+        
+        if f is None or len(f) < 1:
+            response.flash="Excel file required!"
+        else:
+            redirect(URL('student_show_excel_contents', vars=dict(excel_file=f)))
     elif form.errors:
         response.flash = "Form Errors"
     else:
@@ -187,10 +191,18 @@ def download_student_import():
 def faculty_pick_excel():
     f = None
     excel_output = None
-    form = SQLFORM(db.faculty_excel_uploads).process()
+    form = SQLFORM(db.faculty_excel_uploads)
+    
+    f = form.vars.excel_file
+
+    if form.validate():
+        if f is None or len(f) < 1:
+            response.flash="Excel file required!"
+            form.errors.append("Missing Excel File!")
+TODO TODO TODO - update student too
     if form.accepted:
         # session.flash = "Processing File."
-        f = form.vars.excel_file
+        
         redirect(URL('faculty_show_excel_contents', vars=dict(excel_file=f)))
     elif form.errors:
         response.flash = "Form Errors"

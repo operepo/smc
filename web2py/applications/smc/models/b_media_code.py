@@ -103,10 +103,10 @@ def load_media_file_json(file_guid):
     json_file = get_media_file_path(file_guid, ".json")
 
     if os.path.exists(json_file) is not True:
-        print("Invalid JSON file: " + str(json_file))
+        print("Invalid Media JSON file: " + str(json_file))
         return False
 
-    print("Found Json File: ", json_file)
+    print("Found Media Json File: ", json_file)
 
     # Open the json file
     try:
@@ -115,6 +115,14 @@ def load_media_file_json(file_guid):
         meta = loads(tmp)
         f.close()
 
+        fields = ['title', 'media_guid', 'description', 'category', 'tags', 'width', 'height', 'quality', 'media_type', 'youtube_url']
+        for f in fields:
+            if f not in meta:
+                if f == "tags":
+                    meta[f] = "[]"
+                else:
+                    meta[f] = ""
+        
         # See if the item is in the database
         item = db.media_files(media_guid=meta['media_guid'])
         if item is None:
@@ -122,13 +130,15 @@ def load_media_file_json(file_guid):
             print("Record not found: ", meta['media_guid'])
             db.media_files.insert(media_guid=meta['media_guid'], title=meta['title'], description=meta['description'],
                                   category=meta['category'], tags=loads(meta['tags']), width=meta['width'],
-                                  height=meta['height'], quality=meta['quality'], media_type=meta['media_type'])
+                                  height=meta['height'], quality=meta['quality'], media_type=meta['media_type'],
+                                  youtube_url=meta['youtube_url'])
             db.commit()
         else:
             print("Record FOUND: ", meta['media_guid'])
             item.update_record(title=meta['title'], description=meta['description'], category=meta['category'],
                                tags=loads(meta['tags']), width=meta['width'], height=meta['height'],
-                               quality=meta['quality'], media_type=meta['media_type'])
+                               quality=meta['quality'], media_type=meta['media_type'],
+                               youtube_url=meta['youtube_url'])
             db.commit()
     except Exception as ex:
         print("Error processing media file: ", json_file, str(ex))
@@ -157,15 +167,105 @@ def save_media_file_json(file_guid):
             'description': media_file.description, 'original_file_name': media_file.original_file_name,
             'media_type': media_file.media_type, 'category': media_file.category,
             'tags': dumps(media_file.tags), 'width': media_file.width,
-            'height': media_file.height, 'quality': media_file.quality}
+            'height': media_file.height, 'quality': media_file.quality,
+            'youtube_url': media_file.youtube_url}
 
     try:
         meta_json = dumps(meta)
-        f = os.open(json_path, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-        os.write(f, meta_json)
-        os.close(f)
+        #f = os.open(json_path, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+        #os.write(f, meta_json)
+        #os.close(f)
+        f = open(json_path, "w")
+        f.write(meta_json)
+        f.close()
     except Exception as ex:
         print("Exception saving media json " + str(file_guid) + " => " + str(ex))
+        return False
+
+    return True
+
+
+def load_document_file_json(file_guid):
+    """
+    Load the json file and update the database using this information
+    :param file_guid:
+    :return:
+    """
+
+    json_file = get_document_file_path(file_guid, ".json")
+
+    if os.path.exists(json_file) is not True:
+        print("Invalid Document JSON file: " + str(json_file))
+        return False
+
+    print("Found Document Json File: ", json_file)
+
+    # Open the json file
+    try:
+        f = open(json_file, "r")
+        tmp = f.read()
+        meta = loads(tmp)
+        f.close()
+
+        fields = ['document_guid', 'title', 'description', 'original_file_name', 'media_type', 'category', 'tags', 'source_url']
+        for f in fields:
+            if f not in meta:
+                if f == "tags":
+                    meta[f] = "[]"
+                else:
+                    meta[f] = ""
+        
+        # See if the item is in the database
+        item = db.document_files(document_guid=meta['document_guid'])
+        if item is None:
+            # Record not found!
+            print("Record not found: ", meta['document_guid'] + str(meta))
+            db.document_files.insert(document_guid=meta['document_guid'], title=meta['title'], description=meta['description'],
+                                  original_file_name=meta['original_file_name'],
+                                  category=meta['category'], tags=loads(meta['tags']), media_type=meta['media_type'],
+                                  source_url=meta['source_url'])
+            db.commit()
+        else:
+            print("Record FOUND: ", meta['document_guid'])
+            item.update_record(title=meta['title'], description=meta['description'], category=meta['category'],
+                               tags=loads(meta['tags']), media_type=meta['media_type'],
+                               source_url=meta['source_url'], original_file_name=meta['original_file_name'])
+            db.commit()
+    except Exception as ex:
+        print("Error processing document file: ", json_file, str(ex))
+        # db.rollback()
+
+    return True
+
+
+def save_document_file_json(file_guid):
+    """
+    Store/update the json meta data for this file
+    :param file_guid:
+    :return:
+    """
+
+    # Get the db info for this file
+    document_file = db(db.document_files.document_guid==file_guid).select().first()
+    if document_file is None:
+        print("Error - document file doesn't exist " + str(file_guid))
+        return False
+
+    # Get the json file path for this file
+    json_path = get_document_file_path(file_guid, ".json")
+
+    meta = {'title': document_file.title, 'document_guid': document_file.document_guid.replace('-', ''),
+            'description': document_file.description, 'original_file_name': document_file.original_file_name,
+            'media_type': document_file.media_type, 'category': document_file.category,
+            'tags': dumps(document_file.tags), 'source_url': document_file.source_url}
+
+    try:
+        meta_json = dumps(meta)
+        f = open(json_path, "w")
+        f.write(meta_json)
+        f.close()
+    except Exception as ex:
+        print("Exception saving document json " + str(file_guid) + " => " + str(ex))
         return False
 
     return True

@@ -2,6 +2,10 @@
 .
 TODO 
 
+- Add better progress indicator on find/replace menu - go grays out and says working, then switches back to "go" grayed out - seems confusing
+
+
+
 Reset schedule process on import? (to prevent stuck home drive creation?)
 
 Change password form - fails if  AD not setup?
@@ -22,31 +26,6 @@ Video/Song Play List
 
 Corrupt table errors in smc after update - delete .table files and run fake_migrate
 
-**************************
-zfs not mounting
- - add zfs to /etc/modules
- - /etc/defaults/zfs - ZFS_MOUNT=yes, ZFS_UNMOUNT=yes
- - /etc/rc.local
-	- zpool export dpool
-	- zpool import dpool
-	- zfs mount -O -a
-- Add init script to do this???
-Install init-system-helpers package
-add ZFS to /etc/modules
-(REMOVE zfs-mount from /etc/insserv.conf)
-dpkg -i zfsutils*.deb
-(AUTO YES to use maintainers files (or restore to original??))
-dpkg -i zfs-initramfs*.deb
-Force reinstall of zfs stuff
-Clean out /etc/rc.local
-**************************
-
-*** Send snapshot command for wsp
-
-change_IP - commented out ceph changes, adjust so the rest doesn't blow up if ceph not active
-
-
-IP Change - node1 hosts file didn't update??
 	
 4/17/16
 - Update to current w2p version (2.14.5)

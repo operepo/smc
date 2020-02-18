@@ -399,7 +399,8 @@ db.define_table('media_file_import_queue',
                 Field('quality', 'string', default='normal', requires=IS_IN_SET(['normal', 'low', 'high'])),
                 Field('status', 'string', default='queued',
                       requires=IS_IN_SET(['queued', 'processing', 'done'])),
-                auth.signature
+                auth.signature,
+                Field('youtube_url', 'string', default='')
                 )
 
 db.define_table('media_files',
@@ -436,7 +437,8 @@ db.define_table('document_import_queue',
                       requires=IS_NOT_EMPTY()),
                 Field('status', 'string', default='queued',
                       requires=IS_IN_SET(['queued', 'processing', 'done'])),
-                auth.signature
+                auth.signature,
+                Field('source_url', 'string', default='')
                 )
 
 db.define_table('document_files',
@@ -449,7 +451,8 @@ db.define_table('document_files',
                 Field('tags', 'list:string'),
                 Field('views', 'integer', default=0),
                 Field('google_url', 'string', default=''),
-                auth.signature
+                auth.signature,
+                Field('source_url', 'string', default='')
                 )
 
 # Indexes

@@ -28,6 +28,13 @@ auth.settings.allow_basic_login = True
 
 
 @auth.requires_membership("Administrators")
+def load_document_json():
+    document_id = "748a804ba39d4146841010df81eff057"
+
+    ret = load_document_file_json(document_id)
+    return locals()
+
+@auth.requires_membership("Administrators")
 def next_test():
     import module_reload
     ret = module_reload.ReloadModules()
