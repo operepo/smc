@@ -289,7 +289,7 @@ db.define_table("student_canvas_import_status",
                 )
 
 db.define_table("student_excel_uploads",
-                Field("excel_file", 'upload', length=128, autodelete=True),
+                Field("excel_file", 'upload', length=128, autodelete=True, requires=IS_NOT_EMPTY(error_message="Please upload an excel file!")),
                 auth.signature
                 )
 
@@ -371,7 +371,7 @@ db.define_table("faculty_canvas_import_status",
                 )
 
 db.define_table("faculty_excel_uploads",
-                Field("excel_file", 'upload', length=128, autodelete=True),
+                Field("excel_file", 'upload', length=128, autodelete=True, requires=IS_NOT_EMPTY(error_message="Please upload an excel file!")),
                 auth.signature
                 )
 

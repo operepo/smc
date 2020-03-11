@@ -456,13 +456,23 @@ class Canvas:
             # ret += "<b>Creating new canvas user: </b>" + user_name + "<br />"
             # Try creating user with the API, fall back to SIS Import if needed (SIS Import handles deleted users too)
             p = dict()
-            p["user[name]"] = str.encode(last_name + ", " + first_name + " (" + user_name + ")").encode('utf-8')
-            p["user[short_name]"] = str.encode(last_name + ", " + first_name + " (" + user_name + ")").encode('utf-8')
-            p["user[sortable_name]"] = str.encode(last_name + ", " + first_name + " (" +
-                                                  user_name + ")").encode('utf-8')
-            p["pseudonym[unique_id]"] = str.encode(user_name).encode('utf-8')
-            p["pseudonym[password]"] = str.encode(password).encode('utf-8')
-            p["pseudonym[sis_user_id]"] = str.encode(user_name).encode('utf-8')
+            # old py2 - needed unicode
+            #p["user[name]"] = str.encode(last_name + ", " + first_name + " (" + user_name + ")").encode('utf-8')
+            #p["user[short_name]"] = str.encode(last_name + ", " + first_name + " (" + user_name + ")").encode('utf-8')
+            #p["user[sortable_name]"] = str.encode(last_name + ", " + first_name + " (" +
+            #                                      user_name + ")").encode('utf-8')
+            #p["pseudonym[unique_id]"] = str.encode(user_name).encode('utf-8')
+            #p["pseudonym[password]"] = str.encode(password).encode('utf-8')
+            #p["pseudonym[sis_user_id]"] = str.encode(user_name).encode('utf-8')
+            #p["pseudonym[send_confirmation]"] = 0
+
+            # py3 - already unicode
+            p["user[name]"] = last_name + ", " + first_name + " (" + user_name + ")"
+            p["user[short_name]"] = last_name + ", " + first_name + " (" + user_name + ")"
+            p["user[sortable_name]"] = last_name + ", " + first_name + " (" + user_name + ")"
+            p["pseudonym[unique_id]"] = user_name
+            p["pseudonym[password]"] = password
+            p["pseudonym[sis_user_id]"] = user_name
             p["pseudonym[send_confirmation]"] = 0
             
             r = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, "/api/v1/accounts/self/users",

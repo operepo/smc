@@ -6,6 +6,7 @@ from ednet.student import Student
 from ednet.faculty import Faculty
 
 import os
+import cgi
 
 
 @auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
@@ -34,21 +35,20 @@ def start_process_queue():
 @auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
 def student_pick_excel():
     f = None
+    file_name = ""
     excel_output = None
     form = SQLFORM(db.student_excel_uploads).process()
+
     if form.accepted:
         # session.flash = "Processing File."
-        f = form.vars.excel_file
-        
-        if f is None or len(f) < 1:
-            response.flash="Excel file required!"
-        else:
-            redirect(URL('student_show_excel_contents', vars=dict(excel_file=f)))
+        file_name = form.vars.excel_file
+        if file_name != "":
+            redirect(URL('student_show_excel_contents', vars=dict(excel_file=file_name)))
     elif form.errors:
-        response.flash = "Form Errors"
+        response.flash = form.errors.student_excel_uploads
     else:
         response.flash = "Upload Excel file or choose previous import."
-    return dict(form=form, file_name=f, out=excel_output)
+    return dict(form=form, file_name=file_name, out=excel_output)
 
 
 @auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
@@ -190,25 +190,21 @@ def download_student_import():
 @auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
 def faculty_pick_excel():
     f = None
+    file_name = ""
     excel_output = None
-    form = SQLFORM(db.faculty_excel_uploads)
-    
-    f = form.vars.excel_file
 
-    if form.validate():
-        if f is None or len(f) < 1:
-            response.flash="Excel file required!"
-            form.errors.append("Missing Excel File!")
-TODO TODO TODO - update student too
+    form = SQLFORM(db.faculty_excel_uploads).process()
+
     if form.accepted:
         # session.flash = "Processing File."
-        
-        redirect(URL('faculty_show_excel_contents', vars=dict(excel_file=f)))
+        file_name = form.vars.excel_file
+        if file_name != "":
+            redirect(URL('faculty_show_excel_contents', vars=dict(excel_file=file_name)))
     elif form.errors:
-        response.flash = "Form Errors"
+        response.flash = form.errors.faculty_excel_uploads
     else:
         response.flash = "Upload Excel file or choose previous import."
-    return dict(form=form, file_name=f, out=excel_output)
+    return dict(form=form, file_name=file_name, out=excel_output)
 
 
 @auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
