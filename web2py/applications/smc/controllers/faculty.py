@@ -473,9 +473,9 @@ def student_ad_quota():
     if (form.accepted):
         # Saved
         quota = request.vars.get('student_ad_quota', '0')
-        AD.SetDriveQuota(current_user, quota)
+        result = AD.SetDriveQuota(current_user, quota)
         msg = "Settings Saved!"
-        if (len(AD._errors) > 0):
+        if (result is False and len(AD._errors) > 0):
             msg += AD.GetErrorString()
         response.flash = msg
         

@@ -263,8 +263,9 @@ For more information, please view the <a target='docs' href='"""
         if AD._file_server_import_enabled is True:
             try:
                 r = AD._winrm.run_cmd('ipconfig', ['/all'])
-                if r.std_err != "":
-                    AD._errors.append("<b>Error testing WINRM connection:</b> " + str(r.std_err) + "<br />")
+                # NOTE - WinRM returns byte strings - convert to py3 strings
+                if r.std_err.decode() != "":
+                    AD._errors.append("<b>Error connecting to fileserver(WINRM) connection:</b> " + r.std_err.decode() + "<br />")
                     return False
             except WinRMTransportError as message:
                 err = """
@@ -295,6 +296,8 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
 
         if con is True:
             AD._errors.append("<b>AD Connection Successful</b> " + AD._ldap_server + "<br />")
+        else:
+            ret = False
 
         # STUDENT CHECKS
         # Check user cn exists
@@ -1030,26 +1033,29 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         try:
             # Create the folder
             r = AD._winrm.run_cmd('mkdir', ['"' + folder_path + '"'])
-            err = r.std_err.strip()
+            err = r.std_err.decode().strip()
             # TODO DEBUG - Grab output and debug commands
-            ret += r.std_out + " err: " + err
+            ret += r.std_out.decode()
             if err != "" and err.endswith("already exists.") is not True:
-                AD._errors.append("<b>Error creating home directory:</b> " + str(r.std_err) + "<br />")
+                ret += " STD_ERR: " + r.std_err.decode()
+                AD._errors.append("<b>Error creating home directory:</b> " + r.std_err.decode() + "<br />")
 
             # Set permissions
             r = AD._winrm.run_cmd('icacls', ['"' + folder_path + '"',
                 "/grant", '"' + user_name + ':(OI)(CI)(DE,GR,GW,GE,RD,WD,AD,X,DC,RA)"', "/inheritance:e",
                 "/T", "/C", "/Q" ]) # "/T"
-            ret += r.std_out + " err: " + r.std_err
-            if (r.std_err != ""):
-                AD._errors.append("<b>Error setting permissions on home directory:</b> " + str(r.std_out) + " - " + str(r.std_err) + "<br />")
+            ret += r.std_out.decode() + " err: " + r.std_err.decode()
+            if (r.std_err.decode() != ""):
+                ret += " STD_ERR: " + r.std_err.decode()
+                AD._errors.append("<b>Error setting permissions on home directory:</b> " + r.std_out.decode() + " - " + r.std_err.decode() + "<br />")
             # Set permissions for CREATOR OWNER user (needed for recycle bin permissions)
             r = AD._winrm.run_cmd('icacls', ['"' + folder_path + '"',
                 "/grant", '"CREATOR OWNER:(OI)(CI)(IO)(DE,GR,GW,GE,RD,WD,AD,X,DC,RA)"', "/inheritance:e",
                 "/T", "/C", "/Q" ]) # "/T"
-            ret += r.std_out + " err: " + r.std_err
-            if (r.std_err != ""):
-                AD._errors.append("<b>Error setting permissions on home directory:</b> " + str(r.std_out) + " - " + str(r.std_err) + "<br />")
+            ret += r.std_out.decode() + " err: " + r.std_err.decode()
+            if (r.std_err.decode() != ""):
+                ret += " STD_ERR: " + r.std_err.decode()
+                AD._errors.append("<b>Error setting permissions on home directory:</b> " + r.std_out.decode() + " - " + r.std_err.decode() + "<br />")
         except:
             er = "<b>Error creating home folder: </b> " + str(folder_path)
             ret += er
@@ -1074,9 +1080,10 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
 
             # Set the quota
             r = AD._winrm.run_cmd('fsutil', [ 'quota', 'modify', AD._file_server_quota_drive, str(warning_level), str(quota), user_name])
-            if r.std_err != "":
-                AD._errors.append("<b>Error setting quota:</b> " + str(r.std_out) + " - " + str(r.std_err) + "<br />")
-            #AD._errors.append("Quota: " + str(r.std_out) + str(r.std_err) + " " + user_name)
+            print(r.std_err)
+            if r.std_err.decode() != "":
+                AD._errors.append("<b>Error setting quota:</b> " + r.std_out.decode() + " - " + r.std_err.decode() + "<br />")
+            #AD._errors.append("Quota: " + r.std_out.decode() + r.std_err.decode() + " " + user_name)
             ret = True
         except:
             er = "<b>Error setting drive quota: </b> " + str(user_name) + ":" + str(quota)
@@ -1097,18 +1104,18 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
         try:
             if enable is True and enforce is True:
                 r = AD._winrm.run_cmd('fsutil', ['quota', 'enforce', AD._file_server_quota_drive])
-                if r.std_err != "":
-                    AD._errors.append("<b>Error enabling quota:</b> " + str(r.std_out) + " - " + str(r.std_err) + "<br />")
+                if r.std_err.decode() != "":
+                    AD._errors.append("<b>Error enabling quota:</b> " + r.std_out.decode() + " - " + r.std_err.decode() + "<br />")
 
             if enable is True and enforce is not True:
                 r = AD._winrm.run_cmd('fsutil', ['quota', 'track', AD._file_server_quota_drive])
-                if r.std_err != "":
-                    AD._errors.append("<b>Error enabling quota:</b> " + str(r.std_out) + " - " + str(r.std_err) + "<br />")
+                if r.std_err.decode() != "":
+                    AD._errors.append("<b>Error enabling quota:</b> " + r.std_out.decode() + " - " + r.std_err.decode() + "<br />")
 
             if enable is False:
                 r = AD._winrm.run_cmd('fsutil', ['quota', 'disable', AD._file_server_quota_drive])
-                if r.std_err != "":
-                    AD._errors.append("<b>Error disabling quota:</b> " + str(r.std_out) + " - " + str(r.std_err) + "<br />")
+                if r.std_err.decode() != "":
+                    AD._errors.append("<b>Error disabling quota:</b> " + r.std_out.decode() + " - " + r.std_err.decode() + "<br />")
 
             ret = True
         except:

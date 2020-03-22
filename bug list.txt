@@ -4,13 +4,7 @@ TODO
 
 - Add better progress indicator on find/replace menu - go grays out and says working, then switches back to "go" grayed out - seems confusing
 
-
-
 Reset schedule process on import? (to prevent stuck home drive creation?)
-
-Change password form - fails if  AD not setup?
-
-Import upload - I/O Error if no file supplied
 
 Add box to prevent removing students from current classes if it isn't listed on the import sheet
 
@@ -24,8 +18,13 @@ Multi upload media tool
 
 Video/Song Play List
 
-Corrupt table errors in smc after update - delete .table files and run fake_migrate
 
+
+- Update to run under python3 - DONE
+- Change password form - fails if  AD not setup? - DONE
+- Import upload - I/O Error if no file supplied - DONE
+- Corrupt table errors in smc after update - delete .table files and run fake_migrate - DONE 
+- Add ability to edit media file/documents - change title, description, origin url, etc...
 	
 4/17/16
 - Update to current w2p version (2.14.5)

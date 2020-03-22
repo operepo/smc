@@ -903,7 +903,7 @@ def download_wamap_qimages():
     return ret
 
 
-def refresh_all_ad_logins():
+def refresh_all_ad_logins(run_from="UI"):
     # Go to the AD server and refresh all student and staff AD login times
     ret = ""
     
@@ -972,12 +972,15 @@ refresh_ad_login = current.cache.ram('refresh_ad_login', lambda: True, time_expi
 if refresh_ad_login is True:
     current.cache.ram('refresh_ad_login', lambda: False, time_expire=0)
     # Update the last login value for all users (students and faculty)
+    AD.Init() # Make sur AD settings are loaded
+    # print("Scheduler...")
     if AD._ldap_enabled is not True:
         # Not enabled, skip
         pass
     else:
         # Schedule the process
-        result = scheduler.queue_task('refresh_all_ad_logins', timeout=1200, immediate=True, sync_output=5, group_name="misc", repeats=1, period=0)
+        result = scheduler.queue_task('refresh_all_ad_logins', timeout=1200, immediate=True,
+            sync_output=5, group_name="misc", repeats=1, period=0, pvars=dict(run_from='x_scheduler.py'))
         pass
     
     # Make sure to start the scheduler process
