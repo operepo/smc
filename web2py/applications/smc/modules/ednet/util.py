@@ -158,7 +158,7 @@ class Util:
             return data
         except Exception as ex:
             print("Base64 error! " + str(ex) + " - " + str(data))
-            return data
+            return str(data)
         #print("c")
         iv, data = data[:16], data[16:]
         try:

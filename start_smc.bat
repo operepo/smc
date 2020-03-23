@@ -47,6 +47,9 @@ SET LISTEN_IP=127.0.0.1
 SET W_SSL=1
 SET SSL_CERT="test.crt"
 SET SSL_KEY="test.key"
+SET W_SCHEDULER=-K smc --with-scheduler
+rem -K smc --with-scheduler
+
 
 echo %ESC_GREEN%Removing PYC files...%ESC_RESET%
 !PYEXE! clear_pyc_files.py
@@ -69,11 +72,11 @@ rem SET "CANVAS_SECRET=ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O"
 if "%W_SSL%"=="1" (
     rem test
     echo %ESC_GREEN%Starting Web2Py w SSL...%ESC_RESET%
-    !PYEXE! -B web2py/web2py.py -p 8000 -i "%LISTEN_IP%" -e  -s "SMC Server" --minthreads=4 --maxthreads=8 --timeout=60 -K smc --with-scheduler -a "<recycle>" --no_gui --ssl_certificate=%SSL_CERT% --ssl_private_key=%SSL_KEY% 
+    !PYEXE! -B web2py/web2py.py -p 8000 -i "%LISTEN_IP%" -e  -s "SMC Server" --minthreads=4 --maxthreads=8 --timeout=60 %W_SCHEDULER% -a "<recycle>" --no_gui --ssl_certificate=%SSL_CERT% --ssl_private_key=%SSL_KEY% 
     rem  # --ca-cert="ca.crt"
 ) else (
     echo %ESC_GREEN%Starting Web2Py...%ESC_RESET%
-    !PYEXE! -B web2py/web2py.py -p 8000 -i "%LISTEN_IP%" -e  -s "SMC Server" --minthreads=4 --maxthreads=8 --timeout=60 -K smc --with-scheduler -a "<recycle>" --no_gui 
+    !PYEXE! -B web2py/web2py.py -p 8000 -i "%LISTEN_IP%" -e  -s "SMC Server" --minthreads=4 --maxthreads=8 --timeout=60 %W_SCHEDULER% -a "<recycle>" --no_gui 
 )
 
 

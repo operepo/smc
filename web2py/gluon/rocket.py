@@ -102,7 +102,10 @@ class Connection(object):
             # See: http://bugs.jython.org/issue1309
             self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         #print(str(self.socket))
-        self.socket.settimeout(SOCKET_TIMEOUT)
+        #print("SSL: " + str(self.ssl))
+        # Stop exception if socket not valid
+        if isinstance(self.socket, ssl.SSLSocket):
+            self.socket.settimeout(SOCKET_TIMEOUT)
 
         self.shutdown = self.socket.shutdown
         self.fileno = self.socket.fileno

@@ -12,6 +12,7 @@
 'miss': ['misses'],
 'person': ['people'],
 'quark': ['quarks'],
+'row': ['rows'],
 'second': ['seconds'],
 'shop': ['shops'],
 'this': ['these'],

@@ -107,7 +107,10 @@ def update_media_database_from_json_files():
                 # update_media_meta_data(f_path)
                 file_guid, ext = os.path.splitext(f)
                 load_media_file_json(file_guid)
-    pass
+    
+    # Make sure to do this and unlock the db
+    db.commit()
+
     return True
 
 def update_document_database_from_json_files():
@@ -127,9 +130,10 @@ def update_document_database_from_json_files():
             if f.endswith("json") and f != "data.json":
                 file_guid, ext = os.path.splitext(f)
                 load_document_file_json(file_guid)
-    pass
+    
+    # Make sure to do this and unlock the db
+    db.commit()
     return True
-
 
 
 def process_media_file(media_id):
@@ -282,9 +286,6 @@ def process_media_file(media_id):
     # media_file.update(status='done')
     db(db.media_file_import_queue.id==media_id).delete()
     
-    # Have to call commit in tasks if changes made to the db
-    db.commit()
-    
     # Dump meta data to the folder along side the video files
     # This can be used for export/import
     # meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),
@@ -300,6 +301,9 @@ def process_media_file(media_id):
     save_media_file_json(media_guid)
     
     print("!clear!100%")
+
+    # Have to call commit in tasks if changes made to the db
+    db.commit()
     
     return dict(mp4_ret=mp4_ret, ogv_ret=ogv_ret, webm_ret=webm_ret, poster_ret=poster_ret, thumb_ret=thumb_ret)
 
@@ -509,6 +513,9 @@ def pull_youtube_video(yt_url, media_guid):
     f.write(meta_json)
     f.close()
 
+    # Have to call commit in tasks if changes made to the db
+    db.commit()
+
     # Throw a little delay in here to help keep from getting blocked by youtube
     time.sleep(30)
     return True
@@ -558,6 +565,9 @@ def remove_old_wamap_video_files():
             print("skipping " + fpath  + " [" + str(time.time()) + "]")
             not_removed.append(fpath)
     print("Done." + str(time.time()))
+    
+    # Have to call commit in tasks if changes made to the db
+    db.commit()
     # return dict(removed=removed, not_removed=not_removed)
     return True
 
@@ -707,6 +717,10 @@ def create_home_directory(user_name, home_directory):
     ret = AD.CreateHomeDirectory(user_name, home_directory)
     print("Done Creating home directory for: " + user_name + " [" + str(time.time()) + "]")
     print("Result: " + ret)
+    
+    # Have to call commit in tasks if changes made to the db
+    db.commit()
+
     return ret
 
 
@@ -900,19 +914,26 @@ def download_wamap_qimages():
         db_wamap.commit()
         
     db_wamap.close()
+    
+    # Have to call commit in tasks if changes made to the db
+    db.commit()
     return ret
 
 
 def refresh_all_ad_logins(run_from="UI"):
     # Go to the AD server and refresh all student and staff AD login times
     ret = ""
+
+    # Might be longer running - make sure to commit so we don't leave databases locked
+    db.commit()
+    db_scheduler.commit()
     
     # Update the last login value for all users (students and faculty)
     if AD._ldap_enabled is not True:
         ret = "[AD Disabled]"
         return ret
     if AD.ConnectAD() is not True:
-        ret = "[AD Connection Error]"
+        ret = "[AD Connection Error]" + AD.GetErrorString()
         return ret
     
     # Grab list of students
@@ -925,7 +946,6 @@ def refresh_all_ad_logins(run_from="UI"):
         # else:
         #    ret += str(ll)
         db(db.student_info.user_id==row.user_id).update(ad_last_login=ll)
-        pass
         db.commit()
     
     # Grab a list of faculty
@@ -938,20 +958,21 @@ def refresh_all_ad_logins(run_from="UI"):
         # else:
         #    ret += str(ll)
         db(db.faculty_info.user_id==row.user_id).update(ad_last_login=ll)
-        pass
         db.commit()
     
     rows = None
     ad_errors = AD.GetErrorString()
     ret = "Done."
     
+    # Have to call commit in tasks if changes made to the db
+    db.commit()
     return ret
 
 
 # Enable the scheduler
 from gluon.scheduler import Scheduler
 
-scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=1,
+scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=2,
                       group_names=['process_videos', 'create_home_directory', 'wamap_delete',
                                    'wamap_videos', 'misc', "download_videos"],
                       tasks=dict(process_media_file=process_media_file,
@@ -969,19 +990,22 @@ current.scheduler = scheduler
 
 # Make sure to run the ad login refresh every hour or so
 refresh_ad_login = current.cache.ram('refresh_ad_login', lambda: True, time_expire=60*60)
-if refresh_ad_login is True:
-    current.cache.ram('refresh_ad_login', lambda: False, time_expire=0)
+if refresh_ad_login is True and request.is_scheduler is not True:
+    # Set the current value to false so we don't need to refresh for a while
+    current.cache.ram('refresh_ad_login', lambda: False, time_expire=-1)
     # Update the last login value for all users (students and faculty)
     AD.Init() # Make sur AD settings are loaded
-    # print("Scheduler...")
+    print("Queueing up refresh_all_ad_logins...")
+    # print(str(request.is_scheduler))
+    # print(str(request))
     if AD._ldap_enabled is not True:
         # Not enabled, skip
-        pass
+        print("AD Not enabled, skipping refresh_all_ad_logins...")
     else:
         # Schedule the process
-        result = scheduler.queue_task('refresh_all_ad_logins', timeout=1200, immediate=True,
+        result = scheduler.queue_task('refresh_all_ad_logins', timeout=1200, 
             sync_output=5, group_name="misc", repeats=1, period=0, pvars=dict(run_from='x_scheduler.py'))
-        pass
+        
     
     # Make sure to start the scheduler process
     # cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_misc_scheduler.py') + " > /dev/null 2>&1 &"
