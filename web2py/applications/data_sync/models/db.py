@@ -1,5 +1,21 @@
 # -*- coding: utf-8 -*-
 
+
+# Track module changes - reload on change
+from gluon.custom_import import track_changes
+track_changes(True)
+
+# Make sure the appconfig.ini file exists
+import os
+import shutil
+app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ini_path = os.path.join(app_root, "private", "appconfig.ini")
+default_ini_path = os.path.join(app_root, "appconfig.ini.default")
+if not os.path.isfile(ini_path):
+    # Copy the default file over
+    shutil.copyfile(default_ini_path, ini_path)
+
+
 # -------------------------------------------------------------------------
 # AppConfig configuration made easy. Look inside private/appconfig.ini
 # Auth is for authenticaiton and access control
