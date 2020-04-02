@@ -4,11 +4,9 @@ import os
 import time
 import xml.etree.ElementTree as ElementTree
 from typing import Dict, Optional
-
 from pytube import request
 from html import unescape
-
-from pytube.helpers import safe_filename
+from pytube.helpers import safe_filename, target_directory
 
 
 class Caption:
@@ -49,7 +47,7 @@ class Caption:
         """
         fraction, whole = math.modf(d)
         time_fmt = time.strftime("%H:%M:%S,", time.gmtime(whole))
-        ms = "{:.3f}".format(fraction).replace("0.", "")
+        ms = f"{fraction:.3f}".replace("0.", "")
         return time_fmt + ms
 
     def xml_caption_to_srt(self, xml_captions: str) -> str:
@@ -85,10 +83,10 @@ class Caption:
     ) -> str:
         """Write the media stream to disk.
 
-        :param filename:
+        :param title:
             Output filename (stem only) for writing media file.
             If one is not specified, the default filename is used.
-        :type filename: str
+        :type title: str
         :param srt:
             Set to True to download srt, false to download xml. Defaults to True.
         :type srt bool
@@ -105,30 +103,25 @@ class Caption:
         :type filename_prefix: str or None
 
         :rtype: str
-
         """
-        output_path = output_path or os.getcwd()
-
         if title.endswith(".srt") or title.endswith(".xml"):
             filename = ".".join(title.split(".")[:-1])
         else:
             filename = title
 
         if filename_prefix:
-            filename = "{prefix}{filename}".format(
-                prefix=safe_filename(filename_prefix), filename=filename,
-            )
+            filename = f"{safe_filename(filename_prefix)}{filename}"
 
         filename = safe_filename(filename)
 
-        filename += " ({})".format(self.code)
+        filename += f" ({self.code})"
 
         if srt:
             filename += ".srt"
         else:
             filename += ".xml"
 
-        file_path = os.path.join(output_path, filename)
+        file_path = os.path.join(target_directory(output_path), filename)
 
         with open(file_path, "w", encoding="utf-8") as file_handle:
             if srt:

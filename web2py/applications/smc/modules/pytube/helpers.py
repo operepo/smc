@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
+
 """Various helper functions implemented by pytube."""
 import functools
 import logging
-import pprint
+import os
 import re
-from typing import TypeVar, Callable
+import warnings
+from typing import TypeVar, Callable, Optional, Dict, List, Any
+from urllib import request
 
 from pytube.exceptions import RegexMatchError
 
@@ -30,10 +33,7 @@ def regex_search(pattern: str, string: str, group: int) -> str:
     if not results:
         raise RegexMatchError(caller="regex_search", pattern=pattern)
 
-    logger.debug(
-        "finished regex search: %s",
-        pprint.pformat({"pattern": pattern, "results": results.group(0),}, indent=2,),
-    )
+    logger.debug("matched regex search: %s", pattern)
 
     return results.group(group)
 
@@ -82,7 +82,7 @@ def safe_filename(s: str, max_length: int = 255) -> str:
     return filename[:max_length].rsplit(" ", 0)[0]
 
 
-def create_logger(level: int = logging.ERROR) -> logging.Logger:
+def setup_logger(level: int = logging.ERROR):
     """Create a configured instance of logger.
 
     :param int level:
@@ -99,7 +99,6 @@ def create_logger(level: int = logging.ERROR) -> logging.Logger:
     logger = logging.getLogger("pytube")
     logger.addHandler(handler)
     logger.setLevel(level)
-    return logger
 
 
 GenericType = TypeVar("GenericType")
@@ -108,3 +107,66 @@ GenericType = TypeVar("GenericType")
 def cache(func: Callable[..., GenericType]) -> GenericType:
     """ mypy compatible annotation wrapper for lru_cache"""
     return functools.lru_cache()(func)  # type: ignore
+
+
+def deprecated(reason: str) -> Callable:
+    """
+    This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emitted
+    when the function is used.
+    """
+
+    def decorator(func1):
+        message = "Call to deprecated function {name} ({reason})."
+
+        @functools.wraps(func1)
+        def new_func1(*args, **kwargs):
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                message.format(name=func1.__name__, reason=reason),
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            warnings.simplefilter("default", DeprecationWarning)
+            return func1(*args, **kwargs)
+
+        return new_func1
+
+    return decorator
+
+
+def target_directory(output_path: Optional[str] = None) -> str:
+    """
+    Function for determining target directory of a download.
+    Returns an absolute path (if relative one given) or the current
+    path (if none given). Makes directory if it does not exist.
+
+    :type output_path: str
+        :rtype: str
+    :returns:
+        An absolute directory path as a string.
+    """
+    if output_path:
+        if not os.path.isabs(output_path):
+            output_path = os.path.join(os.getcwd(), output_path)
+    else:
+        output_path = os.getcwd()
+    os.makedirs(output_path, exist_ok=True)
+    return output_path
+
+
+def install_proxy(proxy_handler: Dict[str, str]) -> None:
+    proxy_support = request.ProxyHandler(proxy_handler)
+    opener = request.build_opener(proxy_support)
+    request.install_opener(opener)
+
+
+def uniqueify(duped_list: List) -> List:
+    seen: Dict[Any, bool] = {}
+    result = []
+    for item in duped_list:
+        if item in seen:
+            continue
+        seen[item] = True
+        result.append(item)
+    return result

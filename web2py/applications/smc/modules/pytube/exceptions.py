@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """Library specific exception definitions."""
 from typing import Union, Pattern
 
@@ -26,17 +27,22 @@ class RegexMatchError(ExtractError):
         :param str pattern:
             Pattern that failed to match
         """
-        super().__init__(
-            "{caller}: could not find match for {pattern}".format(
-                caller=caller, pattern=pattern
-            )
-        )
+        super().__init__(f"{caller}: could not find match for {pattern}")
         self.caller = caller
         self.pattern = pattern
 
 
 class LiveStreamError(ExtractError):
     """Video is a live stream."""
+
+    def __init__(self, video_id: str):
+        """
+        :param str video_id:
+            A YouTube video identifier.
+        """
+        super().__init__(f"{video_id} is streaming live and cannot be loaded")
+
+        self.video_id = video_id
 
 
 class VideoUnavailable(PytubeError):
@@ -47,7 +53,7 @@ class VideoUnavailable(PytubeError):
         :param str video_id:
             A YouTube video identifier.
         """
-        super().__init__("{video_id} is unavailable".format(video_id=video_id))
+        super().__init__(f"{video_id} is unavailable")
 
         self.video_id = video_id
 
