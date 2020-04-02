@@ -79,8 +79,8 @@ elif PY3:
 # For finding number of CPUs
 import multiprocessing
 
-#from smc.pytube import YouTube
-from applications.smc.modules.pytube import YouTube
+from pytube import YouTube
+#from applications.smc.modules.pytube import YouTube
 
 from ednet.ad import AD
 from ednet import Faculty

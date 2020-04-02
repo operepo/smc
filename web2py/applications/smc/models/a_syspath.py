@@ -11,7 +11,7 @@ import sys
 global APP_VERSION
 APP_VERSION = None
 
-sys_path_imported = False
+#sys_path_imported = False
 
 # Needed because w2p import sucks and can't find modules in the modules folder
 import_path = os.path.join(request.folder, 'modules')
