@@ -187,7 +187,11 @@ class Util:
                     data = data.decode('ascii')
                 except:
                     print("err decoding encrypted data as ascii")
-                    pass
+                    try:
+                        data = data.decode('latin-1')
+                    except:
+                        print("err decoding encrypted data as latin-1 - returning raw data")
+                        data = str(data)
         #print("g")
         #print("DAT: " + data)
         data = data.rstrip(" ")
