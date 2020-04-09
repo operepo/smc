@@ -926,7 +926,6 @@ def refresh_all_ad_logins(run_from="UI"):
 
     # Might be longer running - make sure to commit so we don't leave databases locked
     db.commit()
-    db_scheduler.commit()
     
     # Update the last login value for all users (students and faculty)
     if AD._ldap_enabled is not True:
@@ -972,7 +971,7 @@ def refresh_all_ad_logins(run_from="UI"):
 # Enable the scheduler
 from gluon.scheduler import Scheduler
 
-scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=2,
+scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=3,
                       group_names=['process_videos', 'create_home_directory', 'wamap_delete',
                                    'wamap_videos', 'misc', "download_videos"],
                       tasks=dict(process_media_file=process_media_file,

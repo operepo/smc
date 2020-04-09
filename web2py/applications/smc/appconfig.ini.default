@@ -15,7 +15,7 @@ names = localhost:*, 127.0.0.1:*, *:*, *
 uri       = sqlite://storage.sqlite
 migrate   = true
 ; ignored for sqlite
-pool_size = 10  
+pool_size = 0  
 
 ; smtp address and credentials
 [smtp]

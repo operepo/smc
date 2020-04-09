@@ -116,7 +116,7 @@ if not request.env.web2py_runtime_gae:
              migrate=migrate )  # fake_migrate_all=True
     db.executesql('PRAGMA journal_mode=WAL')
     
-    db_scheduler = DAL('sqlite://storage_scheduler.sqlite', pool_size=1, check_reserved=['all'])
+    db_scheduler = DAL('sqlite://storage_scheduler.sqlite', pool_size=0, check_reserved=['all'])
     db_scheduler.executesql('PRAGMA journal_mode=WAL')
 
 else:
@@ -219,6 +219,7 @@ auth.enable_record_versioning(db)
 
 from gluon import current
 current.db = db
+current.db_scheduler = db_scheduler
 current.auth = auth
 current.smc_log = ""
 current.config = myconf
