@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 
+#CUSTOM CHANGES - Support Reload
+try:
+    import importlib
+    reload = importlib.reload
+except:
+    pass
+
 EXPERIMENTAL_STUFF = True
 MAXNFILES = 1000
 

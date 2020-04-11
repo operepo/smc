@@ -26,6 +26,16 @@ import sys
 
 auth.settings.allow_basic_login = True
 
+# Always reload modules on the test controller
+import module_reload
+ret = module_reload.ReloadModules()
+
+@auth.requires_membership("Administrators")
+def dev_key_test():
+    
+    response.view = 'generic.json'
+    (dev_key_id, msg) = Canvas.EnsureDevKey()
+    return locals()
 
 @auth.requires_membership("Administrators")
 def winrm_test():
@@ -46,8 +56,7 @@ def load_document_json():
 
 @auth.requires_membership("Administrators")
 def next_test():
-    import module_reload
-    ret = module_reload.ReloadModules()
+    
     
     # Get the users to import
     sheet_name = "STUDENT USERS"

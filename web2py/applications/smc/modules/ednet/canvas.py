@@ -204,10 +204,14 @@ class Canvas:
         # Strip off http and canvas
         canvas_domain = canvas_url.replace("https://canvas.", "")
 
-        # Find the admin user
-        admin_user = "admin@" + canvas_domain
+        # Find the admin user - NOTE change to pull using a join and 'Site Admin' instead
+        # of trying to calculate the email
+        #admin_user = "admin@" + canvas_domain
+        admin_user = "Site Admin"
         # sql = "SELECT id FROM users WHERE name='admin@ed'"
-        sql = "SELECT user_id, account_id FROM pseudonyms WHERE unique_id='" + admin_user + "'"
+        #sql = "SELECT user_id, account_id FROM pseudonyms WHERE unique_id='" + admin_user + "'"
+        sql = "SELECT pseudonyms.user_id, pseudonyms.account_id FROM pseudonyms, accounts " + \
+            "WHERE pseudonyms.account_id=accounts.id and accounts.name='" + admin_user + "'"
         rows = db_canvas.executesql(sql)
         user_id = 0
         account_id = 0
@@ -216,7 +220,7 @@ class Canvas:
             account_id = row[1]
 
         if user_id < 1:
-            msg += "  Unable to find admin user in canvas - ensure that a user exists with the " + admin_user + " user name"
+            msg += "  Unable to find admin user in canvas - ensure that an admin user exists with the " + admin_user + " name"
             return "", msg
 
         # NOTE: Need to make sure developer_key_account_bindings has a record and that it
@@ -327,6 +331,8 @@ class Canvas:
         db = current.db
         # Make sure there is a dev key
         dev_key_id, msg = Canvas.EnsureDevKey()
+        if def_key_id == 0:
+            return "", "Error setting dev key - " + msg, ""
 
         # Make sure we have a canvas_secret
         canvas_secret = Canvas.GetCanvasSecret()
