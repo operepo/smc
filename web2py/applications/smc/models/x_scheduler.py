@@ -53,6 +53,7 @@ elif PY3:
     from urllib.request import urlopen
     from urllib.error import HTTPError
     from urllib.request import Request
+    from urllib.request import urlretrieve
     # NOTE - Leave off!! - will override web2py request object
     #from urllib import request
 
@@ -449,7 +450,7 @@ def pull_youtube_video(yt_url, media_guid):
     # Download the thumbnail file if its set
     if thumbnail_url != "":
         try:
-            tn = urllib.urlopen(thumbnail_url)
+            tn = urlopen(thumbnail_url)
             with open(output_thumb, 'wb') as f:
                 f.write(tn.read())
             # Copy the thumbnail to the poster
@@ -768,10 +769,10 @@ def download_wamap_qimages():
                 continue  # Skip trying to download if the file is already there
         try:
             print("Downloading " + row["source_filename"])
-            urllib.urlretrieve(source_url, local_path)
+            urlretrieve(source_url, local_path)
             if '<title>404' in open(local_path).read():
                 # Didn't find, try dl from amazonaws
-                urllib.urlretrieve(s3_source_url, local_path)
+                urlretrieve(s3_source_url, local_path)
         except Exception as e:
             print("Exception trying to download " + source_url + "(" + str(e) + ")")
             ret = False
@@ -802,11 +803,11 @@ def download_wamap_qimages():
                 continue  # Skip trying to download if the file is already there
         try:
             print("Downloading " + row[0])
-            urllib.urlretrieve(source_url, local_path)
+            urlretrieve(source_url, local_path)
             if '<title>404' in open(local_path).read():
                 # Didn't find, try dl from amazonaws
                 # print("404 getting " + source_url)
-                urllib.urlretrieve(alt_source_url, local_path)
+                urlretrieve(alt_source_url, local_path)
         except Exception as e:
             print("Exception trying to download " + source_url + "(" + str(e) + ")")
             ret = False
@@ -830,11 +831,11 @@ def download_wamap_qimages():
                 continue # Skip trying to download if the file is already there
         try:
             print("Downloading " + row.source_url)
-            urllib.urlretrieve(source_url, local_path)
+            urlretrieve(source_url, local_path)
             if '<title>404' in open(local_path).read():
                 print("404 getting " + source_url)
                 # Didn't find, try dl from amazonaws
-                # urllib.urlretrieve(s3_source_url, local_path)
+                # urlretrieve(s3_source_url, local_path)
             else:
                 os.chdir(pdfs_folder)
                 # Store the original link in a link file

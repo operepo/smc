@@ -53,7 +53,7 @@ if (startup == True):
         pw = str(os.environ["IT_PW"]) + ""
         pw = pw.strip()
     if (pw != ""):
-        print("Resetting admin password...")
+        # print("Resetting admin password...")
         # Set pw for w2p admin login (parameters_??.py file)
         save_password(pw,80)
         save_password(pw,443)
