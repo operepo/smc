@@ -331,7 +331,7 @@ class Canvas:
         db = current.db
         # Make sure there is a dev key
         dev_key_id, msg = Canvas.EnsureDevKey()
-        if def_key_id == 0:
+        if dev_key_id == 0:
             return "", "Error setting dev key - " + msg, ""
 
         # Make sure we have a canvas_secret
