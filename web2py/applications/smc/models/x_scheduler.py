@@ -201,7 +201,7 @@ def process_media_file(media_id):
     # cmd = ffmpeg + " -i '" + input_file + "' -vcodec libvpx -qscale 6 -acodec libvorbis
     # -ab 128k -vf scale='480:-1' '" + output_webm + "'"
     # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    # webm_ret = p.communicate()[0]
+    # webm_ret = p.communicate()[0].decode()
     
     # Do OGV
     # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale 6
@@ -211,7 +211,7 @@ def process_media_file(media_id):
     # print("Creating OGV..."  + " [" + str(time.time()) + "]")
     print("!clear!10%")
     # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    # ogv_ret = p.communicate()[0]
+    # ogv_ret = p.communicate()[0].decode()
 
     # Do MP4
     # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -profile main
@@ -223,7 +223,7 @@ def process_media_file(media_id):
     print("MP4: " + cmd)
     print("!clear!30%")
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    mp4_ret = p.communicate()[0]
+    mp4_ret = p.communicate()[0].decode()
     
     # Do MP4 with mobile quality
     cmd = ffmpeg + " -y -i \"" + input_file + \
@@ -233,21 +233,21 @@ def process_media_file(media_id):
     # print("Creating mobile MP4..."  + " [" + str(time.time()) + "]")
     print("!clear!70%")
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    mp4_ret += p.communicate()[0]
+    mp4_ret += p.communicate()[0].decode()
 
     # Generate poster image
     cmd = ffmpeg + " -y -ss 5 -i \"" + input_file + "\" -vf  \"thumbnail,scale=640:-1\" -frames:v 1 \"" + output_poster + "\""
     # print("Creating poster image..." + " [" + str(time.time()) + "]")
     print("!clear!85%")
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    poster_ret = p.communicate()[0]
+    poster_ret = p.communicate()[0].decode()
     
     # Generate thumbnail image
     cmd = ffmpeg + " -y -ss 5 -i \"" + input_file + "\" -vf  \"thumbnail,scale=128:-1\" -frames:v 1 \"" + output_thumb + "\""
     # print("Creating thumbnail image..."  + " [" + str(time.time()) + "]")
     print("!clear!95%")
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    thumb_ret = p.communicate()[0]
+    thumb_ret = p.communicate()[0].decode()
 
     # -vf scale="480:2*trunc(ow*a/2)"
     # ffmpeg -i [your video] [encoding options as specified above]
@@ -475,7 +475,7 @@ def pull_youtube_video(yt_url, media_guid):
             print("Generating Thumbnail...")
             try:
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-                thumb_ret = p.communicate()[0]
+                thumb_ret = p.communicate()[0].decode()
             except Exception as ex:
                 print("Error generating thumbnail: " + str(output_thumb) + " - " + str(ex))
 
@@ -486,7 +486,7 @@ def pull_youtube_video(yt_url, media_guid):
             print("Generating Poster Image...")
             try:
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-                poster_ret = p.communicate()[0]
+                poster_ret = p.communicate()[0].decode()
             except Exception as ex:
                 print("Error generating poster: " + str(output_poster) + " - " + str(ex))
 
