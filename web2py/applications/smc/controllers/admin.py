@@ -465,7 +465,7 @@ def kill_all_workers():
     p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     ret = p.wait()
-    # ret = p.communicate()[0]
+    # ret = p.communicate()[0].decode()
     return ret
 
 
@@ -476,7 +476,7 @@ def kill_process_videos_schedule_process():
     p = subprocess.Popen(cmd, shell=True, close_fds=True)
     ret = ""
     ret = p.wait()
-    # ret = p.communicate()[0]
+    # ret = p.communicate()[0].decode()
     return ret
 
 
@@ -484,7 +484,7 @@ def isFFMPEGRunning():
     ret = "is NOT"
     cmd1 = ["/bin/ps ax | grep 'ffmpeg'"]
     p1 = subprocess.Popen(cmd1, stdout=subprocess.PIPE, shell=True)
-    out = p1.communicate()[0]
+    out = p1.communicate()[0].decode()
     
     if 'ffmpeg -y' in out:
         ret = "IS"

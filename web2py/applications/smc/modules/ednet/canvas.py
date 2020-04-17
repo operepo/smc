@@ -245,11 +245,13 @@ class Canvas:
         # Strip off http and canvas
         canvas_domain = canvas_url.replace("https://canvas.", "")
         redis_url = "redis." + canvas_domain
+        # NOTE - Should be linked in docker to hostname redis
+        redis_url = "redis"
         had_error = False
         import redis
 
         try:
-            r = redis.Redis(host=redis_url, port=6379)  # password=...
+            r = redis.Redis(host=redis_url, port=6379, socket_connect_timeout=5)  # password=...
             r.flushdb()
         except Exception as ex:
             print("Error flushing redis db: " + str(ex))
