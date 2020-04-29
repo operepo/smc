@@ -93,8 +93,11 @@ def credential_student():
             user_exists = True
         if user_exists is True:
             key, msg, hash, full_name = Canvas.EnsureStudentAccessToken(user_name)
-            if hash is bytes:
-                hash = hash.decode('utf-8')
+            if isinstance(hash ,bytes):
+                try:
+                    hash = hash.decode('utf-8')
+                except Exception as ex:
+                    hash = "ERROR DECODING HASH!!!"
             
         else:
             # User doesn't exit!
