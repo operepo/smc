@@ -19,9 +19,10 @@ class W2Py:
     @staticmethod
     def SetStudentPassword(user_name, new_password, update_db=True):
         db = current.db
-        ret = True
+        ret = False
         # Get the auth_user id
-        rows = db(db.auth_user.username == user_name).select()
+        # USE LIKE TO SUPPORT CASE INSENSTIVE MATCHES
+        rows = db(db.auth_user.username.like(user_name)).select()
         for row in rows:
             id = row['id']
             # Set password in info table
@@ -30,14 +31,17 @@ class W2Py:
 
             # Set Web2py password
             db(db.auth_user.id == id).update(password=db.auth_user.password.validate(new_password)[0])
+            ret = True
         return ret
     
     @staticmethod
     def SetFacultyPassword(user_name, new_password, update_db=True):
         db = current.db
-        ret = True
+        ret = False
+        #print("PW: " + user_name + str(update_db) + new_password)
         # Get the auth_user id
-        rows = db(db.auth_user.username == user_name).select()
+        # USE LIKE TO SUPPORT CASE INSENSTIVE MATCHES
+        rows = db(db.auth_user.username.like(user_name)).select()
         for row in rows:
             id = row['id']
             # Set password in info table
@@ -46,6 +50,7 @@ class W2Py:
 
             # Set Web2py password
             db(db.auth_user.id == id).update(password=db.auth_user.password.validate(new_password)[0])
+            ret = True
         return ret
     
     @staticmethod

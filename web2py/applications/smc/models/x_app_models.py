@@ -204,7 +204,8 @@ db.define_table("my_app_settings",
                 Field("laptop_admin_user", default="huskers"),
                 Field("laptop_admin_password", "password", default="", required=True),
                 Field("canvas_integration_enabled", "boolean", default="False"),
-
+                Field("disable_student_self_change_password", "boolean", default="False"),
+                Field("disable_faculty_self_change_password", "boolean", default="False"),
                 )
 
 # Enable encryption
@@ -549,6 +550,51 @@ db.define_table('ope_laptop_firewall_rules',
                 Field('can_modify', 'boolean', default=True, writable=False, readable=False),
                 )
 
+
+# Tables for laptop logs and information
+db.define_table("ope_laptops",
+      Field('auth_key', 'string', default=str(uuid.uuid4()).replace('-', '')),
+      Field('bios_serial_number', 'string', requires=IS_NOT_EMPTY()),
+      Field('boot_disk_serial_number', 'string', default=''),
+      Field('state_tracking_number', 'string', default=""),
+      Field('current_student', 'string', default=""),
+      Field('admin_user', 'string', default=""),
+      Field('credentialed_by_user', 'string', default=""),
+      Field('last_sync_date', 'datetime', default=None),
+      Field('bios_name', 'string', default=""),
+      Field('bios_version', 'string', default=""),
+      Field('bios_manufacturer', 'string', default=""),
+      Field('admin_password_status', 'string', default=""),
+
+      Field('archived', 'boolean', default=False),
+      Field('extra_info', 'json'),
+      auth.signature,
+)
+
+db.define_table("ope_laptop_logs",
+      Field("parent_id", "reference ope_laptops"),
+      Field("push_date", 'datetime'),
+      Field("log_type", 'string', requires=IS_IN_SET(
+            ["machine_info", "event_logs"]
+            )),
+      #Field(""),
+
+      Field('extra_info', 'json'),
+
+      auth.signature,
+)
+
+db.define_table("ope_laptop_screen_shots",
+      Field("parent_id", "reference ope_laptops"),
+      Field("file_date", 'datetime'),
+      Field("push_date", 'datetime'),
+      Field("credentialed_user", 'string', default=""),
+      Field("archived", 'boolean', default=False),
+      Field("flagged", 'boolean', default=False),
+      Field('img_file', 'upload', length=64, autodelete=True, uploadseparate=True,
+            requires=IS_NOT_EMPTY(error_message="Please attach a screen shot file!")),
+      auth.signature,
+)
 
 # Adjust the app logo if it is set
 app_logo = AppSettings.GetValue('app_logo', '<none>')

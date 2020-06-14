@@ -9,6 +9,13 @@ from ednet import Student
 
 @auth.requires_membership('Faculty')
 def changepassword():
+    # See if this form has been disabled
+    disabled = AppSettings.GetValue("disable_faculty_self_change_password", "False")
+    # print(disabled)
+    if disabled is True:
+        form = "Feature disabled!"
+        return dict(form=form)
+
     form = SQLFORM.factory(
         Field('old_password', 'password'),
         Field('new_password', 'password', requires=[IS_NOT_EMPTY(),IS_STRONG(min=6, special=1, upper=1,
@@ -61,10 +68,13 @@ def manage_students():
     db.student_info.student_guid.readable=False
     db.student_info.sheet_name.readable=False
     db.student_info.id.readable=False
-    db.student_info.account_id.readable=False
+    #db.student_info.account_id.readable=False
+    db.student_info.user_id.label = "ID"
+    db.student_info.account_id.label = "User Name"
     db.student_info.additional_fields.readable=False
     
     fields = (db.student_info.user_id,
+              db.student_info.account_id,
               db.student_info.student_name,
               db.student_info.import_classes,
               db.student_info.student_ad_quota,
@@ -72,7 +82,7 @@ def manage_students():
               db.student_info.account_enabled,
               db.student_info.account_added_on,
               db.student_info.account_updated_on,
-              db.student_info.account_id,
+              #db.student_info.account_id,
               db.student_info.ad_last_login,
               )
     maxtextlengths = {'student_info.account_added_on': 24, 'student_info.account_updated_on': 24, 'student_info.ad_last_login': 24}
@@ -118,10 +128,13 @@ def manage_faculty():
     db.faculty_info.faculty_guid.readable=False
     db.faculty_info.sheet_name.readable=False
     db.faculty_info.id.readable=False
-    db.faculty_info.account_id.readable=False
+    #db.faculty_info.account_id.readable=False
+    db.faculty_info.user_id.label = "ID"
+    db.faculty_info.account_id.label = "User Name"
     db.faculty_info.additional_fields.readable=False
     
     fields = (db.faculty_info.user_id,
+              db.faculty_info.account_id,
               db.faculty_info.faculty_name,
               db.faculty_info.import_classes,
               db.faculty_info.faculty_ad_quota,
@@ -129,7 +142,7 @@ def manage_faculty():
               db.faculty_info.account_enabled,
               db.faculty_info.account_added_on,
               db.faculty_info.account_updated_on,
-              db.faculty_info.account_id,
+              #db.faculty_info.account_id,
               db.faculty_info.ad_last_login,
               )
     maxtextlengths = {'faculty_info.account_added_on': 24, 'faculty_info.account_updated_on': 24, 'faculty_info.ad_last_login': 24}
@@ -143,6 +156,7 @@ def manage_faculty():
              dict(header=T('Change Password'),body=lambda row: A('Change Password', _href=URL('faculty', 'faculty_change_password', args=[row.user_id])) ),
              dict(header=T('Allow Import'),body=lambda row: A(GetImportPermissionStatus(row.account_id), _href=URL('faculty', 'faculty_toggle_import', args=[row.user_id, row.account_id])) ),
              dict(header=T('Allow Admin'),body=lambda row: A(GetAdminPermissionStatus(row.account_id), _href=URL('faculty', 'faculty_toggle_admin', args=[row.user_id, row.account_id])) ),
+             dict(header=T('Allow Laptop Logs'),body=lambda row: A(GetLaptopLogsPermissionStatus(row.account_id), _href=URL('faculty', 'faculty_toggle_laptop_logs', args=[row.user_id, row.account_id])) ),
              ]
     
     user_grid = SQLFORM.grid(query, fields=fields, orderby=db.faculty_info.faculty_name,
@@ -221,9 +235,14 @@ def student_change_password():
     
     if (default_pw_form.accepted):
         new_pw = AppSettings.GetValue('student_password_pattern', 'SID<user_id>!')
-        new_pw = new_pw.replace('<user_id>', student_id)
-        Student.SetPassword(student_id, new_pw);
-        response.flash = "Default Password Set!"
+        # Replace the possible values in this string with real info
+        new_pw = Student.process_config_params(student_id, new_pw, is_username=False, row=None)
+        #new_pw = new_pw.replace('<user_id>', student_id)
+        msg = Student.SetPassword(student_id, new_pw)
+        if msg == "":
+            response.flash = "Default Password Set!"
+        else:
+            response.flash = msg
     
     if (custom_pw_form.accepted):
         pw = request.vars.get('new_password', '')
@@ -260,10 +279,14 @@ def faculty_change_password():
     
     if (default_pw_form.accepted):
         new_pw = AppSettings.GetValue('faculty_password_pattern', 'FID<user_id>#')
-        new_pw = new_pw.replace('<user_id>', faculty_id)
-        Faculty.SetPassword(faculty_id, new_pw);
-        response.flash = "Default Password Set!"
-    
+        # Replace the possible values in this string with real info
+        new_pw = Faculty.process_config_params(faculty_id, new_pw, is_username=False, row=None)
+        msg = Faculty.SetPassword(faculty_id, new_pw)
+        if msg == "":
+            response.flash = "Default Password Set!"
+        else:
+            response.flash = msg
+            
     if (custom_pw_form.accepted):
         pw = request.vars.get('new_password', '')
         if (pw != ""):
@@ -398,6 +421,45 @@ def faculty_toggle_admin():
         auth.add_membership('Administrators', user_id=account_id)
     message = status_action
     return dict(message=message, current_user=current_user, status_action=status_action)
+
+@auth.requires(auth.has_membership('Administrators'))
+def faculty_toggle_laptop_logs():
+    faculty_id = request.args(0)
+    account_id = request.args(1)
+    if (faculty_id == None or account_id == None):
+        if (session.back):
+            redirect(session.back)
+        else:
+            redirect(URL('faculty', 'manage_faculty'))
+    
+    current_user = Faculty.GetUsername(faculty_id)
+    
+    status_action = "Change Status"
+    auth = current.auth # Grab the current auth object
+    
+    # Add to the group
+    if (auth.has_membership(role='Laptop Logs', user_id=account_id) == True):
+        status_action = "Removing Laptop Log Rights"        
+        auth.del_membership(auth.id_group(role='Laptop Logs'), user_id=account_id)
+    else:
+        status_action = "Adding Laptop Log Rights"
+        auth.add_membership('Laptop Logs', user_id=account_id)
+    message = status_action
+    return dict(message=message, current_user=current_user, status_action=status_action)
+
+
+@auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
+def GetLaptopLogsPermissionStatus(account_id):
+    ret = "True"
+    auth = current.auth # Grab the current auth object
+    
+    if (auth.has_membership(role='Laptop Logs', user_id=account_id) == True):
+        ret = "True"
+    else:
+        ret = "False"
+    
+    return ret
+
 
 @auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
 def GetAdminPermissionStatus(account_id):
@@ -636,3 +698,42 @@ def create_new_student():
 @auth.requires(auth.has_membership('Import') or auth.has_membership('Administrators'))
 def create_new_faculty():
     return dict()
+
+
+@auth.requires(auth.has_membership('Laptop Logs') or auth.has_membership('Administrators'))
+def laptop_logs():
+    laptops = None
+
+    # Get a list of credentialed laptops
+
+    query = db.ope_laptops
+
+    db.ope_laptops.id.readable=False
+    db.ope_laptops.auth_key.readable=False
+    db.ope_laptops.admin_password_status.readable=False
+    db.ope_laptops.extra_info.readable=False
+    db.ope_laptops.admin_user.readable=False
+    db.ope_laptops.credentialed_by_user.readable=False
+    db.ope_laptops.archived.readable=False
+
+    maxtextlengths={"Screen Shots": 50,}
+    links = [
+            dict(header=T(''),
+                body=lambda row: SPAN(
+                    A("[Screen Shots]", _style="white-space: nowrap;", _href=URL('faculty', 'ope_laptop_screenshots', args=[row.id])),
+                    A("[Log Files]", _style="white-space: nowrap;", _href=URL('faculty', 'ope_laptop_logs', args=[row.id])),
+                    A("[Details]", _style="white-space: nowrap;", _href=URL('faculty', 'ope_laptop_details', args=[row.id])),
+                    )
+                ),
+
+            ]
+    
+    laptops = SQLFORM.grid(query, orderby=db.ope_laptops.current_student,
+        searchable=True, create=False, deletable=False, paginate=50,
+        csv=False, details=False, editable=False,
+        links=links, links_placement='left', links_in_grid=True,
+        maxtextlengths=maxtextlengths
+        )
+
+
+    return dict(laptops=laptops)

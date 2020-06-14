@@ -415,7 +415,12 @@ class Canvas:
         hash = Util.encrypt(student_pw, access_token)
 
         # Make sure redis info is flushed
-        Canvas.FlushRedisKeys("*keys*")
+        # Start a background process so we can return right away
+        scheduler = current.scheduler
+        result = scheduler.queue_task('flush_redis_keys', timeout=60,
+                                      immediate=True, sync_output=5, group_name="misc")
+        
+        #Canvas.FlushRedisKeys("*keys*")
 
         return access_token, msg, hash, student_name
 

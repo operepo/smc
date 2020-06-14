@@ -237,11 +237,22 @@ class Student:
     
     @staticmethod
     def GetUsername(student_id, row=None):
+        db = current.db
         ret = ""
 
-        pattern = AppSettings.GetValue('student_id_pattern', '<user_id>')
-        ret = Student.process_config_params(student_id, pattern, is_username=True, row=row)
-
+        # Try to get the real (current) username for this id
+        row = db(db.student_info.user_id.like(student_id)).select().first()
+        if row:
+            # Got the student record, get the matching user id
+            user_name = row.account_id.username
+            if user_name is not None and user_name != "":
+                #print("Found real user name: " + user_name)
+                ret = user_name
+        # Unable to find that, return the default pattern
+        if ret == "":
+            pattern = AppSettings.GetValue('student_id_pattern', '<user_id>')
+            ret = Student.process_config_params(faculty_id, pattern, is_username=True, row=row)
+        
         return str(ret)
     
     @staticmethod
@@ -288,17 +299,17 @@ class Student:
         if AD.Connect() is True:
             user_dn = Student.GetAD_DN(user_name, Student.GetProgram(student_id))
             if AD.SetPassword(user_dn, new_password) is not True:
-                return "<b>Error setting AD password:</b> " + AD.GetErrorString()
+                return "Error setting AD password: " + AD.GetErrorString()
         else:
             # Don't set ad password if ad isn't enabled
             pass
             
         # Set Canvas password
         if Canvas.SetPassword(user_name, new_password) is not True:
-            return "<b>Error setting Canvas password:</b> " + Canvas.GetErrorString()
+            return "Error setting Canvas password: " + Canvas.GetErrorString()
         
         if W2Py.SetStudentPassword(user_name, new_password, update_db) is not True:
-            return "<b>Error setting system password</b>"
+            return "Error setting system password"
         
         return ret
     

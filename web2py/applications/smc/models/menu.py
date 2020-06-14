@@ -49,6 +49,7 @@ response.menu = [
             (T('Change Password'), False, URL('faculty', 'changepassword')),
             (T('Manage Students'), False, URL('faculty', 'manage_students')),
             (T('Manage Faculty'), False, URL('faculty', 'manage_faculty')),
+            (T('Laptop Logs'), False, URL('faculty', 'laptop_logs')),
         ]),
     (SPAN('Import', _class='highlighted'), False, URL('import', 'index'), [
             (T('Import Students'), False, URL('import', 'student_pick_excel')),

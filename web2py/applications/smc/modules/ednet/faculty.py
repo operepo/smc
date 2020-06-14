@@ -236,11 +236,22 @@ class Faculty:
 
     @staticmethod
     def GetUsername(faculty_id, row=None):
+        db = current.db
         ret = ""
 
-        pattern = AppSettings.GetValue('faculty_id_pattern', '<user_id>')
-        ret = Faculty.process_config_params(faculty_id, pattern, is_username=True, row=row)
-
+        # Try to get the real (current) username for this id
+        row = db(db.faculty_info.user_id.like(faculty_id)).select().first()
+        if row:
+            # Got the faculty record, get the matching user id
+            user_name = row.account_id.username
+            if user_name is not None and user_name != "":
+                #print("Found real user name: " + user_name)
+                ret = user_name
+        # Unable to find that, return the default pattern
+        if ret == "":
+            pattern = AppSettings.GetValue('faculty_id_pattern', '<user_id>')
+            ret = Faculty.process_config_params(faculty_id, pattern, is_username=True, row=row)
+        
         return str(ret)
     
     @staticmethod
@@ -287,17 +298,18 @@ class Faculty:
         if AD.Connect() is True:
             user_dn = Faculty.GetAD_DN(user_name, Faculty.GetProgram(faculty_id))
             if AD.SetPassword(user_dn, new_password) is not True:
-                return "<b>Error setting AD password:</b> " + AD.GetErrorString()
+                return "Error setting AD password: " + AD.GetErrorString()
         else:
             # Don't set pw if AD is disabled
+            print("skipping ad set")
             pass
         
         # Set Canvas password
         if Canvas.SetPassword(user_name, new_password) is not True:
-            return "<b>Error setting Canvas password:</b> " + Canvas.GetErrorString()
+            return "Error setting Canvas password: " + Canvas.GetErrorString()
         
         if W2Py.SetFacultyPassword(user_name, new_password, update_db) is not True:
-            return "<b>Error setting system password</b>"
+            return "Error setting SMC password"
         
         return ret
 

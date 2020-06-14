@@ -4,6 +4,7 @@ import sys
 import os
 import subprocess
 import urllib
+import json
 from gluon import current
 
 import paramiko
@@ -30,7 +31,8 @@ def test():
     return locals()
 
 
-@auth.requires_membership("Administrators")
+#@auth.requires_membership("Administrators")
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def verify_ope_account_in_smc():
     response.view = 'generic.json'
     db = current.db
@@ -65,13 +67,18 @@ def verify_ope_account_in_smc():
     if msg == "Found":
         # Pull the laptop admin info
         laptop_admin_user = AppSettings.GetValue("laptop_admin_user", "")
-        laptop_admin_password = AppSettings.GetValue("laptop_admin_password", "")
-        
+        # Moved pw to credential area
+        laptop_admin_password = "********" # AppSettings.GetValue("laptop_admin_password", "")
+    
+    smc_version = get_app_version()
     return dict(msg=msg, student_full_name=student_full_name,
-                laptop_admin_user=laptop_admin_user, laptop_admin_password=laptop_admin_password)
+                laptop_admin_user=laptop_admin_user,
+                laptop_admin_password=laptop_admin_password,
+                smc_version=smc_version)
 
 
-@auth.requires_membership("Administrators")
+#@auth.requires_membership("Administrators")
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def credential_student():
     response.view = 'generic.json'
     db = current.db
@@ -81,6 +88,8 @@ def credential_student():
     hash = ""
     user_name = None
     full_name = ""
+    laptop_admin_password = ""
+    admin_hash = ""
     canvas_url = AppSettings.GetValue('canvas_server_url', 'https://canvas.ed')
     # Get the user in question
     if len(request.args) > 0:
@@ -93,16 +102,72 @@ def credential_student():
             user_exists = True
         if user_exists is True:
             key, msg, hash, full_name = Canvas.EnsureStudentAccessToken(user_name)
+            # Turn bytes into string so it sends over json better
             if isinstance(hash ,bytes):
                 try:
                     hash = hash.decode('utf-8')
                 except Exception as ex:
                     hash = "ERROR DECODING HASH!!!"
+            # Encode admin hash
+            laptop_admin_password = AppSettings.GetValue("laptop_admin_password", "")
+            admin_hash = Util.encrypt(laptop_admin_password, key)
+            laptop_admin_password = "" # Clear when done
+            # Turn bytes into string so it sends over json better
+            if isinstance(admin_hash, bytes):
+                try:
+                    admin_hash = admin_hash.decode("utf-8")
+                except Exception as ex:
+                    admin_hash = "ERROR DECODING HASH!!!"
             
+            # All is good, if there is an ex_info param, then pull data out
+            # of it and put it in the ope_laptops data table
+            #print(request.vars)
+            try:
+                info = request.vars["ex_info"]
+                if info is not None:
+                    print("Saving posted credential information.")
+                    record = db((db.ope_laptops.bios_serial_number==info["bios_serial_number"]) &
+                        (db.ope_laptops.current_student==info["current_student"])
+                    ).select().first()
+                    if record is None:
+                        # No record, add one
+                        db.ope_laptops.insert(
+                            bios_serial_number=info["bios_serial_number"],
+                            boot_disk_serial_number=info["disk_boot_drive_serial_number"],
+                            current_student=info["current_student"],
+                            admin_user=info["admin_user"],
+                            credentialed_by_user=info["logged_in_user"],
+                            last_sync_date=request.now,
+                            bios_name=info["bios_name"],
+                            bios_version=info["bios_version"],
+                            bios_manufacturer=info["bios_manufacturer"],
+                            admin_password_status=info["cs_admin_password_status"],
+                            extra_info=json.dumps(info),
+                        )
+                    else:
+                        # Update existing record
+                        record.update_record(
+                            #bios_serial_number=info["bios_serial_number"],
+                            boot_disk_serial_number=info["disk_boot_drive_serial_number"],
+                            #current_student=info["current_student"],
+                            admin_user=info["admin_user"],
+                            credentialed_by_user=info["logged_in_user"],
+                            last_sync_date=request.now,
+                            bios_name=info["bios_name"],
+                            bios_version=info["bios_version"],
+                            bios_manufacturer=info["bios_manufacturer"],
+                            admin_password_status=info["cs_admin_password_status"],
+                            extra_info=json.dumps(info),
+                        )
+                    db.commit()
+            except Exception as ex:
+                print("ERROR - Invalid json post!\n" + str(ex))
+
         else:
             # User doesn't exit!
             msg = "Invalid User!"
-    return dict(key=key, msg=msg, hash=hash, full_name=full_name, canvas_url=canvas_url)
+    return dict(key=key, msg=msg, hash=hash, full_name=full_name, canvas_url=canvas_url,
+        admin_hash=admin_hash)
 
 
 def get_firewall_list():

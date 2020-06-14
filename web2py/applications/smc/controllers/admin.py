@@ -61,9 +61,16 @@ def config():
 def config_app_settings():
     ensure_settings()
     
+    db.my_app_settings.disable_faculty_self_change_password.label = \
+        "Prevent faculty from changing passwords with SMC"
+    db.my_app_settings.disable_student_self_change_password.label = \
+        "Prevent students from changing passwords with SMC"
+
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
-                   fields=["app_name", "app_description", "app_logo"]).process()
+                   fields=["app_name", "app_description", "app_logo",
+                   "disable_student_self_change_password",
+                   "disable_faculty_self_change_password"]).process()
     
     if form.accepted:
         # Saved

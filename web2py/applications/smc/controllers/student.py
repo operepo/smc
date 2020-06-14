@@ -11,6 +11,14 @@ def index():
 
 @auth.requires_membership('Students')
 def changepassword():
+    # See if this form has been disabled
+    disabled = AppSettings.GetValue("disable_student_self_change_password", "False")
+    # print(disabled)
+    if disabled is True:
+        form = "Feature disabled!"
+        return dict(form=form)
+    
+
     # response.view = "student/changepassword.html"
     form = SQLFORM.factory(
         Field('old_password', 'password'),

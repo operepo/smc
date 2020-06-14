@@ -968,6 +968,11 @@ def refresh_all_ad_logins(run_from="UI"):
     db.commit()
     return ret
 
+def flush_redis_keys():
+    # Flush keys from redis server
+    # Commonly needed when login information has been manipulated
+    # such as during credentialing a student
+    Canvas.FlushRedisKeys("*keys*")
 
 # Enable the scheduler
 from gluon.scheduler import Scheduler
@@ -984,6 +989,7 @@ scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=3,
                                  update_media_database_from_json_files=update_media_database_from_json_files,
                                  pull_youtube_video=pull_youtube_video,
                                  update_document_database_from_json_files=update_document_database_from_json_files,
+                                 flush_redis_keys=flush_redis_keys,
                                  ))
 current.scheduler = scheduler
 
