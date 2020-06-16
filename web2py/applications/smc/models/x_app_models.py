@@ -565,10 +565,10 @@ db.define_table("ope_laptops",
       Field('bios_version', 'string', default=""),
       Field('bios_manufacturer', 'string', default=""),
       Field('admin_password_status', 'string', default=""),
-
       Field('archived', 'boolean', default=False),
       Field('extra_info', 'json'),
       auth.signature,
+      Field('laptop_version', 'string', default='')
 )
 
 db.define_table("ope_laptop_logs",

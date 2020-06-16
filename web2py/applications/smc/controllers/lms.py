@@ -6,6 +6,7 @@ import subprocess
 import urllib
 import json
 from gluon import current
+from datetime import datetime
 
 import paramiko
 
@@ -32,7 +33,8 @@ def test():
 
 
 #@auth.requires_membership("Administrators")
-@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+#@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+@auth.requires_permission("credential")
 def verify_ope_account_in_smc():
     response.view = 'generic.json'
     db = current.db
@@ -77,8 +79,10 @@ def verify_ope_account_in_smc():
                 smc_version=smc_version)
 
 
+# TODO - Setup permission and add facult/admins to credential permission
 #@auth.requires_membership("Administrators")
-@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+#@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+@auth.requires_permission("credential")
 def credential_student():
     response.view = 'generic.json'
     db = current.db
@@ -143,6 +147,7 @@ def credential_student():
                             bios_manufacturer=info["bios_manufacturer"],
                             admin_password_status=info["cs_admin_password_status"],
                             extra_info=json.dumps(info),
+                            laptop_version=info["mgmt_version"],
                         )
                     else:
                         # Update existing record
@@ -158,6 +163,7 @@ def credential_student():
                             bios_manufacturer=info["bios_manufacturer"],
                             admin_password_status=info["cs_admin_password_status"],
                             extra_info=json.dumps(info),
+                            laptop_version=info["mgmt_version"],
                         )
                     db.commit()
             except Exception as ex:
@@ -169,6 +175,9 @@ def credential_student():
     return dict(key=key, msg=msg, hash=hash, full_name=full_name, canvas_url=canvas_url,
         admin_hash=admin_hash)
 
+def ping():
+    server_time = datetime.now()
+    return dict(server_time=server_time)
 
 def get_firewall_list():
     response.view = 'default/index.json'

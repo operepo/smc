@@ -30,6 +30,23 @@ auth.settings.allow_basic_login = True
 import module_reload
 ret = module_reload.ReloadModules()
 
+
+@auth.requires_permission("credential")
+def credential():
+    return dict(message="It Worked!")
+
+@auth.requires_membership("Administrators")
+def test_credential():
+    auth.add_group("Laptop Logs", "test...")
+    a_id = auth.id_group("Administrators")
+    f_id = auth.id_group("Faculty")
+
+    auth.add_permission(name='credential', group_id=a_id)
+    auth.add_permission(name='credential', group_id=f_id)
+
+
+    return locals()
+
 @auth.requires_membership("Administrators")
 def dev_key_test():
     

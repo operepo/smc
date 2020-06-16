@@ -19,11 +19,14 @@ if db_init_needed:
     g = db(db.auth_group.role=='Media Upload').select().first()
     if (g == None):
         db.auth_group.insert(role='Media Upload', description='Users with permission to upload media files')
-        db.commit()
     g = db(db.auth_group.role=='Laptop Logs').select().first()
     if (g == None):
         db.auth_group.insert(role='Laptop Logs', description='Users with permission to view laptop log files')
-        db.commit()
+    
+    # Make sure permissions are setup for each group
+    auth.add_permission(name='credential', group_id=auth.id_group(role='Administrators'))
+    auth.add_permission(name='credential', group_id=auth.id_group(role='Faculty'))
+    db.commit()
 
 new_admin = False
 # Starting Users
