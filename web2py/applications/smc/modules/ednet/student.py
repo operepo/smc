@@ -251,7 +251,7 @@ class Student:
         # Unable to find that, return the default pattern
         if ret == "":
             pattern = AppSettings.GetValue('student_id_pattern', '<user_id>')
-            ret = Student.process_config_params(faculty_id, pattern, is_username=True, row=row)
+            ret = Student.process_config_params(student_id, pattern, is_username=True, row=row)
         
         return str(ret)
     
