@@ -1960,9 +1960,11 @@ def find_replace_google_re_download_docs():
 
         # Download the file
         try:
-            req = urllib.urlopen(export_url)
+            #req = urllib.urlopen(export_url)
+            req = requests.get(export_url, stream=True)
             with open(target_file, 'wb') as f:
-                f.write(req.read())
+                for block in req.iter_content(1024):
+                    f.write(block)
 
             # NOTE - Just re-downloading - don't need the rest of this.
             # Should have file name in the content-disposition header
@@ -1988,6 +1990,15 @@ def find_replace_google_re_download_docs():
 
     return ret
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def test_find_replace_google_download_doc():
+    response.view = "generic.json"
+    current_course = "392419000000128"
+    export_format = "pdf"
+    doc_url = "Click this link: <a href=\"https://docs.google.com/document/d/1Tx2zl16Kq024p6ILySB_quGayhYcctL-MboJIYiWivY/edit?usp=sharing\" >LINK</a>"
+    ret = find_replace_google_download_doc(current_course, export_format, doc_url)
+
+    return locals()
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace_google_download_doc(current_course_name, export_format, doc_url):
@@ -2013,8 +2024,11 @@ def find_replace_google_download_doc(current_course_name, export_format, doc_url
     # Grab the ID from the match
     doc_id = matches.group(3)
 
+    if export_format == "":
+        export_format = "epub"
+
     # Make export link
-    export_url = "https://docs.google.com/document/export?format=epub&id=" + str(doc_id)
+    export_url = "https://docs.google.com/document/export?format=" + export_format + "&id=" + str(doc_id)
 
     print("Pulling google doc: " + export_url)
 
@@ -2043,15 +2057,17 @@ def find_replace_google_download_doc(current_course_name, export_format, doc_url
 
     # Download the file
     try:
-        req = urllib.urlopen(export_url)
+        #req = urllib.urlopen(export_url)
+        req = requests.get(export_url, stream=True)
         with open(target_file, 'wb') as f:
-            f.write(req.read())
+            for block in req.iter_content(1024):
+                f.write(block)
 
         # Should have file name in the content-disposition header
         # content-disposition: attachment; filename="WB-CapitalLettersPunctuation.epub";
         # filename*=UTF-8''WB%20-%20Capital%20Letters%20%26%20Punctuation.epub
-        content_type = str(req.info()['Content-Type'])
-        content_disposition = str(req.info()['content-disposition'])
+        content_type = str(req.headers['Content-Type'])
+        content_disposition = str(req.headers['content-disposition'])
         # split the content-disposition into parts and find the original filename
         parts = content_disposition.split("; ")
         for part in parts:
