@@ -1699,7 +1699,13 @@ def find_replace_google_run(current_course, current_course_name, export_format):
     ret = "Running...<br /><br />"
 
     # Regular expression to find google docs
-    find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)'''
+    find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)(/edit(\?usp=sharing){0,1}){0,1}'''
+
+    # Match examples
+    # https://docs.google.com/document/d/1Tx2zl16Kq024p6ILySB_quGayhYcctL-MboJIYiWivY/edit?usp=sharing
+    # https://docs.google.com/document/d/1xpw_s4zLo3ZZj_CoD40BVClUFsvVomEu8vE6zL7WUKY
+    # https://drive.google.com/open?id=1BGj4VKH0fGeBuriIWcc0i3VoH5-wfKU1aXNYB58nV4I
+    # https://docs.google.com/document/d/1OQsvGI78tDvTulzoo1o-I4yOL3yqLh1PlY9vLz1bosI/edit
 
     # === Pull all pages and extract links ===
     items = Canvas.get_page_list_for_course(current_course)
@@ -1936,7 +1942,7 @@ def find_replace_google_re_download_docs():
 
         # Need the document id from the google url
         # Regular expression to pull out the id
-        find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)'''
+        find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)(/edit(\?usp=sharing){0,1}){0,1}'''
         matches = re.search(find_str, g_url)
 
         if matches is None:
@@ -1996,7 +2002,7 @@ def find_replace_google_download_doc(current_course_name, export_format, doc_url
         return ret
 
     # Regular expression to pull out the id
-    find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)'''
+    find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)(/edit(\?usp=sharing){0,1}){0,1}'''
     matches = re.search(find_str, doc_url)
 
     if matches is None:
