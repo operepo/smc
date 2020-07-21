@@ -13,6 +13,8 @@ import glob
 import mimetypes
 from gluon.contrib.simplejson import loads, dumps
 import requests
+from langcodes import *
+import webvtt
 
 from ednet.canvas import Canvas
 
@@ -91,6 +93,104 @@ def is_media_file_present(file_guid):
     path = get_media_file_path(file_guid)
 
     return os.path.exists(path)
+
+def get_lang_name(lang):
+    """
+    Find the country label for the provided language
+    """
+    ret = None
+
+    try:
+        l = Language.get(lang)
+        d = l.describe()
+        ret = ""
+        if 'language' in d:
+            ret += d['language']
+        if 'script' in d:
+            ret += " (" + d['script'] + ")"
+        if 'territory' in d:
+            ret += " (" + d['territory'] + ")"
+    except:
+        pass
+
+    if ret is None:
+        ret = ""
+    return ret
+
+def save_media_caption_file(file_guid, language, file_name, f_handle):
+    """
+    Save caption file to the proper 
+    """
+    ret = False
+    print("Trying to save caption file: " + file_guid + "/" + language + "/" + \
+        file_name)
+
+    try:
+        file_name = os.path.basename(file_name)
+        parts = os.path.splitext(file_name)
+
+        dest_path = get_media_file_path(file_guid)
+        dest_path = dest_path.replace(".mp4", "_" + language + parts[1].lower())
+
+        out_file = open(dest_path, 'wb')
+        out_file.write(f_handle.read())
+        out_file.close()
+
+        # Do we need to convert to VTT?
+        if dest_path.lower().endswith("srt"):
+            vtt = webvtt.from_srt(dest_path)
+            output_caption_file = dest_path.replace("srt", "vtt")
+            vtt.save(output_caption_file)
+            #print("Saved " + language + " to " + output_caption_file)
+
+        ret = True
+    except Exception as ex:
+        print("Error saving caption file! " + file_guid + "/" + dest_path + "/" + language + "\n" + str(ex))
+    
+    return ret
+
+def get_media_captions_list(file_guid):
+    """
+    Get the list of vtt files
+    """
+    ret = dict()
+    path = get_media_file_path(file_guid)
+    vtt_folder = os.path.dirname(path)
+    with os.scandir(vtt_folder) as it:
+        for entry in it:
+            if file_guid in entry.name and entry.is_file() and entry.name.endswith('.vtt'):
+                # Found a VTT file, assume we are good.
+                # Get language
+                try:
+                    lang = os.path.splitext(entry.name)[0]
+                    lang = lang.split("_")[1]
+
+                    lang_name = get_lang_name(lang)
+
+                    ret[lang] = (entry.name, lang_name)
+                except Exception as ex:
+                    print("Error splitting caption name?" + str(entry.name))
+                    
+    return ret
+
+def is_media_captions_present(file_guid):
+    """
+    Are the caption files present?
+    """
+    cap_files = get_media_captions_list(file_guid)
+    if len(cap_files) > 0:
+        return True
+
+    return False
+
+def get_cc_icon(file_guid):
+    # Return a Xed cc pic or a good cc pic depending on the state of cc files for this movie.
+    ret = URL('static', 'images/no_cc.png')
+
+    if is_media_captions_present(file_guid):
+        ret = URL('static', 'images/cc.png')
+
+    return ret
 
 
 def load_media_file_json(file_guid):
@@ -292,8 +392,14 @@ def queue_up_yt_video(yt_url, category=None):
         result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=yt_url,
                                                                        media_guid=vid_guid
                                                                        ),
-                                      timeout=18000, immediate=True, sync_output=5,
+                                      timeout=18000, immediate=True, sync_output=2,
                                       group_name="download_videos", retry_failed=30, period=300)
+
+        # Launch background process to download caption files
+        caption_result = scheduler.queue_task('pull_youtube_caption',
+            pvars=dict(yt_url=yt_url, media_guid=vid_guid),
+            timeout=90, immediate=True, sync_output=5,
+            group_name="download_videos", retry_failed=30, period=300)
 
         # Make sure to grab the new record now that it has been inserted
         media_file = db(db.media_files.youtube_url == yt_url).select().first()
@@ -330,6 +436,8 @@ def find_ffmpeg():
 
 
 def getURLS(txt):
+    if txt is None:
+        txt = ""
     # Extract the list of urls from the string
     ret = []
     # pat = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)
@@ -346,6 +454,8 @@ def getURLS(txt):
 
 
 def getPDFURLS(txt):
+    if txt is None:
+        txt = ""
     # Extract the list of urls from the string
     ret = []
     # pat = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)

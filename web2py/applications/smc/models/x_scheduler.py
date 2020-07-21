@@ -6,6 +6,8 @@ import subprocess
 from gluon.contrib.simplejson import loads, dumps
 import sys
 import shutil
+import requests
+import webvtt
 
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
@@ -358,6 +360,71 @@ def find_best_yt_stream(yt_url):
     stream = s
     return yt, stream, res
 
+def pull_youtube_caption(yt_url, media_guid):
+    # Download the specified caption file.
+
+    if is_media_captions_present(media_guid):
+        print("VTT file present.")
+        time.sleep(5)
+        return True
+    
+    # Pull the db info
+    media_file = db(db.media_files.media_guid==media_guid).select().first()
+    if media_file is None:
+        print("ERROR - Unable to find a db record for " + str(media_guid))
+        # Slight pause - let scheduler grab output
+        return False
+
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+
+    target_file = get_media_file_path(media_guid, "srt")
+    from pytube import YouTube
+    try:
+        yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
+    except HTTPError as ex:
+        if ex.code == 429:
+            # Need to try again later
+            # Pass this exception up the stack
+            #raise ex
+            pass
+        print("HTTP ERROR: " + str(ex))
+        # Slight pause - let scheduler grab output
+        time.slee(5)
+        return False
+    except Exception as ex:
+        msg = "Bad YT URL? " + yt_url + " -- " + str(ex)
+        print(msg)
+
+    for cap in yt.captions:
+        lang = cap.code
+        output_caption_file = target_file.replace(".srt", "_" + lang + ".srt")
+        #print("Trying to saving " + lang + " to " + output_caption_file)
+
+        try:
+            print("Saving " + lang + " to " + output_caption_file)
+            #caption_url = cap.url
+            #r = requests.get(caption_url)
+            caption_srt = cap.generate_srt_captions()
+            # Save SRT file
+            f = open(output_caption_file, "wb")
+            f.write(caption_srt.encode('utf-8'))
+            f.close()
+
+            # Convert to webvtt format
+            vtt = webvtt.from_srt(output_caption_file)
+            output_caption_file = output_caption_file.replace("srt", "vtt")
+            vtt.save(output_caption_file)
+            print("Saved " + lang + " to " + output_caption_file)
+            
+        except Exception as ex:
+            print("Error - unable to grab caption for lang: " + yt_url + " / " + lang + \
+                "\n\n" + str(ex))
+            continue
+
+    # Slight pause - let scheduler grab output
+    time.sleep(5)
+    return True
+    
 
 def pull_youtube_video(yt_url, media_guid):
     # Download the specified movie.
@@ -367,6 +434,8 @@ def pull_youtube_video(yt_url, media_guid):
     media_file = db(db.media_files.media_guid==media_guid).select().first()
     if media_file is None:
         print("ERROR - Unable to find a db record for " + str(media_guid))
+        # Slight pause - let scheduler grab output
+        time.sleep(5)
         return False
 
     (w2py_folder, applications_folder, app_folder) = get_app_folders()
@@ -395,6 +464,7 @@ def pull_youtube_video(yt_url, media_guid):
     output_meta = target_file + ".json"
     output_poster = target_file + ".poster.png"
     output_thumb = target_file + ".thumb.png"
+    output_en_caption = target_file + "_en.xml"
 
     from pytube import YouTube
     try:
@@ -416,9 +486,9 @@ def pull_youtube_video(yt_url, media_guid):
             return False
 
     try:
-        print("Downloading " + str(yt_url))
+        print("Downloading " + str(yt_url)+"\n\n")
         stream.download(output_path=target_folder, filename=output_mp4_filename)  # put in folder name
-        print("Download Complete!")
+        print("\nDownload Complete!")
     except HTTPError as ex:
         if ex.code == 429:
             # Too many requests - have this try again later...
@@ -433,10 +503,14 @@ def pull_youtube_video(yt_url, media_guid):
             return False
         else:
             print("Unknown HTTP error? " + str(ex))
+            # Slight pause - let scheduler grab output
+            time.sleep(5)
             return False
     except Exception as ex:
         # TODO - Schedule it to try again? Or just let it die?
         print("Error Downloading YouTube Video!  Are you online? " + str(ex))
+        # Slight pause - let scheduler grab output
+        time.sleep(5)
         return False
 
     # print("TN File: " + output_thumb)
@@ -570,6 +644,8 @@ def remove_old_wamap_video_files():
     # Have to call commit in tasks if changes made to the db
     db.commit()
     # return dict(removed=removed, not_removed=not_removed)
+    # Slight pause - let scheduler grab output
+    time.sleep(5)
     return True
 
 
@@ -972,7 +1048,13 @@ def flush_redis_keys():
     # Flush keys from redis server
     # Commonly needed when login information has been manipulated
     # such as during credentialing a student
-    Canvas.FlushRedisKeys("*keys*")
+    try:
+        Canvas.FlushRedisKeys("*keys*")
+    except Exception as ex:
+        print("Error flushing redis keys! \n" + str(ex))
+    # Slight pause - let scheduler grab output
+    time.sleep(5)
+    return true
 
 # Enable the scheduler
 from gluon.scheduler import Scheduler
@@ -990,6 +1072,7 @@ scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=3,
                                  pull_youtube_video=pull_youtube_video,
                                  update_document_database_from_json_files=update_document_database_from_json_files,
                                  flush_redis_keys=flush_redis_keys,
+                                 pull_youtube_caption=pull_youtube_caption,
                                  ))
 current.scheduler = scheduler
 

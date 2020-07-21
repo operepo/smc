@@ -27,6 +27,7 @@ def index():
             A('[Delete]', _style='font-size: 10px; color: red;', _href=URL('media', 'delete_media', args=[row.media_guid], user_signature=True)),
             ) ) )
         #links.append(dict(header=T(''),body=lambda row:  ) )
+    links.append(dict(header=T(''),body=lambda row: IMG(_src=get_cc_icon(row.media_guid), _style="width: 24px; height: auto; max-width: 24px;", _alt="Close Captioning Available")))
     links.append(dict(header=T(''),body=lambda row: A(IMG(_src=getMediaThumb(row.media_guid), _style="width: 128px; height: auto; max-width: 128px;"), _href=URL('media', 'player', args=[row.media_guid], user_signature=True)) ) )
     fields = [db.media_files.id, db.media_files.title, db.media_files.tags, db.media_files.description, db.media_files.media_guid, db.media_files.category] #[db.media_files.title]
     maxtextlengths = {'media_files.title': 150, 'media_files.tags': 50, 'media_files.description': 150}
@@ -53,19 +54,21 @@ def index():
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def edit_media():
     media_guid = request.args(0)
+    caption_files = dict()
+    caption_upload_form = None
 
     if media_guid is None:
         form = "Invalid Media ID"
-        return dict(form=form)
+        return dict(form=form, caption_files=caption_files, caption_upload_form=caption_upload_form)
 
     media_file = db(db.media_files.media_guid==media_guid).select().first()
     if media_file is None:
         form = "Media ID Not Found!"
-        return dict(form=form)
-
+        return dict(form=form, caption_files=caption_files, caption_upload_form=caption_upload_form)
+    
     db.media_files.id.readable=False
-    form = SQLFORM(db.media_files, record=media_file,
-        fields=['title', 'tags', 'description', 'category', 'youtube_url']).process()
+    form = SQLFORM(db.media_files, _name="edit_media", record=media_file,
+        fields=['title', 'tags', 'description', 'category', 'youtube_url']).process(formname="edit_media")
 
     if form.accepted:
         # Commit info to the database (so it is updated when json file is generated)
@@ -76,8 +79,61 @@ def edit_media():
     elif form.errors:
         response.flash = "Error saving media info!"
 
+    caption_upload_form = FORM(
+        TABLE(
+            TR(
+                "Upload VTT or SRT file:",
+                INPUT(_type="file", _name="caption_file", requires=IS_NOT_EMPTY()),
+                ""
+            ),
+            TR(
+                "Choose Language (2 letter code): ",
+                INPUT(_type="text", _id="lang", _name="lang", requires=IS_NOT_EMPTY()),
+                SELECT(
+                    OPTION("[Common Languages]", _value=""),
+                    OPTION("Chinese", _value="zh-Hans-CN"),
+                    OPTION("English", _value="en"),
+                    OPTION("French", _value="fr"),
+                    OPTION("Russian", _value="ru"),
+                    OPTION("Spanish", _value="es"),
+                    OPTION("Taiwan", _value="zh-Hant-TW"),
 
-    return dict(form=form)
+                    _id="sel_lang", _value="",
+                    _onchange="$('#lang').val( $('#sel_lang').val() );"
+                )
+            ),
+            TR(
+                "",
+                INPUT(_type="submit", _value="Upload"),
+                ""
+            )
+        ),
+        _name="caption_upload"
+    )
+
+    if caption_upload_form.accepts(request, session, formname="caption_upload"):
+        # Accepted - process file
+
+        # Is this a VTT or SRT file?
+        if not caption_upload_form.vars.caption_file.filename.lower().endswith("srt") and \
+            not caption_upload_form.vars.caption_file.filename.lower().endswith("vtt"):
+            response.flash = "Invalid File Type - Only VTT and SRT files supported!"
+        else:
+            # Good file name
+            f = caption_upload_form.vars.caption_file.file
+            f_name = caption_upload_form.vars.caption_file.filename
+            if not save_media_caption_file(media_guid, caption_upload_form.vars.lang,
+                f_name, f):
+                response.flash = "Error saving file!"
+            else:
+                response.flash = "File Uploaded!"
+    elif caption_upload_form.errors:
+        response.flash = "Please supply a caption file (VTT or SRT) and the language it provides."
+    
+
+    caption_files = get_media_captions_list(media_guid)
+
+    return dict(form=form, caption_files=caption_files, caption_upload_form=caption_upload_form)
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
@@ -275,11 +331,15 @@ def dl_document():
 def player():
     ret = ""  # start_process_videos()
     
-    poster = URL('static', 'projekktor-1.3.09') + '/media/intro.png'
-    source_ogg = URL('static', 'projekktor-1.3.09') + '/media/intro.ogv'
-    source_mp4 = URL('static', 'projekktor-1.3.09') + '/media/intro.mp4'
-    source_mobile_mp4 = URL('static', 'projekktor-1.3.09') + '/media/intro.mp4'
-    source_webm = URL('static', 'projekktor-1.3.09') + '/media/intro.webm'
+    poster = URL('static', 'images') + 'media_file.png'
+    source_ogg = ""
+    source_mp4 = ""
+    source_mobile_mp4 = ""
+    source_webm = ""
+
+    # This will be the rendered <track> tags
+    subtitles_html = ""
+   
     
     width = '640'  # '720' ,'640'
     height = '385'  # '433' ,'385'
@@ -295,7 +355,12 @@ def player():
     # default to off
     autoplay = "false"
     if request.vars.autoplay == "true":
-        autoplay = "true"
+        # options for autoplay w videojs are:
+        # any - try autoplay, then fall back to play muted
+        # true - autoplay
+        # play - run play() onload
+        # muted - play muted
+        autoplay = "any"
     
     is_mobile = request.vars.get('m', 'false')
     
@@ -312,6 +377,20 @@ def player():
             source_mp4 = URL('static', 'media' + "/" + prefix + "/" + movie_id + ".mp4")
         source_mobile_mp4 = URL('static', 'media' + "/" + prefix + "/" + movie_id + ".mobile.mp4")
         source_webm = URL('static', 'media' + "/" + prefix + "/" + movie_id + ".webm")
+
+        # Get list of vtt files
+        vtt_files = get_media_captions_list(movie_id)
+        
+        # Build up the <tracks> tags
+        for f in vtt_files:
+            #<track kind="captions" src="source_en_subtitles"" srclang="en" label="English" default>
+            default_txt = ""
+            if f == "en":
+                default_txt = "default"
+            subtitles_html += "\n<track kind=\"captions\" src=\"" + \
+                URL('static', 'media' + "/" + prefix + "/" + movie_id + "_" + f + ".vtt") \
+                + "\" srclang=\"" + f + "\" label=\"" + vtt_files[f][1] + "\" " + default_txt + ">"
+
         
         media_file = db(db.media_files.media_guid==movie_id).select().first()
         if media_file is not None:
@@ -326,6 +405,7 @@ def player():
             if views is None:
                 views = 0
             db(db.media_files.media_guid == movie_id).update(views=views+1)
+            db.commit()
         pass
     else:
         movie_id = ""
@@ -334,7 +414,9 @@ def player():
                 source_mobile_mp4=source_mobile_mp4, source_webm=source_webm,
                 movie_id=movie_id, width=width, height=height, title=title,
                 description=description, tags=tags, autoplay=autoplay,
-                iframe_width=iframe_width, iframe_height=iframe_height, views=views, category=category, youtube_url=youtube_url)
+                iframe_width=iframe_width, iframe_height=iframe_height, views=views,
+                category=category, youtube_url=youtube_url,
+                subtitles_html=subtitles_html )
 
 
 def view_document():
@@ -1169,8 +1251,18 @@ def yt_requeue():
             result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=m["youtube_url"],
                                                                            media_guid=file_guid
                                                                            ),
-                                          timeout=18000, immediate=True, sync_output=5,
+                                          timeout=18000, immediate=True, sync_output=3,
                                           group_name="download_videos", retry_failed=30, period=300)
+
+        if is_media_captions_present(file_guid) is not True:
+            # Re-queue captions
+            msg += "Re-queue missing YT Captions : " + m["youtube_url"] + " <br />"
+            result = scheduler.queue_task('pull_youtube_caption', pvars=dict(yt_url=m["youtube_url"],
+                                                                            media_guid=file_guid
+                                                                            ),
+                                            timeout=18000, immediate=True, sync_output=3,
+                                            group_name="download_videos", retry_failed=30, period=300)
+
 
     response.flash = "YouTube downloads re-queued."
     return dict(msg=XML(msg))
@@ -1419,6 +1511,13 @@ def pull_from_youtube_step_1():
         if vid is not None:
             # Video exists already
             response.flash = "Video already in SMC!"
+
+            # Pull caption file if it doesn't exist?
+            caption_result = scheduler.queue_task('pull_youtube_caption',
+                pvars=dict(yt_url=yt_url, media_guid=vid.media_guid),
+                timeout=90, immediate=True, sync_output=2,
+                group_name="download_videos", retry_failed=30, period=300)
+
         else:
             redirect(URL('media', 'pull_from_youtube_step_2.load', vars=dict(yt_url=yt_url), user_signature=True))
     elif form.errors:

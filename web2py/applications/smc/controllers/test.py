@@ -37,7 +37,6 @@ def credential():
 
 @auth.requires_membership("Administrators")
 def test_credential():
-    auth.add_group("Laptop Logs", "test...")
     a_id = auth.id_group("Administrators")
     f_id = auth.id_group("Faculty")
 

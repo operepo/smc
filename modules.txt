@@ -15,3 +15,5 @@ PyMySQL
 #re
 #shutil
 pycanvas
+webvtt-py
+langcodes

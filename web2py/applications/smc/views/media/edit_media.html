@@ -3,3 +3,19 @@
 
 <h1>Edit Media Information</h1>
 {{=form}}
+
+<hr />
+
+<h3>Upload new caption file</h3>
+{{=caption_upload_form}}
+<hr />
+<h3>Current Caption Files</h3>
+<ul>
+{{ for caption in caption_files: }}
+    <li>{{=caption}} - {{=caption_files[caption][1] }}</li>
+{{ pass }}
+</ul>
+
+
+<br />
+<br />
