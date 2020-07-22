@@ -184,11 +184,11 @@ class TestRestAPI(unittest.TestCase):
             {
                 "count": 5,
                 "items": [
-                    {"name": "Chair", "color_name": "red", "id": 1},
-                    {"name": "Chair", "color_name": "green", "id": 2},
-                    {"name": "Table", "color_name": "red", "id": 3},
-                    {"name": "Table", "color_name": "blue", "id": 4},
-                    {"name": "Lamp", "color_name": "green", "id": 5},
+                    {"name": "Chair", "color.name": "red", "id": 1},
+                    {"name": "Chair", "color.name": "green", "id": 2},
+                    {"name": "Table", "color.name": "red", "id": 3},
+                    {"name": "Table", "color.name": "blue", "id": 4},
+                    {"name": "Lamp", "color.name": "green", "id": 5},
                 ],
             },
         )
@@ -311,6 +311,17 @@ class TestRestAPI(unittest.TestCase):
                         "id": 3,
                     },
                 ]
+            },
+        )
+        self.assertEqual(
+            api.search("color", {"name.contains": "ee"}),
+            {"count": 1, "items": [{"id": 2, "name": "green"}]},
+        )
+        self.assertEqual(
+            api.search("color", {"name.in": "blue,green"}),
+            {
+                "count": 2,
+                "items": [{"id": 2, "name": "green"}, {"id": 3, "name": "blue"}],
             },
         )
 

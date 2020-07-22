@@ -1,4 +1,4 @@
-__version__ = '20191224.1'
+__version__ = '20200711.1'
 
 from . template import *
 from . helpers import *

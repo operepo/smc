@@ -59,12 +59,14 @@ def edit_media():
 
     if media_guid is None:
         form = "Invalid Media ID"
-        return dict(form=form, caption_files=caption_files, caption_upload_form=caption_upload_form)
+        return dict(form=form, caption_files=caption_files,
+            caption_upload_form=caption_upload_form, media_guid=media_guid)
 
     media_file = db(db.media_files.media_guid==media_guid).select().first()
     if media_file is None:
         form = "Media ID Not Found!"
-        return dict(form=form, caption_files=caption_files, caption_upload_form=caption_upload_form)
+        return dict(form=form, caption_files=caption_files,
+            caption_upload_form=caption_upload_form, media_guid=media_guid)
     
     db.media_files.id.readable=False
     form = SQLFORM(db.media_files, _name="edit_media", record=media_file,
@@ -133,7 +135,38 @@ def edit_media():
 
     caption_files = get_media_captions_list(media_guid)
 
-    return dict(form=form, caption_files=caption_files, caption_upload_form=caption_upload_form)
+    return dict(form=form, caption_files=caption_files,
+            caption_upload_form=caption_upload_form, media_guid=media_guid)
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def delete_caption_file():
+    response.view='generic.load'
+    media_guid = request.vars['media_guid']
+    lang = request.vars['lang']
+    
+    if media_guid == "":
+        print("Can't delete w missing media_guid!")
+        redirect(URL('media'))
+    
+    if lang == "":
+        print("Can't delete w missing lang!")
+        redirect(URL('media', 'edit_media', args=[media_guid]))
+    
+    # Get the media file
+    caption_file = media_guid + "_" + lang
+    srt_path = get_media_file_path(caption_file, ext="srt")
+    vtt_path = get_media_file_path(caption_file, ext="vtt")
+
+    if os.path.exists(srt_path):
+        print("Found SRT file, removing: " + srt_path)
+        os.unlink(srt_path)
+    
+    if os.path.exists(vtt_path):
+        print("Found VTT file, removing: " + vtt_path)
+        os.unlink(vtt_path)
+    
+    # Return us back to the edit page.
+    redirect(URL('media', 'edit_media', args=[media_guid]))
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))

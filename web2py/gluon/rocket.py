@@ -23,7 +23,11 @@ HTTP_SERVER_SOFTWARE = '%s Python/%s' % (
 BUF_SIZE = 16384
 SOCKET_TIMEOUT = 10  # in secs
 THREAD_STOP_CHECK_INTERVAL = 1  # in secs, How often should threads check for a server stop message?
-IS_JYTHON = platform.system() == 'Java'  # Handle special cases for Jython
+if hasattr(sys, 'frozen'):
+    # py2installer
+    IS_JYTHON = False
+else:    
+    IS_JYTHON = platform.system() == 'Java'  # Handle special cases for Jython
 IGNORE_ERRORS_ON_CLOSE = set([errno.ECONNABORTED, errno.ECONNRESET])
 DEFAULT_LISTEN_QUEUE_SIZE = 5
 DEFAULT_MIN_THREADS = 10
@@ -101,6 +105,7 @@ class Connection(object):
             # inherit from the listening socket.
             # See: http://bugs.jython.org/issue1309
             self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
         #print(str(self.socket))
         #print("SSL: " + str(self.ssl))
         # Stop exception if socket not valid

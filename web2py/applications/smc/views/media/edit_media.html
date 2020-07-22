@@ -12,10 +12,20 @@
 <h3>Current Caption Files</h3>
 <ul>
 {{ for caption in caption_files: }}
-    <li>{{=caption}} - {{=caption_files[caption][1] }}</li>
+    <li>{{=caption}} - {{=caption_files[caption][1] }} - 
+        <a href="{{=URL('media', 'delete_caption_file', vars={'media_guid': media_guid, 'lang': caption}, user_signature=True )}}"
+            onclick="return delete_caption_file('{{=media_guid}}', '{{=caption}}');">
+            <img alt='delete caption file' src="{{=URL('static', 'images/delete.gif')}}"
+            style="width: 16px; height: 16px;"></a>
+    </li>
 {{ pass }}
 </ul>
 
+<script>
+    function delete_caption_file(file_guid, lang) {
+        return confirm('Are you sure you want to delete the ' + lang + ' caption file?');
+    }
+</script>
 
 <br />
 <br />
