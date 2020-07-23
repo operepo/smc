@@ -2340,18 +2340,25 @@ def flashcard_player():
 
     return ret
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def test_pull_single_quizlet_url():
+    request.view = "generic.json"
+    q_id = request.args(0)
+    q_type = request.args(1)
+
+    ret = pull_single_quizlet_url(q_id, q_type)
+    return locals()
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def pull_single_quizlet_url(q_id, q_type):
     # Fill in headers with public stuff so it looks good
     headers = dict()
-    headers[
-        'accept'] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3"
-    headers['accept-encoding'] = "gzip, deflate, br"
+    headers['accept'] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3"
+    # Don't want compression here
+    #headers['accept-encoding'] = "gzip, deflate"
     headers['accept-language'] = "en-US,en;q=0.9,es;q=0.8"
     headers['cache-control'] = "max-age=0"
-    headers[
-        'user-agent'] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
+    headers['user-agent'] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
 
     # Pull data for a quizlet url - includes json, pics, and mp3s
     ret = False
@@ -2369,11 +2376,13 @@ def pull_single_quizlet_url(q_id, q_type):
     # Pull the embed url
     q_url = "https://quizlet.com/" + q_id + "/flashcards/embed"
     resp = requests.get(q_url, headers=headers)
-    html = resp.text
+    html = resp.text # content.decode('utf-8')  # text
+    #print("HTML: " + html)
 
     # Find the json data
     # Now strip out the json data - we want the json between these
-    find_str = r'''<script>window\.Quizlet\["cardsModeData"\] = (.*); QLoad\("Quizlet\.cardsModeData"\);</script>'''
+    #find_str = r'''<script\.window\.Quizlet\["cardsModeData"\] = (.*); QLoad\("Quizlet\.cardsModeData"\);</script>'''
+    find_str = r'''window\.Quizlet\["assistantModeData"\] = (.*); QLoad\("Quizlet\.assistantModeData"\);\}'''
     m = re.search(find_str, html)
     if m is None:
         print("-----> No flashcard data found at " + q_url)
@@ -2385,6 +2394,12 @@ def pull_single_quizlet_url(q_id, q_type):
     js_data = loads(js_string)
 
     # print("JS Data: " + str(js_data))
+    # Copy settings - new format changed all these
+    js_data["id"] = str(js_data['studyableId'])
+    js_data["url"] = str(js_data['studyablePath'])
+    js_data["wordLabel"] = "English"
+    js_data["definitionLabel"] = "Photos"
+    js_data['sets'] = js_data['setList']
 
     id = str(js_data['id'])
     url = str(js_data['url'])
@@ -2395,6 +2410,22 @@ def pull_single_quizlet_url(q_id, q_type):
 
     # Now pull terms found
     for t in terms:
+        # COPY SETTINGS - Make sure these exist for each term - new format changed things
+        t['photo'] = str(t['_imageUrl'])
+        t['quiz_id'] = str(t['setId'])
+        t['term_lang'] = ""
+        t['def_lang'] = ""
+        t['word_audio'] = str(t['_wordAudioUrl'])
+        t['has_word_custom_audio'] = "false"
+        if str(t['wordCustomAudioId']) != "null":
+            t['has_word_custom_audio'] = "true"
+        t['def_audio'] = str(t['_definitionAudioUrl'])
+        t['has_def_custom_audio'] = "false"
+        if str(t['definitionCustomAudioId']) != "null":
+            t['has_def_custom_audio'] = "true"
+        t['can_edit'] = 'false'
+
+
         t_id = str(t['id'])
         t_quiz_id = str(t['quiz_id'])
         t_photo = str(t['photo'])
@@ -2434,7 +2465,7 @@ def pull_single_quizlet_url(q_id, q_type):
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def pull_ql_audio(headers, quizlet_url, save_path, url):
-    if len(url) < 1 or url == 'False':
+    if url is None or url == 'None' or len(url) < 1 or url == 'False':
         # No audio url.
         return
 
@@ -2474,11 +2505,16 @@ def pull_ql_image(headers, quizlet_url, save_path, image_data):
 
     # Image data looks like: 3,pBj7uiWsawC-9EuYswJrCw,jpg,960x720
     # transform it to this form: https://o.quizlet.com/pBj7uiWsawC-9EuYswJrCw_b.jpg
-    parts = image_data.split(",")
-    pull_url = "https://o.quizlet.com/" + parts[1] + "_b." + parts[2]
-
-    # Add extention on (.jpg ?)
-    f_path = save_path + "." + parts[2]
+    if "http" not in image_data:
+        parts = image_data.split(",")
+        pull_url = "https://o.quizlet.com/" + parts[1] + "_b." + parts[2]
+        # Add extention on (.jpg ?)
+        f_path = save_path + "." + parts[2]
+    else:
+        pull_url = image_data
+        bname = os.path.basename(image_data)
+        f_path = save_path + os.path.splitext(bname)[1]
+   
 
     if os.path.exists(f_path):
         print("--> QL PIC ALREADY DOWNLOADED " + pull_url)

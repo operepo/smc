@@ -43,6 +43,10 @@ function start() {
         var word_audio = t_obj.word_audio;
         var def_audio = t_obj.def_audio;
 
+        if (word_audio == "None") { word_audio = ""; }
+        if (def_audio == "None") { def_audio = ""; }
+        if (photo == "None") { photo = ""; }
+
         // Translate to local links
         if (word_audio != "") {
             word_audio = "{{=URL('static', 'media/flashcards')}}/" + quiz_id + "/" + id + ".word.mp3";
