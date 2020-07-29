@@ -18,13 +18,18 @@ Multi upload media tool
 
 Video/Song Play List
 
+CHANGES DONE
 
+7/27/20
+- Fix error on credential if smc not linked w canvas (3 params returned instead of 4) - credit Andy Duckworth - DONE
+
+- Added closed captioning support for SMC (visible on player, pulls from youtube also and under edit screen ) - DONE
 
 - Update to run under python3 - DONE
 - Change password form - fails if  AD not setup? - DONE
 - Import upload - I/O Error if no file supplied - DONE
 - Corrupt table errors in smc after update - delete .table files and run fake_migrate - DONE 
-- Add ability to edit media file/documents - change title, description, origin url, etc...
+- Add ability to edit media file/documents - change title, description, origin url, etc... - DONE
 	
 4/17/16
 - Update to current w2p version (2.14.5)

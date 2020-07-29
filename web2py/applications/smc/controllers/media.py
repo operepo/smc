@@ -2342,7 +2342,7 @@ def flashcard_player():
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def test_pull_single_quizlet_url():
-    request.view = "generic.json"
+    response.view = "generic.json"
     q_id = request.args(0)
     q_type = request.args(1)
 
@@ -2808,6 +2808,9 @@ def find_replace_step_custom_regex():
         "Quizlet Flashcards (download data and use local player)":
             [r'''https://(www\.)?quizlet\.com/([0-9]+)/([a-zA-Z]+)/embed''',
              r'''<FLASH_CARD_LINK___\2___\3___>'''],
+        "Fix Failed Quizlet Imports":
+            [r'''ERROR_PULLING_QUIZLET_([0-9]+)''',
+            r'''https://quizlet.com/\1/flashcards/embed'''],
     }
 
     patterns_list = []

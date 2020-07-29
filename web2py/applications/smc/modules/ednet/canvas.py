@@ -334,7 +334,7 @@ class Canvas:
         # Make sure there is a dev key
         dev_key_id, msg = Canvas.EnsureDevKey()
         if dev_key_id == 0:
-            return "", "Error setting dev key - " + msg, ""
+            return "", "Error setting dev key, make sure SMC is linked to canvas (Admin -> Canvas Settings/Verify) - " + msg, "", ""
 
         # Make sure we have a canvas_secret
         canvas_secret = Canvas.GetCanvasSecret()
