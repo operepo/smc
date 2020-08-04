@@ -834,7 +834,8 @@ class Canvas:
     def get_courses_for_faculty(faculty):
         Canvas.Init()
         # if faculty is 'admin', then get all courses
-        api = "/api/v1/users/sis_user_id:" + faculty + "/courses"
+        #api = "/api/v1/users/sis_user_id:" + faculty + "/courses"
+        api = "/api/v1/users/sis_login_id:" + faculty + "/courses"
         if faculty == 'admin':
             api = "/api/v1/accounts/1/courses"
 
@@ -854,7 +855,10 @@ class Canvas:
         next_url = Canvas._api_next
 
         for c in current_enrollment:
-            course_list[c['id']] = c['name']
+            if 'id' in c and 'name' in c:
+                course_list[c['id']] = c['name']
+            else:
+                course_list["ERROR"] = "ERR (" + str(faculty) + ") - Is this user in canvas? SIS_LOGIN_ID doesn't match."
 
         # Keep grabbing more until we run out of pages
         while next_url != '':
@@ -869,7 +873,10 @@ class Canvas:
             next_url = Canvas._api_next
 
             for c in current_enrollment:
-                course_list[c['id']] = c['name']
+                if 'id' in c and 'name' in c:
+                    course_list[c['id']] = c['name']
+                else:
+                    course_list["ERROR"] = "ERR (" + str(faculty) + ") - Is this user in canvas? SIS_LOGIN_ID doesn't match."
 
         return course_list
 

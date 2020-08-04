@@ -4637,7 +4637,6 @@ class IS_STRONG(Validator):
                 numbers = "number"
                 if self.number > 1:
                     numbers = "numbers"
-                numbers = self.translator(number)
                 if not len(all_number) >= self.number:
                     failures.append(
                         self.translator("Must include at least %s %s")

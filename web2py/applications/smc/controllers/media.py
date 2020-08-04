@@ -1681,6 +1681,9 @@ def find_replace():
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace_step_1():
+    # Force canvasinit to rerun
+    Canvas.Close()
+    Canvas.Init()
     course_list = []
     course_dict = dict()
 
@@ -1706,13 +1709,24 @@ def find_replace_step_1():
 
     if form.accepted:
         #try:
-        cname = course_dict[str(form.vars.current_course)]
-        cid = form.vars.current_course
-        redirect(URL("find_replace_step_2.load", vars=dict(current_course=cid,
-                                                        current_course_name=cname)))
+        # Make sure the course ID is an ID.
+        is_id = False
+        try:
+            c_id = int(form.vars.current_course)
+            is_id = True
+        except:
+            is_id = False
+        
+        if is_id is True:
+            cname = course_dict[str(form.vars.current_course)]
+            cid = form.vars.current_course
+            redirect(URL("find_replace_step_2.load", vars=dict(current_course=cid,
+                                                            current_course_name=cname)))
+        else:
+            response.flash = "Invalid Course Id! " + str(form.vars.current_course)
         #except Exception as ex:
         #    response.flash="Invalid course id " + str(form.vars.current_course) + str(ex) #+ str(course_dict)
-            
+        
         # reload_str = form.vars.current_course
 
     return dict(form1=form)
