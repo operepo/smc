@@ -2509,7 +2509,7 @@ def pull_ql_audio(headers, quizlet_url, save_path, url):
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def pull_ql_image(headers, quizlet_url, save_path, image_data):
-    if len(image_data) < 1 or image_data == "False" or image_data == "None" image_data is None:
+    if image_data is None or len(image_data) < 1 or image_data == "False" or image_data == "None":
         # No image data
         return ""
 
