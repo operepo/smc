@@ -2271,6 +2271,7 @@ def find_replace_post_process_text(course_id, txt):
     # Deal with left over cleaup for find/replace
 
     # Find canvas file ids.
+    txt = txt.replace("&lt;CANVAS_FILE_ID", "<CANVAS_FILE_ID").replace("__&gt;", "__>")
     pattern = re.compile("<CANVAS_FILE_ID__(.*)__>")
 
     match = pattern.search(txt)
@@ -2284,12 +2285,16 @@ def find_replace_post_process_text(course_id, txt):
         match = pattern.search(txt)
 
     # Find quizlet IDs  <FLASH_CARD_LINK___2130943___()___>
-    pattern = re.compile("<FLASH_CARD_LINK___([0-9]+)___([a-zA-Z0-9]+)___>")
+    #print("Searcing For Flash Cards..." + txt[:30])
+    # Fix &gt; and &lt; - canvas screws w us sometimes here...
+    txt = txt.replace("&lt;FLASH_CARD", "<FLASH_CARD").replace("___&gt;", "___>")
+    pattern = re.compile('''<FLASH_CARD_LINK___([0-9]+)___([a-zA-Z0-9]+)___>''')
     match = pattern.search(txt)
     while match is not None:
         # Run code to pull info for quizlet
         q_id = match.group(1)
         q_type = match.group(2)
+        print("Processing FLASH_CARD_LINK: " + str(match))
 
         try:
             if pull_single_quizlet_url(q_id, q_type) is True:
