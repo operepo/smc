@@ -2300,7 +2300,7 @@ def find_replace_post_process_text(course_id, txt):
             else:
                 print("----> Error pulling quizlet: " + str(q_id))
                 error_text = "ERROR_PULLING_QUIZLET_" + str(q_id)
-                txt = txt.replace(match.group(0), error_text)
+                #txt = txt.replace(match.group(0), error_text)
         except Exception as ex:
             print("----> Unknown Exception pulling quizlet data " + str(q_id) + "\n" + str(ex))
             break
@@ -2509,7 +2509,7 @@ def pull_ql_audio(headers, quizlet_url, save_path, url):
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def pull_ql_image(headers, quizlet_url, save_path, image_data):
-    if len(image_data) < 1 or image_data == "False":
+    if len(image_data) < 1 or image_data == "False" or image_data == "None" image_data is None:
         # No image data
         return ""
 
