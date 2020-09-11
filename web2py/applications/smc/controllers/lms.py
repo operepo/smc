@@ -32,6 +32,35 @@ def test():
     return locals()
 
 
+# Fetch quiz questions and pack them up into an encrypted package
+def get_quiz_questions_for_student():
+    response.view = 'generic.json'
+    ret = dict()
+    # Get the param - student, course_id, quiz_id, auth_key
+    student_user = request.args(0)
+    try:
+        course_id = int(request.args(1))
+        quiz_id = int(request.args(2))
+    except:
+        ret["msg"] = "Invalid parameters!"
+        return ret 
+    auth_key = request.args(3)
+    if course_id is None or quiz_id is None or auth_key is None:
+        ret["msg"] = "ERROR - Invalid input data!"
+        return ret
+    
+    # do API calls
+    # is this student in this course?
+    course_list = Canvas.get_courses_for_student(student_user)
+    if not course_id in course_list:
+        ret["msg"] = "ERROR - Not enrolled in that course! " + str(student_user) + "/" + str(course_id)
+        return ret
+
+    # Get the questions for this quiz
+    quiz_questions = Canvas.get_question_payload_for_quiz(course_id, quiz_id, auth_key)
+    #print(quiz_questions)
+    return json.dumps(quiz_questions)
+
 #@auth.requires_membership("Administrators")
 #@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 @auth.requires_permission("credential")

@@ -14,6 +14,94 @@ from ednet.canvas import Canvas
 from pytube import YouTube
 
 
+def media_list():
+    response.view = "default.json"
+    ret = list()
+
+    search_term = request.vars.get("search_term")
+    if search_term is None or search_term == "":
+        return dumps(ret)
+    
+    print("Search Term: " + search_term)
+
+    # Get media files....
+    query = (
+        (db.media_files.category.contains(search_term)) | 
+        (db.media_files.tags.contains(search_term))
+        )
+    
+    rows = db(query).select()
+    for row in rows:
+        item = dict()
+        item["file_type"] = "media"
+        item["media_guid"] = row.media_guid
+        item["title"] = row.title
+        item["tags"] = row.tags
+        item["category"] = row.category
+        file_list = list()
+
+        prefix = row.media_guid[:2] + "/"
+        base_url = URL('static', 'media') + "/" + prefix
+        
+        
+        file_list.append(
+            base_url + row.media_guid + ".poster.png"
+        )
+
+        file_list.append(
+            base_url + row.media_guid + ".thumb.png"
+        )
+
+        file_list.append(
+            base_url + row.media_guid + ".json"
+        )
+
+        file_list.append(
+            base_url + row.media_guid + ".mp4"
+        )
+        
+        vtt_files = get_media_captions_list(row.media_guid)
+        for v_file in vtt_files:
+            file_list.append(
+                base_url + row.media_guid + "_" + v_file + ".vtt"
+            )
+        
+        item["files"] = file_list
+
+        ret.append(item)
+    
+    # Get document files
+    query = (
+        (db.document_files.category.contains(search_term)) | 
+        (db.document_files.tags.contains(search_term))
+        )
+    
+    rows = db(query).select()
+    for row in rows:
+        item = dict()
+        item["file_type"] = "document"
+        item["document_guid"] = row.document_guid
+        item["title"] = row.title
+        item["tags"] = row.tags
+        item["category"] = row.category
+        file_list = list()
+
+        prefix = row.document_guid[:2] + "/"
+        base_url = URL('static', 'documents') + "/" + prefix
+                
+        file_list.append(
+            base_url + row.document_guid
+        )
+        file_list.append(
+            base_url + row.document_guid + ".json"
+        )
+
+        item["files"] = file_list
+
+        ret.append(item)
+    
+    return dumps(ret)
+
 
 def index():
     ret = start_process_videos()
