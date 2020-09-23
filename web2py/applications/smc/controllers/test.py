@@ -31,6 +31,14 @@ import module_reload
 ret = module_reload.ReloadModules()
 
 
+@auth.requires_membership("Administrators")
+def test_yt_proxies():
+    response.view = 'generic.json'
+
+    ret = get_youtube_proxies()
+    
+    return ret
+
 @auth.requires_permission("credential")
 def credential():
     return dict(message="It Worked!")

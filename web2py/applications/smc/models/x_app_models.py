@@ -596,6 +596,13 @@ db.define_table("ope_laptop_screen_shots",
       auth.signature,
 )
 
+db.define_table("youtube_proxy_list",
+      Field("protocol", "string", default="https"),
+      Field("proxy_url", "string", default=""),
+      Field("enabled", "boolean", default=True),
+      auth.signature,
+)
+
 # Adjust the app logo if it is set
 app_logo = AppSettings.GetValue('app_logo', '<none>')
 if app_logo != "<none>":
