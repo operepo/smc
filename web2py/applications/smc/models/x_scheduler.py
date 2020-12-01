@@ -391,11 +391,12 @@ def pull_youtube_caption(yt_url, media_guid):
             pass
         print("HTTP ERROR: " + str(ex))
         # Slight pause - let scheduler grab output
-        time.slee(5)
+        time.sleep(5)
         return False
     except Exception as ex:
         msg = "Bad YT URL? " + yt_url + " -- " + str(ex)
         print(msg)
+        return False
 
     for cap in yt.captions:
         lang = cap.code

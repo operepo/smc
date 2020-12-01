@@ -600,6 +600,7 @@ db.define_table("youtube_proxy_list",
       Field("protocol", "string", default="https"),
       Field("proxy_url", "string", default=""),
       Field("enabled", "boolean", default=True),
+      Field("last_429_error_on", "datetime"),
       auth.signature,
 )
 
