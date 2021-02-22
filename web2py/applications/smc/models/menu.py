@@ -34,6 +34,7 @@ response.menu = [
         # (T('Offline Conversion'), False, URL('media', 'conversion'), [
             (T(u'Offline Conversion \u2bc8 Pull From YouTube (single url)'), False, URL('media', 'pull_from_youtube')),
             (T(u'Offline Conversion \u2bc8 Find/Replace (mass edit course)'), False, URL('media', 'find_replace')),
+            (T(u'Offline Conversion \u2bc8 Convert Link to PDF'), False, URL('media', 'link_to_pdf')),
          # ]),
         #(T('Media Utilities'), False, URL('media', 'utilities'), [
             (T(u'Media Utilities \u2bc8 Scan Media Files'), False, URL('media', 'scan_media_files')),

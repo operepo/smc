@@ -1,0 +1,19 @@
+<h4>Web Link to PDF</h4>
+<div>
+Find web links and convert to PDF.
+</div>
+
+<hr />
+<div>
+    <b>Using Course: {{=current_course_name + " (" + current_course + ")"}}</b>
+    <span><a href="{{=URL('media', 'link_to_pdf.html')}}">(Choose a different course)</a></span>
+</div>
+
+<div>
+
+{{=form1}}
+</div>
+
+<div>
+{{=find_replace_results}}
+</div>
