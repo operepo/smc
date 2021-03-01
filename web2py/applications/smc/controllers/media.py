@@ -1847,6 +1847,7 @@ def find_replace_step_2():
         auto_youtube_tool="YouTube -> SMC Links (ONLY WORKS ONLINE)",
         auto_google_docs_tool="Google Docs -> SMC Links (ONLY WORKS ONLINE)",
         custom_regex="Custom Find/Replace",
+        link_to_pdf="Convert link to PDF file",
     )
 
     option_list = []
@@ -1872,6 +1873,8 @@ def find_replace_step_2():
             # response.flash = "RegEx"
             redirect(URL('media', 'find_replace_step_custom_regex.load', user_signature=True))
             pass
+        elif form2.vars.fr_option == "link_to_pdf":
+            redirect(URL('media', 'find_replace_link_to_pdf.load', user_signature=True))
         else:
             response.flash = "Unknown Option!"
         pass
@@ -2108,22 +2111,175 @@ def find_replace_google_run(current_course, current_course_name, export_format):
     ret += "<br /><br /><b>Done!</b>"
     return ret
 
-def link_to_pdf():
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_link_to_pdf():
+    server_url = Canvas._canvas_server_url
+
+    current_course = request.vars.current_course
+    current_course_name = request.vars.current_course_name
+
+    if current_course is not None:
+        session.fr_current_course = current_course
+    else:
+        current_course = session.fr_current_course
+
+    if current_course_name is not None:
+        session.fr_current_course_name = current_course_name
+    else:
+        current_course_name = session.fr_current_course_name
+
+    if current_course is None:
+        redirect(URL("find_replace.html"))
+
+    form1 = FORM(TABLE(TR("Ready to run click GO: "),
+                       TR("", INPUT(_type="submit", _value="GO"))),
+                 _action=URL('media', 'find_replace_link_to_pdf.load', user_signature=True)).process(keepvalues=True)
+
+    find_replace_results = ""
+
+    if form1.accepted:
+        find_replace_results = find_replace_link_to_pdf_run(current_course, current_course_name)
+        # response.flash = "Not enabled yet!"
+
+    return dict(form1=form1, current_course=current_course, current_course_name=current_course_name,
+                server_url=server_url, find_replace_results=XML(find_replace_results))
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_link_to_pdf_run(current_course, current_course_name):
+    ret = "Running...<br /><br />"
+
+    # === Pull all pages and extract links ===
+    items = Canvas.get_page_list_for_course(current_course)
+    total_pages = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Page: " + str(i)
+        new_text = link_to_pdf(current_course_name, orig_text)
+
+        if orig_text != new_text:
+            page_changed = True
+
+        # Update page
+        if page_changed is True:
+            new_item = dict()
+            new_item["wiki_page[body]"] = new_text
+            Canvas.update_page_for_course(current_course, i, new_item)
+            ret += " page updated"
+        else:
+            ret += " no links found."
+
+    # === Pull all quizzes and extract links ===
+    items = Canvas.get_quiz_list_for_course(current_course)
+    total_quizzes = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Quiz: " + str(i)
+        new_text = link_to_pdf(current_course_name, orig_text)
+
+        if orig_text != new_text:
+            page_changed = True
+
+        # Update
+        if page_changed is True:
+            new_item = dict()
+            new_item["quiz[description]"] = new_text
+            Canvas.update_quiz_for_course(current_course, i, new_item)
+            ret += " quiz updated"
+        else:
+            ret += " no links found."
+
+        quiz_id = i
+        # === Pull all questions and extract links ===
+        q_items = Canvas.get_quiz_questions_for_quiz(current_course, quiz_id)
+        total_questions = len(q_items)
+        for q in q_items:
+            q_orig_text = q_items[q]
+            q_new_text = q_orig_text
+            q_page_changed = False
+            ret += "<br />&nbsp;&nbsp;&nbsp;&nbsp;Working on question: " + str(q)
+            q_new_text = link_to_pdf(current_course_name, q_orig_text)
+
+            if q_orig_text != q_new_text:
+                q_page_changed = True
+
+            # Update page
+            if q_page_changed is True:
+                new_item = dict()
+                new_item["question[question_text]"] = q_new_text
+                Canvas.update_quiz_question_for_course(current_course, quiz_id, q, new_item)
+                ret += " question updated"
+            else:
+                ret += " no links found."
+
+    # === Pull all discussion topics and extract links ===
+    items = Canvas.get_discussion_list_for_course(current_course)
+    total_dicussions = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Discussion: " + str(i)
+        new_text = link_to_pdf(current_course_name, orig_text)
+
+        if orig_text != new_text:
+            page_changed = True
+
+        # Update page
+        if page_changed is True:
+            new_item = dict()
+            new_item["message"] = new_text
+            Canvas.update_discussion_for_course(current_course, i, new_item)
+            ret += " discussion updated"
+        else:
+            ret += " no links found."
+
+    # === Pull all assignments and extract links ===
+    items = Canvas.get_assignment_list_for_course(current_course)
+    total_assignments = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Assignment: " + str(i)
+        new_text = link_to_pdf(current_course_name, orig_text)
+
+        if orig_text != new_text:
+            page_changed = True
+
+        # Update page
+        if page_changed is True:
+            new_item = dict()
+            new_item["assignment[description]"] = new_text
+            Canvas.update_assignment_for_course(current_course, i, new_item)
+            ret += " assignment updated"
+        else:
+            ret += " no links found."
+
+    ret += "<br /><br /><b>Done!</b>"
+    return ret
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def link_to_pdf(course_name, canvas_page):
+    ret=canvas_page
     # response.view = 'link_to_pdf.html'
 
     # Test HTML for function. Need to replace with Canvas course content.
-    course_name = 'canvascourse'
-    canvas_page = '''<h3><span style="font-weight: 400;">Risk management planning</span></h3>
-<p><span style="font-weight: 400;">planning for possible risks and considering optional contingency plans and mitigation strategies</span></p>
-<h4><span style="font-weight: 400;">Outcomes</span></h4>
-<ul>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Understand the </span><a href="https://en.wikipedia.org/wiki/The_Emperor%27s_New_School"><span style="font-weight: 400;">definition</span></a><span style="font-weight: 400;"> of risk.</span></li>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Demonstrate the </span><a href='https://en.wikipedia.org/wiki/Julian_Edelman'><span style="font-weight: 400;">development of a risk assessment</span></a><span style="font-weight: 400;">.</span></li>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Demonstrate the </span><a href="https://en.wikipedia.org/wiki/Streetcars_in_Santa_Barbara,_California"><span style="font-weight: 400;">development of a risk management plan</span></a><span style="font-weight: 400;">.</span></li>
-</ul>
-<p><span style="font-weight: 400;"><iframe src="https://www.youtube.com/embed/xXV_gjtXMSk" width="560" height="314" allowfullscreen="allowfullscreen"></iframe></span></p>
-<p><a href="https://docs.google.com/document/d/17Xeo0daUIf--R49mB2muMr2YTpdMSRsteuTmlEGBq_Q/edit?usp=sharing"><span style="font-weight: 400;">Project Lifecycle Outline</span></a></p>
-'''
+#     course_name = 'canvascourse'
+#     canvas_page = '''<h3><span style="font-weight: 400;">Risk management planning</span></h3>
+# <p><span style="font-weight: 400;">planning for possible risks and considering optional contingency plans and mitigation strategies</span></p>
+# <h4><span style="font-weight: 400;">Outcomes</span></h4>
+# <ul>
+# <li style="font-weight: 400;"><span style="font-weight: 400;">Understand the </span><a href="https://en.wikipedia.org/wiki/The_Emperor%27s_New_School"><span style="font-weight: 400;">definition</span></a><span style="font-weight: 400;"> of risk.</span></li>
+# <li style="font-weight: 400;"><span style="font-weight: 400;">Demonstrate the </span><a href='https://en.wikipedia.org/wiki/Julian_Edelman'><span style="font-weight: 400;">development of a risk assessment</span></a><span style="font-weight: 400;">.</span></li>
+# <li style="font-weight: 400;"><span style="font-weight: 400;">Demonstrate the </span><a href="https://en.wikipedia.org/wiki/Streetcars_in_Santa_Barbara,_California"><span style="font-weight: 400;">development of a risk management plan</span></a><span style="font-weight: 400;">.</span></li>
+# </ul>
+# <p><span style="font-weight: 400;"><iframe src="https://www.youtube.com/embed/xXV_gjtXMSk" width="560" height="314" allowfullscreen="allowfullscreen"></iframe></span></p>
+# <p><a href="https://docs.google.com/document/d/17Xeo0daUIf--R49mB2muMr2YTpdMSRsteuTmlEGBq_Q/edit?usp=sharing"><span style="font-weight: 400;">Project Lifecycle Outline</span></a></p>
+# '''
     # Variable with HTML parsed by beautiful soup.
     soup = bs(canvas_page, 'lxml')
 
@@ -2143,19 +2299,26 @@ def link_to_pdf():
         links.append(iframe['src'])
 
     # Regular expression to look for Google docs items.
-    r = re.compile('https://docs.google.com/.*')
-    google_Docs = list(filter(r.match, links))
-    print('google docs list' + str(google_Docs))
+    # r = re.compile('https://docs.google.com/.*')
+    # google_Docs = list(filter(r.match, links))
+    # print('google docs list' + str(google_Docs))
 
     # Regular expression to look for YouTube items.
-    r = re.compile('https://www.youtube.com/.*')
-    you_Tube = list(filter(r.match, links))
+    # r = re.compile('https://www.youtube.com/.*')
+    # you_Tube = list(filter(r.match, links))
 
     # Regular expression to look for SMC items.
-    r = re.compile('.*media/dl_document/.*')
-    smc_links = list(filter(r.match, links))
-    remove_links = google_Docs + you_Tube + smc_links
+    # r = re.compile('.*media/dl_document/.*')
+    # smc_links = list(filter(r.match, links))
+    # remove_links = google_Docs + you_Tube + smc_links
 
+    r = re.compile('^(?!http).*|(.*flickr.com.*)|(.*flic.kr.*)|(.*yahoo.com.*)|(.*/media/view_document/.*)|(.*/media/player.*)|(.*/media/dl_document.*)|(.*vimeo.com.*)|(.*youtube.com.*)|(.*drive.google.com.*)|(.*/fonts/.*)|(.*/courses/.*)|(.*ted.com/talks.*)|(.*/api/.*)|(.*docs.google.com.*)|(.*fonts.gstatic.com.*)')
+    remove_links = list(filter(r.match, links))
+    print('This is the list of URLS from the page:')
+    print(links)
+    print('This is the list of links to remove:')
+    print(remove_links)
+    
     # Removes Google docs URLs from list.
     for i in remove_links:
         print('looking for link' + str(i))
@@ -2188,7 +2351,11 @@ def link_to_pdf():
                 continue
             print('converting' + link_URL)
 
-            smc_url = web_to_link_download_doc(course_name,link_URL)
+            try:
+                smc_url = web_to_link_download_doc(course_name,link_URL)
+            except Exception as ex:
+                print('Error pulling link' + link_URL + '\n' + str(ex))
+                smc_url = ''
             if len(smc_url) > 0:
                 if 'href' in str(o):
                     o['href'] = smc_url
@@ -2199,8 +2366,9 @@ def link_to_pdf():
 
             # title_number+=1
             # pdfkit.from_url(i, 'title'+str(title_number)+'.pdf')
+        ret=str(soup)
 
-    return dict(server_url=web_URL, final_html=str(soup), l=locals())
+    return ret
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace_google_re_download_docs():
