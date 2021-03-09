@@ -453,7 +453,8 @@ db.define_table('document_files',
                 Field('views', 'integer', default=0),
                 Field('google_url', 'string', default=''),
                 auth.signature,
-                Field('source_url', 'string', default='')
+                Field('source_url', 'string', default=''),
+                Field('link_to_pdf', 'string', default='')
                 )
 
 # Indexes

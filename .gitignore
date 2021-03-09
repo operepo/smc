@@ -23,3 +23,7 @@ uploads/
 /tmp.txt
 /web2py/deposit
 /.vscode
+env/
+smc.code-workspace
+env
+/*.code-workspace

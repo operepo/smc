@@ -9,9 +9,12 @@ import glob
 import mimetypes
 from gluon.contrib.simplejson import loads, dumps
 import requests
+import pdfkit
+import lxml
 
 from ednet.canvas import Canvas
 from pytube import YouTube
+from bs4 import BeautifulSoup as bs
 
 
 def media_list():
@@ -1844,6 +1847,7 @@ def find_replace_step_2():
         auto_youtube_tool="YouTube -> SMC Links (ONLY WORKS ONLINE)",
         auto_google_docs_tool="Google Docs -> SMC Links (ONLY WORKS ONLINE)",
         custom_regex="Custom Find/Replace",
+        link_to_pdf="Convert link to PDF file",
     )
 
     option_list = []
@@ -1869,6 +1873,8 @@ def find_replace_step_2():
             # response.flash = "RegEx"
             redirect(URL('media', 'find_replace_step_custom_regex.load', user_signature=True))
             pass
+        elif form2.vars.fr_option == "link_to_pdf":
+            redirect(URL('media', 'find_replace_link_to_pdf.load', user_signature=True))
         else:
             response.flash = "Unknown Option!"
         pass
@@ -2105,6 +2111,264 @@ def find_replace_google_run(current_course, current_course_name, export_format):
     ret += "<br /><br /><b>Done!</b>"
     return ret
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_link_to_pdf():
+    server_url = Canvas._canvas_server_url
+
+    current_course = request.vars.current_course
+    current_course_name = request.vars.current_course_name
+
+    if current_course is not None:
+        session.fr_current_course = current_course
+    else:
+        current_course = session.fr_current_course
+
+    if current_course_name is not None:
+        session.fr_current_course_name = current_course_name
+    else:
+        current_course_name = session.fr_current_course_name
+
+    if current_course is None:
+        redirect(URL("find_replace.html"))
+
+    form1 = FORM(TABLE(TR("Ready to run click GO: "),
+                       TR("", INPUT(_type="submit", _value="GO"))),
+                 _action=URL('media', 'find_replace_link_to_pdf.load', user_signature=True)).process(keepvalues=True)
+
+    find_replace_results = ""
+
+    if form1.accepted:
+        find_replace_results = find_replace_link_to_pdf_run(current_course, current_course_name)
+        # response.flash = "Not enabled yet!"
+
+    return dict(form1=form1, current_course=current_course, current_course_name=current_course_name,
+                server_url=server_url, find_replace_results=XML(find_replace_results))
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def find_replace_link_to_pdf_run(current_course, current_course_name):
+    ret = "Running...<br /><br />"
+
+    # === Pull all pages and extract links ===
+    items = Canvas.get_page_list_for_course(current_course)
+    total_pages = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Page: " + str(i)
+        new_text = link_to_pdf(current_course_name, orig_text)
+
+        if orig_text != new_text:
+            page_changed = True
+
+        # Update page
+        if page_changed is True:
+            new_item = dict()
+            new_item["wiki_page[body]"] = new_text
+            Canvas.update_page_for_course(current_course, i, new_item)
+            ret += " page updated"
+        else:
+            ret += " no links found."
+
+    # === Pull all quizzes and extract links ===
+    items = Canvas.get_quiz_list_for_course(current_course)
+    total_quizzes = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Quiz: " + str(i)
+        new_text = link_to_pdf(current_course_name, orig_text)
+
+        if orig_text != new_text:
+            page_changed = True
+
+        # Update
+        if page_changed is True:
+            new_item = dict()
+            new_item["quiz[description]"] = new_text
+            Canvas.update_quiz_for_course(current_course, i, new_item)
+            ret += " quiz updated"
+        else:
+            ret += " no links found."
+
+        quiz_id = i
+        # === Pull all questions and extract links ===
+        q_items = Canvas.get_quiz_questions_for_quiz(current_course, quiz_id)
+        total_questions = len(q_items)
+        for q in q_items:
+            q_orig_text = q_items[q]
+            q_new_text = q_orig_text
+            q_page_changed = False
+            ret += "<br />&nbsp;&nbsp;&nbsp;&nbsp;Working on question: " + str(q)
+            q_new_text = link_to_pdf(current_course_name, q_orig_text)
+
+            if q_orig_text != q_new_text:
+                q_page_changed = True
+
+            # Update page
+            if q_page_changed is True:
+                new_item = dict()
+                new_item["question[question_text]"] = q_new_text
+                Canvas.update_quiz_question_for_course(current_course, quiz_id, q, new_item)
+                ret += " question updated"
+            else:
+                ret += " no links found."
+
+    # === Pull all discussion topics and extract links ===
+    items = Canvas.get_discussion_list_for_course(current_course)
+    total_dicussions = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Discussion: " + str(i)
+        new_text = link_to_pdf(current_course_name, orig_text)
+
+        if orig_text != new_text:
+            page_changed = True
+
+        # Update page
+        if page_changed is True:
+            new_item = dict()
+            new_item["message"] = new_text
+            Canvas.update_discussion_for_course(current_course, i, new_item)
+            ret += " discussion updated"
+        else:
+            ret += " no links found."
+
+    # === Pull all assignments and extract links ===
+    items = Canvas.get_assignment_list_for_course(current_course)
+    total_assignments = len(items)
+    for i in items:
+        orig_text = items[i]
+        new_text = orig_text
+        page_changed = False
+        ret += "<br />Working on Assignment: " + str(i)
+        new_text = link_to_pdf(current_course_name, orig_text)
+
+        if orig_text != new_text:
+            page_changed = True
+
+        # Update page
+        if page_changed is True:
+            new_item = dict()
+            new_item["assignment[description]"] = new_text
+            Canvas.update_assignment_for_course(current_course, i, new_item)
+            ret += " assignment updated"
+        else:
+            ret += " no links found."
+
+    ret += "<br /><br /><b>Done!</b>"
+    return ret
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def link_to_pdf(course_name, canvas_page):
+    ret=canvas_page
+    # response.view = 'link_to_pdf.html'
+
+    # Test HTML for function. Need to replace with Canvas course content.
+#     course_name = 'canvascourse'
+#     canvas_page = '''<h3><span style="font-weight: 400;">Risk management planning</span></h3>
+# <p><span style="font-weight: 400;">planning for possible risks and considering optional contingency plans and mitigation strategies</span></p>
+# <h4><span style="font-weight: 400;">Outcomes</span></h4>
+# <ul>
+# <li style="font-weight: 400;"><span style="font-weight: 400;">Understand the </span><a href="https://en.wikipedia.org/wiki/The_Emperor%27s_New_School"><span style="font-weight: 400;">definition</span></a><span style="font-weight: 400;"> of risk.</span></li>
+# <li style="font-weight: 400;"><span style="font-weight: 400;">Demonstrate the </span><a href='https://en.wikipedia.org/wiki/Julian_Edelman'><span style="font-weight: 400;">development of a risk assessment</span></a><span style="font-weight: 400;">.</span></li>
+# <li style="font-weight: 400;"><span style="font-weight: 400;">Demonstrate the </span><a href="https://en.wikipedia.org/wiki/Streetcars_in_Santa_Barbara,_California"><span style="font-weight: 400;">development of a risk management plan</span></a><span style="font-weight: 400;">.</span></li>
+# </ul>
+# <p><span style="font-weight: 400;"><iframe src="https://www.youtube.com/embed/xXV_gjtXMSk" width="560" height="314" allowfullscreen="allowfullscreen"></iframe></span></p>
+# <p><a href="https://docs.google.com/document/d/17Xeo0daUIf--R49mB2muMr2YTpdMSRsteuTmlEGBq_Q/edit?usp=sharing"><span style="font-weight: 400;">Project Lifecycle Outline</span></a></p>
+# '''
+    # Variable with HTML parsed by beautiful soup.
+    soup = bs(canvas_page, 'lxml')
+
+    # List to contain website URLs for processing to PDF.
+    web_URL = []
+    links = []
+
+    # beautiful soup find all to look for URLs.
+    for a in soup.find_all('a', href=True):
+        web_URL.append(a)
+        links.append(a['href'])
+
+    # beautiful soup find all to look for URLs set in an iframe. 
+    for iframe in soup.find_all('iframe', src=True):
+        # embed_URL = 'https:'+a['src']
+        web_URL.append(iframe)
+        links.append(iframe['src'])
+
+    # Regular expression to look for Google docs items.
+    # r = re.compile('https://docs.google.com/.*')
+    # google_Docs = list(filter(r.match, links))
+    # print('google docs list' + str(google_Docs))
+
+    # Regular expression to look for YouTube items.
+    # r = re.compile('https://www.youtube.com/.*')
+    # you_Tube = list(filter(r.match, links))
+
+    # Regular expression to look for SMC items.
+    # r = re.compile('.*media/dl_document/.*')
+    # smc_links = list(filter(r.match, links))
+    # remove_links = google_Docs + you_Tube + smc_links
+
+    r = re.compile('^(?!http).*|(.*flickr.com.*)|(.*flic.kr.*)|(.*yahoo.com.*)|(.*/media/view_document/.*)|(.*/media/player.*)|(.*/media/dl_document.*)|(.*vimeo.com.*)|(.*youtube.com.*)|(.*drive.google.com.*)|(.*/fonts/.*)|(.*/courses/.*)|(.*ted.com/talks.*)|(.*/api/.*)|(.*docs.google.com.*)|(.*fonts.gstatic.com.*)')
+    remove_links = list(filter(r.match, links))
+    print('This is the list of URLS from the page:')
+    print(links)
+    print('This is the list of links to remove:')
+    print(remove_links)
+    
+    # Removes Google docs URLs from list.
+    for i in remove_links:
+        print('looking for link' + str(i))
+        for o in web_URL[:]:
+            # if ('href' in o and o['href'] == i) or ('src' in o and o['src'] == i):
+            if i in str(o):
+                web_URL.remove(o)
+                print('removing'+str(i))
+
+    # Counter.
+    title_number = 0
+    print(remove_links)
+    print('----')
+    print(web_URL)
+
+    # First part of if statement just prints a message if there are no URLs found. Second part sends individual URL to function.
+    if len(web_URL) < 1:
+        print('This page has no web links.')
+    else:
+        for o in web_URL:
+            print(o)
+            print(type(o))
+            link_URL = ''
+            if 'href' in str(o):
+                link_URL = o['href']
+            if 'src' in str(o):
+                link_URL = o['src']
+            if link_URL == '':
+                print('skipping' + str(o))
+                continue
+            print('converting' + link_URL)
+
+            try:
+                smc_url = web_to_link_download_doc(course_name,link_URL)
+            except Exception as ex:
+                print('Error pulling link' + link_URL + '\n' + str(ex))
+                smc_url = ''
+            if len(smc_url) > 0:
+                if 'href' in str(o):
+                    o['href'] = smc_url
+                if 'src' in str(o):
+                    o['src'] = smc_url
+                q_tag = soup.new_tag("q", cite=link_URL)
+                o.append(q_tag)
+
+            # title_number+=1
+            # pdfkit.from_url(i, 'title'+str(title_number)+'.pdf')
+        ret=str(soup)
+
+    return ret
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace_google_re_download_docs():
@@ -2353,6 +2617,129 @@ def find_replace_google_download_doc(current_course_name, export_format, doc_url
     ret = URL('media', 'dl_document', args=[file_guid], scheme=True, host=True)
     return ret
 
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def web_to_link_download_doc(current_course_name, link_url):
+    # Will return the new SMC url or empty string if an error occurs
+    ret = ""
+
+    # Check if exists - return smc link if it does
+    row = db(db.document_files.link_to_pdf == link_url).select().first()
+    if row is not None:
+        ret = URL('media', 'dl_document', args=[row.document_guid], scheme=True, host=True)
+        print("Web Link Already Downloaded: " + str(ret))
+        return ret
+
+    # Not sure if I need this code below.
+
+    # Regular expression to pull out the id
+    # find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)(/edit(\?usp=sharing){0,1}){0,1}'''
+    # matches = re.search(find_str, doc_url)
+
+    # if matches is None:
+    #     msg = "No google doc id found in " + str(doc_url)
+    #     print(msg)
+    #     return ret
+
+    # Grab the ID from the match
+    # doc_id = matches.group(3)
+
+    # if export_format == "":
+    #     export_format = "epub"
+
+    # Make export link
+    # export_url = "https://docs.google.com/document/export?format=" + export_format + "&id=" + str(doc_id)
+
+    # print("Pulling google doc: " + export_url)
+
+    # Figure out a local file name
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+
+    # static/documents/01/010102alj29v.... (no file extension)
+    # generate new uuid
+    file_guid = str(uuid.uuid4()).replace('-', '')
+    # print("File GUID: " + str(file_guid))
+    target_folder = os.path.join(app_folder, 'static', 'documents')
+
+    file_prefix = file_guid[0:2]
+
+    target_folder = os.path.join(target_folder, file_prefix)
+    # print("Target Dir: " + target_folder)
+
+    try:
+        os.makedirs(target_folder)
+    except OSError as message:
+        pass
+
+    target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
+
+    original_file_name = link_url + '.pdf'
+
+    # PDF conversion of web link.
+    pdfkit.from_url(link_url, target_file)
+
+    # # Download the file
+    # try:
+    #     #req = urllib.urlopen(export_url)
+    #     req = requests.get(export_url, stream=True)
+    #     with open(target_file, 'wb') as f:
+    #         for block in req.iter_content(1024):
+    #             f.write(block)
+
+    #     # Should have file name in the content-disposition header
+    #     # content-disposition: attachment; filename="WB-CapitalLettersPunctuation.epub";
+    #     # filename*=UTF-8''WB%20-%20Capital%20Letters%20%26%20Punctuation.epub
+    #     content_type = str(req.headers['Content-Type'])
+    #     content_disposition = str(req.headers['content-disposition'])
+    #     # split the content-disposition into parts and find the original filename
+    #     parts = content_disposition.split("; ")
+    #     for part in parts:
+    #         if "filename=" in part:
+    #             parts2 = part.split("=")
+    #             p = parts2[1]
+    #             p = p.strip('"')  # strip off "s
+    #             if p is not None and p != "":
+    #                 original_file_name = p
+    #                 break
+
+    # except Exception as ex:
+    #     print("Error trying to save google doc file: " + str(export_url) + " - " + str(ex))
+    #     return ret
+
+    # Now add the info to the database.
+    output_meta = target_file + ".json"
+    # Save JSON info
+    # Pull the extension off the original filename
+    title, ext = os.path.splitext(original_file_name)
+    description = "Pulled web (" + str(link_url) + ") for course " + str(current_course_name)
+    media_type = "document"
+    category = current_course_name
+    tags = [current_course_name]
+
+    meta = {'title': title, 'document_guid': file_guid,
+            'description': description, 'original_file_name': original_file_name,
+            'media_type': media_type, 'category': category,
+            'tags': dumps(tags), 'link_to_pdf': link_url}
+
+    meta_json = dumps(meta)
+
+    try:
+        #f = os.open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+        #os.write(f, meta_json)
+        #os.close(f)
+        f = open(output_meta, "w")
+        f.write(meta_json)
+        f.close()
+    except Exception as ex:
+        print("ERROR SAVING JSON for google doc download " + str(output_meta) + " - " + str(ex))
+
+    # Store this file in the database
+    db.document_files.insert(document_guid=file_guid, title=title, description=description,
+                             original_file_name=original_file_name, media_type=media_type,
+                             category=category, tags=tags, link_to_pdf=link_url)
+    db.commit()
+
+    ret = URL('media', 'dl_document', args=[file_guid], scheme=True, host=True)
+    return ret
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace_post_process_text(course_id, txt):
