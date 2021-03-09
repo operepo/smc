@@ -1,0 +1,13 @@
+xmltodict
+requests>=2.9.1
+requests_ntlm>=0.3.0
+six
+
+[credssp]
+requests-credssp>=1.0.0
+
+[kerberos:sys_platform!="win32"]
+pykerberos<2.0.0,>=1.2.1
+
+[kerberos:sys_platform=="win32"]
+winkerberos>=0.5.0
