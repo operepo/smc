@@ -21,6 +21,19 @@ from ednet.canvas import Canvas
 from pytube import YouTube
 #import pytube
 
+def get_youtube_proxies():
+    query = (db.youtube_proxy_list.enabled==True)
+    # Random order so you get a possible different item from the list each time
+    rows = db(query).select(orderby='<random>')
+    ret = None
+    for row in rows:
+        if ret is None:
+            ret = {}
+        
+        ret[row["protocol"]] = row["proxy_url"]
+
+    return ret
+
 def get_flashcards_folder_path(flashcard_id):
     (w2py_folder, applications_folder, app_folder) = get_app_folders()
     flashcards_folder = os.path.join(app_folder, "static/media/flashcards")

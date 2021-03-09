@@ -24,7 +24,8 @@ class SequentialGUID:
         rand_bytes += os.urandom(10) #Get 10 random bytes
 
         # Get the current timestamp in miliseconds - makes this sequential
-        ts = long((datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)).total_seconds() * 1000)
+        # NOTE - py3 - long is just in now
+        ts = int((datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)).total_seconds() * 1000)
         tsbytes = bytearray()
         # NOTE: we don't pass endian into long_to_bytes
         tsbytes += long_to_bytes(ts) # Convert long to byte array

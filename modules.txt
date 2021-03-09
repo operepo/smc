@@ -17,3 +17,6 @@ PyMySQL
 pycanvas
 webvtt-py
 langcodes
+
+lxml
+beautifulsoup4

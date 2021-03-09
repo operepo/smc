@@ -829,12 +829,58 @@ class Canvas:
                 ret += key + "=" + v
 
         return ret
+    @staticmethod
+    def get_courses_for_student(student):
+        Canvas.Init()
+        api = "/api/v1/users/sis_login_id:" + student + "/courses"
+        
+        p = dict()
+        p["per_page"] = 200000
+
+        course_list = dict()
+
+        current_enrollment = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                            api, params=p)
+
+        if current_enrollment is None:
+            print("Error pulling canvas enrollment - " + str(api))
+            return course_list
+
+        # Save next_url in case there are more pages to get
+        next_url = Canvas._api_next
+
+        for c in current_enrollment:
+            if 'id' in c and 'name' in c:
+                course_list[c['id']] = c['name']
+            else:
+                course_list["ERROR"] = "ERR (" + str(student) + ") - Is this user in canvas? SIS_LOGIN_ID doesn't match."
+
+        # Keep grabbing more until we run out of pages
+        while next_url != '':
+            # Strip off server name
+            api = next_url.replace(Canvas._canvas_server_url, "")
+            current_enrollment = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                                api)  # don't send params, params=p)
+            if current_enrollment is None:
+                print("Error pulling canvas enrollment - " + str(api))
+                return course_list
+
+            next_url = Canvas._api_next
+
+            for c in current_enrollment:
+                if 'id' in c and 'name' in c:
+                    course_list[c['id']] = c['name']
+                else:
+                    course_list["ERROR"] = "ERR (" + str(student) + ") - Is this user in canvas? SIS_LOGIN_ID doesn't match."
+
+        return course_list
 
     @staticmethod
     def get_courses_for_faculty(faculty):
         Canvas.Init()
         # if faculty is 'admin', then get all courses
-        api = "/api/v1/users/sis_user_id:" + faculty + "/courses"
+        #api = "/api/v1/users/sis_user_id:" + faculty + "/courses"
+        api = "/api/v1/users/sis_login_id:" + faculty + "/courses"
         if faculty == 'admin':
             api = "/api/v1/accounts/1/courses"
 
@@ -854,7 +900,10 @@ class Canvas:
         next_url = Canvas._api_next
 
         for c in current_enrollment:
-            course_list[c['id']] = c['name']
+            if 'id' in c and 'name' in c:
+                course_list[c['id']] = c['name']
+            else:
+                course_list["ERROR"] = "ERR (" + str(faculty) + ") - Is this user in canvas? SIS_LOGIN_ID doesn't match."
 
         # Keep grabbing more until we run out of pages
         while next_url != '':
@@ -869,7 +918,10 @@ class Canvas:
             next_url = Canvas._api_next
 
             for c in current_enrollment:
-                course_list[c['id']] = c['name']
+                if 'id' in c and 'name' in c:
+                    course_list[c['id']] = c['name']
+                else:
+                    course_list["ERROR"] = "ERR (" + str(faculty) + ") - Is this user in canvas? SIS_LOGIN_ID doesn't match."
 
         return course_list
 
@@ -1041,6 +1093,87 @@ class Canvas:
                 quiz_bodies[q['id']] = q["description"]
 
         return quiz_bodies
+
+    @staticmethod
+    def get_question_payload_for_quiz(course_id, quiz_id, user_auth_key):
+        payload = list()
+
+        # Get the list of questions for this quiz
+        Canvas.Init()
+        api = "/api/v1/courses/" + str(course_id) + "/quizzes/" + str(quiz_id) + "/questions"
+
+        p = dict()
+        p["per_page"] = 50
+
+        next_url = ""
+        question_objects = dict()
+
+        question_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                    api, params=p)
+        if question_list is None:
+            print("Error pulling question list - " + str(api))
+            return payload
+
+        # If there are more pages, _api_next should have the link to the next page
+        next_url = Canvas._api_next
+        # print("Next URL: " + next_url)
+
+        for q in question_list:
+            question_objects[q['id']] = q
+
+        while next_url != '':
+            # Calls to get more results (and strip off https://canvas.ed/)
+            api = next_url.replace(Canvas._canvas_server_url, "")
+            # print("Next API: " + api)
+            question_list = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                       api)  # Note - don't send params, they are in the api url
+            if question_list is None:
+                print("Error pulling question list - " + str(api))
+                break
+
+            # If there are more pages, _api_next should have the link to the next page
+            next_url = Canvas._api_next
+            # print("Next URL: " + next_url)
+
+            for q in question_list:
+                # print("P: " + str(p))
+                question_objects[q['id']] = q
+
+        # We have the questions, process them and put them in the payload
+        for qid in question_objects:
+            # payload question
+            q = question_objects[qid]
+            question_id = q["id"]
+            quizz_id = q['quiz_id']
+            pq = dict()
+            pq["id"] = question_id
+            pq["course_id"] = course_id
+            pq["quiz_id"] = q["quiz_id"]
+            pq["position"] = q["position"]
+            pq["question_type"] = q["question_type"]
+            pq["quiz_group_id"] = q["quiz_group_id"]
+
+            payload_token = str(uuid.uuid4()).replace("-","")
+            pq["payload_token"] = payload_token
+
+            json_str = json.dumps(q)
+            # Build the payload_hash
+            h = hashlib.sha256()
+            h.update(user_auth_key.encode())
+            h.update(str(course_id).encode())
+            h.update(str(quiz_id).encode())
+            h.update(str(question_id).encode())
+            h.update(payload_token.encode())
+
+            enc_key = h.hexdigest()
+            
+            # Encrypt the payload
+            pl = Util.encrypt(json_str, enc_key)
+            pq["question_payload"] = pl.decode()
+            payload.append(pq)
+
+        return payload
+
 
     @staticmethod
     def get_quiz_questions_for_quiz(course_id, quiz_id):

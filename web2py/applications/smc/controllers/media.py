@@ -14,6 +14,94 @@ from ednet.canvas import Canvas
 from pytube import YouTube
 
 
+def media_list():
+    response.view = "default.json"
+    ret = list()
+
+    search_term = request.vars.get("search_term")
+    if search_term is None or search_term == "":
+        return dumps(ret)
+    
+    print("Search Term: " + search_term)
+
+    # Get media files....
+    query = (
+        (db.media_files.category.contains(search_term)) | 
+        (db.media_files.tags.contains(search_term))
+        )
+    
+    rows = db(query).select()
+    for row in rows:
+        item = dict()
+        item["file_type"] = "media"
+        item["media_guid"] = row.media_guid
+        item["title"] = row.title
+        item["tags"] = row.tags
+        item["category"] = row.category
+        file_list = list()
+
+        prefix = row.media_guid[:2] + "/"
+        base_url = URL('static', 'media') + "/" + prefix
+        
+        
+        file_list.append(
+            base_url + row.media_guid + ".poster.png"
+        )
+
+        file_list.append(
+            base_url + row.media_guid + ".thumb.png"
+        )
+
+        file_list.append(
+            base_url + row.media_guid + ".json"
+        )
+
+        file_list.append(
+            base_url + row.media_guid + ".mp4"
+        )
+        
+        vtt_files = get_media_captions_list(row.media_guid)
+        for v_file in vtt_files:
+            file_list.append(
+                base_url + row.media_guid + "_" + v_file + ".vtt"
+            )
+        
+        item["files"] = file_list
+
+        ret.append(item)
+    
+    # Get document files
+    query = (
+        (db.document_files.category.contains(search_term)) | 
+        (db.document_files.tags.contains(search_term))
+        )
+    
+    rows = db(query).select()
+    for row in rows:
+        item = dict()
+        item["file_type"] = "document"
+        item["document_guid"] = row.document_guid
+        item["title"] = row.title
+        item["tags"] = row.tags
+        item["category"] = row.category
+        file_list = list()
+
+        prefix = row.document_guid[:2] + "/"
+        base_url = URL('static', 'documents') + "/" + prefix
+                
+        file_list.append(
+            base_url + row.document_guid
+        )
+        file_list.append(
+            base_url + row.document_guid + ".json"
+        )
+
+        item["files"] = file_list
+
+        ret.append(item)
+    
+    return dumps(ret)
+
 
 def index():
     ret = start_process_videos()
@@ -1681,6 +1769,9 @@ def find_replace():
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace_step_1():
+    # Force canvasinit to rerun
+    Canvas.Close()
+    Canvas.Init()
     course_list = []
     course_dict = dict()
 
@@ -1706,13 +1797,24 @@ def find_replace_step_1():
 
     if form.accepted:
         #try:
-        cname = course_dict[str(form.vars.current_course)]
-        cid = form.vars.current_course
-        redirect(URL("find_replace_step_2.load", vars=dict(current_course=cid,
-                                                        current_course_name=cname)))
+        # Make sure the course ID is an ID.
+        is_id = False
+        try:
+            c_id = int(form.vars.current_course)
+            is_id = True
+        except:
+            is_id = False
+        
+        if is_id is True:
+            cname = course_dict[str(form.vars.current_course)]
+            cid = form.vars.current_course
+            redirect(URL("find_replace_step_2.load", vars=dict(current_course=cid,
+                                                            current_course_name=cname)))
+        else:
+            response.flash = "Invalid Course Id! " + str(form.vars.current_course)
         #except Exception as ex:
         #    response.flash="Invalid course id " + str(form.vars.current_course) + str(ex) #+ str(course_dict)
-            
+        
         # reload_str = form.vars.current_course
 
     return dict(form1=form)
@@ -2257,6 +2359,7 @@ def find_replace_post_process_text(course_id, txt):
     # Deal with left over cleaup for find/replace
 
     # Find canvas file ids.
+    txt = txt.replace("&lt;CANVAS_FILE_ID", "<CANVAS_FILE_ID").replace("__&gt;", "__>")
     pattern = re.compile("<CANVAS_FILE_ID__(.*)__>")
 
     match = pattern.search(txt)
@@ -2270,12 +2373,16 @@ def find_replace_post_process_text(course_id, txt):
         match = pattern.search(txt)
 
     # Find quizlet IDs  <FLASH_CARD_LINK___2130943___()___>
-    pattern = re.compile("<FLASH_CARD_LINK___([0-9]+)___([a-zA-Z0-9]+)___>")
+    #print("Searcing For Flash Cards..." + txt[:30])
+    # Fix &gt; and &lt; - canvas screws w us sometimes here...
+    txt = txt.replace("&lt;FLASH_CARD", "<FLASH_CARD").replace("___&gt;", "___>")
+    pattern = re.compile('''<FLASH_CARD_LINK___([0-9]+)___([a-zA-Z0-9]+)___>''')
     match = pattern.search(txt)
     while match is not None:
         # Run code to pull info for quizlet
         q_id = match.group(1)
         q_type = match.group(2)
+        print("Processing FLASH_CARD_LINK: " + str(match))
 
         try:
             if pull_single_quizlet_url(q_id, q_type) is True:
@@ -2286,7 +2393,7 @@ def find_replace_post_process_text(course_id, txt):
             else:
                 print("----> Error pulling quizlet: " + str(q_id))
                 error_text = "ERROR_PULLING_QUIZLET_" + str(q_id)
-                txt = txt.replace(match.group(0), error_text)
+                #txt = txt.replace(match.group(0), error_text)
         except Exception as ex:
             print("----> Unknown Exception pulling quizlet data " + str(q_id) + "\n" + str(ex))
             break
@@ -2495,7 +2602,7 @@ def pull_ql_audio(headers, quizlet_url, save_path, url):
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def pull_ql_image(headers, quizlet_url, save_path, image_data):
-    if len(image_data) < 1 or image_data == "False":
+    if image_data is None or len(image_data) < 1 or image_data == "False" or image_data == "None":
         # No image data
         return ""
 
