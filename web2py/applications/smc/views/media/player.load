@@ -1,6 +1,7 @@
 <link rel="stylesheet" href="{{= URL('static', 'video-js') }}/video-js.css" type="text/css" media="screen">
 <script type="text/javascript" src="{{= URL('static', 'video-js') }}/video-js-ie8.min.js"></script>
 
+<!-- jQuery('.video-js').bind('contextmenu',function() { return false; });  -->
 <video
     id="my-video"
     class="video-js"
@@ -11,6 +12,7 @@
     poster="{{=poster}}"
 	data-setup="{}"
 	autoplay="{{=autoplay}}"
+  oncontextmenu="return false;"
   >
     <source src="{{= source_mp4 }}" type="video/mp4" />
 	<!--source src="MY_VIDEO.webm" type="video/webm" / -->

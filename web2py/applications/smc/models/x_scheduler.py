@@ -60,9 +60,9 @@ elif PY3:
     #from urllib import request
 
     def install_proxy(proxy_handler):
-        proxy_support = request.ProxyHandler(proxy_handler)
-        opener = request.build_opener(proxy_support)
-        request.install_opener(opener)
+        proxy_support = urllib.request.ProxyHandler(proxy_handler)
+        opener = urllib.request.build_opener(proxy_support)
+        urllib.request.install_opener(opener)
 
     def unicode(s):
         """No-op."""
@@ -326,7 +326,9 @@ def find_best_yt_stream(yt_url):
 
     # Change out embed for watch so the link works properly
     try:
-        yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
+        proxies = get_youtube_proxies()
+        print("- YT - Using proxies: " + str(proxies))
+        yt = YouTube(yt_url.replace("/embed/", "/watch?v="), proxies=proxies)
     except HTTPError as ex:
         if ex.code == 429:
             # Need to try again later
@@ -380,7 +382,7 @@ def pull_youtube_caption(yt_url, media_guid):
     target_file = get_media_file_path(media_guid, "srt")
     from pytube import YouTube
     try:
-        yt = YouTube(yt_url.replace("/embed/", "/watch?v="))
+        yt = YouTube(yt_url.replace("/embed/", "/watch?v="), proxies=get_youtube_proxies())
     except HTTPError as ex:
         if ex.code == 429:
             # Need to try again later
@@ -389,11 +391,12 @@ def pull_youtube_caption(yt_url, media_guid):
             pass
         print("HTTP ERROR: " + str(ex))
         # Slight pause - let scheduler grab output
-        time.slee(5)
+        time.sleep(5)
         return False
     except Exception as ex:
         msg = "Bad YT URL? " + yt_url + " -- " + str(ex)
         print(msg)
+        return False
 
     for cap in yt.captions:
         lang = cap.code
@@ -473,7 +476,7 @@ def pull_youtube_video(yt_url, media_guid):
         if ex.code == 429:
             # Too many requests - have this try again later...
 
-            sleep_time = 300  # sleep for 5 mins?
+            sleep_time = 60  # sleep for 5 mins?
             if "Retry-After" in ex.headers:
                 sleep_time = int(ex.headers["Retry-After"])
             print("Too many requests - sleeping for a few... " + str(sleep_time))
@@ -493,7 +496,7 @@ def pull_youtube_video(yt_url, media_guid):
         if ex.code == 429:
             # Too many requests - have this try again later...
 
-            sleep_time = 300  # sleep for 5 mins?
+            sleep_time = 60  # sleep for 5 mins?
             if "Retry-After" in ex.headers:
                 sleep_time = int(ex.headers["Retry-After"])
             print("Too many requests - sleeping for a few... " + str(sleep_time))
@@ -592,7 +595,7 @@ def pull_youtube_video(yt_url, media_guid):
     db.commit()
 
     # Throw a little delay in here to help keep from getting blocked by youtube
-    time.sleep(30)
+    time.sleep(15)
     return True
 
 
@@ -712,7 +715,7 @@ def process_wamap_video_links():
                     f.close()
 
                     # Download the video from the internet
-                    yt = YouTube()
+                    yt = YouTube(proxies=get_youtube_proxies())
                     yt_url = yt_url.replace("!!1", "").replace("!!0", "")  # because some urls end up with the
                     # field separator still in it
                     if "/embed/" in yt_url:
