@@ -1846,8 +1846,8 @@ def find_replace_step_2():
     fr_options = dict(
         auto_youtube_tool="YouTube -> SMC Links (ONLY WORKS ONLINE)",
         auto_google_docs_tool="Google Docs -> SMC Links (ONLY WORKS ONLINE)",
+        link_to_pdf="Convert links to PDF file (ONLY WORKS ONLINE)",
         custom_regex="Custom Find/Replace",
-        link_to_pdf="Convert link to PDF file",
     )
 
     option_list = []
@@ -2280,6 +2280,10 @@ def link_to_pdf(course_name, canvas_page):
 # <p><span style="font-weight: 400;"><iframe src="https://www.youtube.com/embed/xXV_gjtXMSk" width="560" height="314" allowfullscreen="allowfullscreen"></iframe></span></p>
 # <p><a href="https://docs.google.com/document/d/17Xeo0daUIf--R49mB2muMr2YTpdMSRsteuTmlEGBq_Q/edit?usp=sharing"><span style="font-weight: 400;">Project Lifecycle Outline</span></a></p>
 # '''
+    # Don't process text if no text provided
+    if canvas_page is None:
+        return canvas_page
+
     # Variable with HTML parsed by beautiful soup.
     soup = bs(canvas_page, 'lxml')
 
@@ -2361,7 +2365,8 @@ def link_to_pdf(course_name, canvas_page):
                     o['href'] = smc_url
                 if 'src' in str(o):
                     o['src'] = smc_url
-                q_tag = soup.new_tag("q", cite=link_URL)
+                q_tag = soup.new_tag("q", cite=link_URL, style="font-size:x-small")
+                q_tag.string = " [ Original Link - " + link_URL + " ]"
                 o.append(q_tag)
 
             # title_number+=1
@@ -2625,7 +2630,7 @@ def web_to_link_download_doc(current_course_name, link_url):
     # Check if exists - return smc link if it does
     row = db(db.document_files.link_to_pdf == link_url).select().first()
     if row is not None:
-        ret = URL('media', 'dl_document', args=[row.document_guid], scheme=True, host=True)
+        ret = URL('media', 'view_document', extension=False, args=[row.document_guid], scheme=True, host=True)
         print("Web Link Already Downloaded: " + str(ret))
         return ret
 
@@ -2738,7 +2743,7 @@ def web_to_link_download_doc(current_course_name, link_url):
                              category=category, tags=tags, link_to_pdf=link_url)
     db.commit()
 
-    ret = URL('media', 'dl_document', args=[file_guid], scheme=True, host=True)
+    ret = URL('media', 'view_document', extension=False, args=[file_guid], scheme=True, host=True)
     return ret
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
