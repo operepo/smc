@@ -213,7 +213,25 @@ class Util:
     def GetCellValue(sheet, row, col, default_val=""):
         ret = default_val
         try:
-            val = str(sheet.cell(row, col).value)
+            val = row[col].value  #.value)
+            if val is None:
+                val = default_val
+            val = str(val)
+            # Strips off the .0 at the end of numbers
+            if val.endswith(".0"):
+                val = val[:-2]
+            ret = val
+        except:
+            # ret = "ERROR!!!"
+            pass
+        return ret
+
+    @staticmethod
+    def GetCellValue2(sheet, row, col, default_val=""):
+        # Old xlrd GetCellValue
+        ret = default_val
+        try:
+            val = str(sheet.cell(row, col))  #.value)
             # Strips off the .0 at the end of numbers
             if val.endswith(".0"):
                 val = val[:-2]

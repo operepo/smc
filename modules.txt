@@ -5,7 +5,8 @@ ecdsa
 isodate
 pytube
 pywinrm
-xlrd
+#xlrd - replaced by openpyxl
+openpyxl
 psutil
 pycryptodome
 urllib3

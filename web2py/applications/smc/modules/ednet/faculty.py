@@ -3,9 +3,9 @@
 from gluon import *
 from gluon import current
 
-#import applications.smc.modules.xlrd
-#from .. import xlrd
-import xlrd
+#import xlrd
+# xlrd - quit supporting xlxs files
+import openpyxl
 import time
 
 from ednet.util import Util
@@ -24,12 +24,14 @@ class Faculty:
         out = DIV(Faculty.ClearImportQueue())
         db = current.db # Grab the current db object
         
-        wbook = xlrd.open_workbook(excel_file)
-        for sheet in wbook.sheets():
-            out.append(DIV("Processing Sheet: " + sheet.name))
+        #wbook = xlrd.open_workbook(excel_file)
+        wbook = openpyxl.load_workbook(excel_file)
+        for sheet in wbook:  # wbook.sheets():
+            out.append(DIV("Processing Sheet: " + sheet.title))
             out.append(DIV("Processing Enabled Faculty."))
             faculty_account_enabled = True  # status 1 = active, 0 = inactive
-            for row in range(sheet.nrows):
+            #for row in range(sheet.nrows):
+            for row in sheet.iter_rows():
                 if Util.GetCellValue(sheet, row, 0).upper() == "USER ID":
                     out.append(DIV("Skipping Header Row."))
                     continue # should be header, skip this line
@@ -56,10 +58,10 @@ class Faculty:
                 import_classes = Util.GetCellValue(sheet, row, 3)
                 program = Util.GetCellValue(sheet, row, 4)
                 additional_fields = ""
-                if sheet.ncols > 5:
-                    additional_fields = Util.GetJSONFromCellRange(sheet, row, 5, sheet.ncols)
+                if len(row) > 5:
+                    additional_fields = Util.GetJSONFromCellRange(sheet, row, 5, len(row))
 
-                sheet_name = sheet.name
+                sheet_name = sheet.title
                 faculty_guid = None
                 account_enabled = faculty_account_enabled
                 account_added_on = time.strftime("%c")
