@@ -2677,10 +2677,20 @@ def web_to_link_download_doc(current_course_name, link_url):
 
     target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
 
-    original_file_name = link_url + '.pdf'
+    # For links that are NOT PDF already, do pdfkit
+    if not link_url.lower().endswith('.pdf'):
+        original_file_name = link_url + '.pdf'
 
-    # PDF conversion of web link.
-    pdfkit.from_url(link_url, target_file)
+        # PDF conversion of web link.
+        pdfkit.from_url(link_url, target_file)
+    else:
+        # This is a PDF file, just download it.
+        original_file_name = link_url
+        req = requests.get(link_url, stream=True)
+        with open(target_file, 'wb') as f:
+            for block in req.iter_content(1024):
+                f.write(block)
+    
 
     # # Download the file
     # try:

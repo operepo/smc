@@ -20,4 +20,5 @@ webvtt-py
 langcodes
 bs4
 pdfkit
+# Make sure to install wkhtmltopdf
 lxml
