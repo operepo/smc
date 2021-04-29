@@ -28,6 +28,11 @@ if db_init_needed:
     auth.add_permission(name='credential', group_id=auth.id_group(role='Faculty'))
     db.commit()
 
+    # Make sure versions are all 0 (no nulls)
+    db(db.document_files.item_version == None).update(item_version=0)
+    db(db.media_files.item_version == None).update(item_version=0)
+    db.commit()
+
 new_admin = False
 # Starting Users
 if db_init_needed and db(db.auth_user.id > 0).count() == 0:

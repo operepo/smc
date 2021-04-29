@@ -418,7 +418,8 @@ db.define_table('media_files',
                 Field('views', 'integer', default=0),
                 Field('youtube_url', 'string', default=''),
                 Field('needs_downloading', 'boolean', default=False),
-                auth.signature
+                auth.signature,
+                Field('item_version', 'bigint', default=0),
                 )
 
 # Indexes
@@ -454,7 +455,8 @@ db.define_table('document_files',
                 Field('google_url', 'string', default=''),
                 auth.signature,
                 Field('source_url', 'string', default=''),
-                Field('link_to_pdf', 'string', default='')
+                Field('link_to_pdf', 'string', default=''),
+                Field('item_version', 'bigint', default=0),
                 )
 
 # Indexes

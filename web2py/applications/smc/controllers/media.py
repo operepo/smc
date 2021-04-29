@@ -9,8 +9,10 @@ import glob
 import mimetypes
 from gluon.contrib.simplejson import loads, dumps
 import requests
-import pdfkit
+#import pdfkit
+from weasyprint import HTML
 import lxml
+import tempfile
 
 from ednet.canvas import Canvas
 from pytube import YouTube
@@ -2504,6 +2506,79 @@ def test_find_replace_google_download_doc():
     return locals()
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def refresh_google_document(doc_row):
+    ret = False
+
+    # Figure out the google URL
+    google_url = doc_row["google_url"]
+
+    # Get the format (pdf, epub, etc...)
+    fname, export_format = os.path.split(doc_row["original_file_name"])
+
+    # Need to pull the google document id from the URL
+    # Regular expression to pull out the id
+    find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)(/edit(\?usp=sharing){0,1}){0,1}'''
+    matches = re.search(find_str, google_url)
+
+    if matches is None:
+        msg = "No google doc id found in " + str(google_url)
+        print(msg)
+        return ret
+
+    # Grab the ID from the match
+    doc_id = matches.group(3)
+
+    # URL to export from
+    export_url = "https://docs.google.com/document/export?format=" + export_format + "&id=" + str(doc_id)
+
+    # Hit the url and start pulling the file, we will check the modified header.
+    try:
+        #req = urllib.urlopen(export_url)
+        req = requests.get(export_url, stream=True)
+        req.headers['']
+        # TODO - Check modified header
+
+        with open(target_file, 'wb') as f:
+            for block in req.iter_content(1024):
+                f.write(block)
+
+        # Should have file name in the content-disposition header
+        # content-disposition: attachment; filename="WB-CapitalLettersPunctuation.epub";
+        # filename*=UTF-8''WB%20-%20Capital%20Letters%20%26%20Punctuation.epub
+        content_type = str(req.headers['Content-Type'])
+        content_disposition = str(req.headers['content-disposition'])
+        # split the content-disposition into parts and find the original filename
+        parts = content_disposition.split("; ")
+        for part in parts:
+            if "filename=" in part:
+                parts2 = part.split("=")
+                p = parts2[1]
+                p = p.strip('"')  # strip off "s
+                if p is not None and p != "":
+                    original_file_name = p
+                    break
+
+    except Exception as ex:
+        print("Error trying to save google doc file: " + str(export_url) + " - " + str(ex))
+        return ret
+
+
+    return ret
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def refresh_google_docs():
+    # Go through list of google docs and get fresh copies if they are newer.
+    rows = db((db.document_files.google_url != None) & (db.document_files.google_url != "")).select()
+    documents_updated = 0
+    for row in rows:
+        if refresh_google_document(row) == True:
+            documents_updated += 1
+        # TODO - DEBUG - remove this - only process 1 while testing.
+        break
+
+    return dict(rows_processed=len(rows), documents_updated=documents_updated)
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace_google_download_doc(current_course_name, export_format, doc_url):
     # Will return the new SMC url or empty string if an error occurs
     ret = ""
@@ -2623,6 +2698,13 @@ def find_replace_google_download_doc(current_course_name, export_format, doc_url
     return ret
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def test_web_to_link_download_doc():
+    response.view='generic.json'
+
+    ret = web_to_link_download_doc("TEST_COURSE", "https://google.com")
+    return dict(ret=ret)
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def web_to_link_download_doc(current_course_name, link_url):
     # Will return the new SMC url or empty string if an error occurs
     ret = ""
@@ -2633,28 +2715,6 @@ def web_to_link_download_doc(current_course_name, link_url):
         ret = URL('media', 'view_document', extension=False, args=[row.document_guid], scheme=True, host=True)
         print("Web Link Already Downloaded: " + str(ret))
         return ret
-
-    # Not sure if I need this code below.
-
-    # Regular expression to pull out the id
-    # find_str = r'''https://(drive|docs)[.]google[.]com/(document/d/|open[?]{1}id=)([a-zA-Z0-9_-]+)(/edit(\?usp=sharing){0,1}){0,1}'''
-    # matches = re.search(find_str, doc_url)
-
-    # if matches is None:
-    #     msg = "No google doc id found in " + str(doc_url)
-    #     print(msg)
-    #     return ret
-
-    # Grab the ID from the match
-    # doc_id = matches.group(3)
-
-    # if export_format == "":
-    #     export_format = "epub"
-
-    # Make export link
-    # export_url = "https://docs.google.com/document/export?format=" + export_format + "&id=" + str(doc_id)
-
-    # print("Pulling google doc: " + export_url)
 
     # Figure out a local file name
     (w2py_folder, applications_folder, app_folder) = get_app_folders()
@@ -2677,12 +2737,15 @@ def web_to_link_download_doc(current_course_name, link_url):
 
     target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
 
-    # For links that are NOT PDF already, do pdfkit
+    # For links that are NOT PDF already, convert to PDF
     if not link_url.lower().endswith('.pdf'):
         original_file_name = link_url + '.pdf'
-
+        
         # PDF conversion of web link.
-        pdfkit.from_url(link_url, target_file)
+        #pdfkit.from_url(link_url, target_file)
+        HTML(link_url).write_pdf(target_file)
+        
+        print("-- HTML -> PDF Completed from: " + link_url)
     else:
         # This is a PDF file, just download it.
         original_file_name = link_url
@@ -2690,35 +2753,6 @@ def web_to_link_download_doc(current_course_name, link_url):
         with open(target_file, 'wb') as f:
             for block in req.iter_content(1024):
                 f.write(block)
-    
-
-    # # Download the file
-    # try:
-    #     #req = urllib.urlopen(export_url)
-    #     req = requests.get(export_url, stream=True)
-    #     with open(target_file, 'wb') as f:
-    #         for block in req.iter_content(1024):
-    #             f.write(block)
-
-    #     # Should have file name in the content-disposition header
-    #     # content-disposition: attachment; filename="WB-CapitalLettersPunctuation.epub";
-    #     # filename*=UTF-8''WB%20-%20Capital%20Letters%20%26%20Punctuation.epub
-    #     content_type = str(req.headers['Content-Type'])
-    #     content_disposition = str(req.headers['content-disposition'])
-    #     # split the content-disposition into parts and find the original filename
-    #     parts = content_disposition.split("; ")
-    #     for part in parts:
-    #         if "filename=" in part:
-    #             parts2 = part.split("=")
-    #             p = parts2[1]
-    #             p = p.strip('"')  # strip off "s
-    #             if p is not None and p != "":
-    #                 original_file_name = p
-    #                 break
-
-    # except Exception as ex:
-    #     print("Error trying to save google doc file: " + str(export_url) + " - " + str(ex))
-    #     return ret
 
     # Now add the info to the database.
     output_meta = target_file + ".json"

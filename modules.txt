@@ -19,6 +19,6 @@ pycanvas
 webvtt-py
 langcodes
 bs4
-pdfkit
-# Make sure to install wkhtmltopdf
+weasyprint  # see additional notes https://weasyprint.readthedocs.io/en/stable/install.html
+# apk --update --upgrade add gcc musl-dev jpeg-dev zlib-dev libffi-dev cairo-dev pango-dev gdk-pixbuf-dev
 lxml
