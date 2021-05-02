@@ -2134,8 +2134,13 @@ def find_replace_link_to_pdf():
         redirect(URL("find_replace.html"))
 
     form1 = FORM(TABLE(TR("Ready to run click GO: "),
-                       TR("", INPUT(_type="submit", _value="GO"))),
-                 _action=URL('media', 'find_replace_link_to_pdf.load', user_signature=True)).process(keepvalues=True)
+                       TR(INPUT(_type="submit", _value="GO", 
+                            _onclick="$('#link_to_pdf_progress').attr('src', '" + URL('static', 'images/progress.gif') + "' );"),
+                            IMG(_id='link_to_pdf_progress', _width=64, _height=64, _src=URL('static', 'images/empty.png'))
+                            ),
+                       ),
+                 _action=URL('media', 'find_replace_link_to_pdf.load', user_signature=True),
+                 _id='link_to_pdf_form').process(keepvalues=True)
 
     find_replace_results = ""
 
