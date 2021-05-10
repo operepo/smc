@@ -13,6 +13,7 @@ import requests
 from weasyprint import HTML
 import lxml
 import tempfile
+import shutil
 
 from ednet.canvas import Canvas
 from pytube import YouTube
@@ -2518,7 +2519,9 @@ def refresh_google_document(doc_row):
     google_url = doc_row["google_url"]
 
     # Get the format (pdf, epub, etc...)
-    fname, export_format = os.path.split(doc_row["original_file_name"])
+    fname, export_format = os.path.splitext(doc_row["original_file_name"])
+    # Strip off the .
+    export_format = export_format.replace(".", "")
 
     # Need to pull the google document id from the URL
     # Regular expression to pull out the id
@@ -2536,37 +2539,51 @@ def refresh_google_document(doc_row):
     # URL to export from
     export_url = "https://docs.google.com/document/export?format=" + export_format + "&id=" + str(doc_id)
 
+    # Need to figure out file target path
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+
+    # static/documents/01/010102alj29v.... (no file extension)
+    # generate new uuid
+    file_guid = doc_row['document_guid']
+    # print("File GUID: " + str(file_guid))
+    target_folder = os.path.join(app_folder, 'static', 'documents')
+
+    file_prefix = file_guid[0:2]
+
+    target_folder = os.path.join(target_folder, file_prefix)
+    # print("Target Dir: " + target_folder)
+
+    try:
+        os.makedirs(target_folder, exist_ok=True)
+    except OSError as message:
+        pass
+
+    target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
+    if not os.path.exists(target_file):
+        print("Original file not downloaded!: " + str(google_url))
+        return False
+    target_file_tmp = target_file + ".dltmp"
     # Hit the url and start pulling the file, we will check the modified header.
     try:
         #req = urllib.urlopen(export_url)
         req = requests.get(export_url, stream=True)
-        req.headers['']
-        # TODO - Check modified header
-
-        with open(target_file, 'wb') as f:
+        # Throw exception if failed to get document
+        req.raise_for_status()
+        
+        # Save the new file
+        with open(target_file_tmp, 'wb') as f:
             for block in req.iter_content(1024):
                 f.write(block)
 
-        # Should have file name in the content-disposition header
-        # content-disposition: attachment; filename="WB-CapitalLettersPunctuation.epub";
-        # filename*=UTF-8''WB%20-%20Capital%20Letters%20%26%20Punctuation.epub
-        content_type = str(req.headers['Content-Type'])
-        content_disposition = str(req.headers['content-disposition'])
-        # split the content-disposition into parts and find the original filename
-        parts = content_disposition.split("; ")
-        for part in parts:
-            if "filename=" in part:
-                parts2 = part.split("=")
-                p = parts2[1]
-                p = p.strip('"')  # strip off "s
-                if p is not None and p != "":
-                    original_file_name = p
-                    break
+        # If succes, move it over the old file
+        shutil.move(target_file_tmp, target_file)
 
+        ret = True
+        print("-> Latest GDoc downloaded: " + str(google_url))
     except Exception as ex:
-        print("Error trying to save google doc file: " + str(export_url) + " - " + str(ex))
+        print("Error trying to save google doc file: " + str(export_url) + "\n - " + str(ex))
+        ret = False
         return ret
-
 
     return ret
 
@@ -2578,8 +2595,6 @@ def refresh_google_docs():
     for row in rows:
         if refresh_google_document(row) == True:
             documents_updated += 1
-        # TODO - DEBUG - remove this - only process 1 while testing.
-        break
 
     return dict(rows_processed=len(rows), documents_updated=documents_updated)
 
