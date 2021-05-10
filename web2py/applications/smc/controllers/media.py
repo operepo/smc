@@ -2589,6 +2589,7 @@ def refresh_google_document(doc_row):
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def refresh_google_docs():
+    response.view = 'generic.html'
     # Go through list of google docs and get fresh copies if they are newer.
     rows = db((db.document_files.google_url != None) & (db.document_files.google_url != "")).select()
     documents_updated = 0
