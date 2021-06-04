@@ -1057,7 +1057,176 @@ def flush_redis_keys():
         print("Error flushing redis keys! \n" + str(ex))
     # Slight pause - let scheduler grab output
     time.sleep(5)
-    return true
+    return True
+
+def tag_media_in_class(media_id, class_name):
+    row = db(db.media_files.media_guid==media_id).select().first()
+    if row is None:
+        # print("Invalid Media ID: " + str(media_id))
+        return False
+    
+    # Add course name to tags
+    tags = row['tags']
+    if tags is None:
+        tags = list()
+    if class_name not in tags:
+        tags.append(class_name)
+        row.update_record(tags=tags)
+        db.commit()
+        save_media_file_json(media_id)
+    return True
+
+def tag_document_in_class(document_id, class_name):
+    row = db(db.document_files.document_guid==document_id).select().first()
+    if row is None:
+        # print("Invalid Document ID: " + str(document_id))
+        return False
+    
+    # Add course name to tags
+    tags = row['tags']
+    if tags is None:
+        tags = list()
+    if class_name not in tags:
+        tags.append(class_name)
+        row.update_record(tags=tags)
+        db.commit()
+        save_document_file_json(document_id)
+    return True
+
+def find_smc_media_in_text(class_id, class_name, search_text):
+    import re
+    links_found = 0
+    if search_text is None:
+        return 0
+
+    # Regular expression to find google docs
+    media_find_str = r'''(/static/media/[a-zA-Z0-9]{2}/|/media/player(\.load){0,1}/)([a-zA-Z0-9]+)(\?){0,1}'''
+    document_find_str = r'''(/media/dl_document/)([a-zA-Z0-9]+)(\?){0,1}'''
+
+    # Match examples
+    # <iframe width="650" height="405" src="https://smc.ed/media/player.load/24bf1a954e3640f1bdcda6804f7d99c4" frameborder="0" allowfullscreen></iframe>
+    # <iframe width="650" height="405" src="https://smc.ed/media/player.load/24bf1a954e3640f1bdcda6804f7d99c4?autoplay=true" frameborder="0" allowfullscreen></iframe>
+    # https://smc.ed/media/player.load/24bf1a954e3640f1bdcda6804f7d99c4
+    # https://smc.ed/media/player.load/24bf1a954e3640f1bdcda6804f7d99c4?autoplay=true
+    # https://smc.ed/media/player/24bf1a954e3640f1bdcda6804f7d99c4
+    # <iframe width="650" height="405" src="https://smc.ed/media/player/24bf1a954e3640f1bdcda6804f7d99c4" frameborder="0" allowfullscreen></iframe>
+    # https://smc.ed/smc/static/media/24/24bf1a954e3640f1bdcda6804f7d99c4.mp4
+
+    # <iframe src="https://smc.ed/smc/static/ViewerJS/index.html#/media/dl_document/3fa5529ded38433ebebe6e1cc41398e9" width="100%" height="720" allowfullscreen="allowfullscreen" webkitallowfullscreen="webkitallowfullscreen"></iframe>
+    # https://smc.ed/media/dl_document/3fa5529ded38433ebebe6e1cc41398e9
+
+    # Find media matches
+    matches = re.finditer(media_find_str, search_text)
+    for m in matches:
+        links_found += 1
+
+        # ID should be in group 3
+        media_id = m.group(3)
+        # print("Found Media ID: " + media_id)
+        # Tag media w course info
+        tag_media_in_class(media_id, class_name)
+
+
+    # Find document matches
+    matches = re.finditer(document_find_str, search_text)
+    for m in matches:
+        links_found += 1
+
+        # ID should be in group 2
+        document_id = m.group(2)
+        # print("Found Document ID: " + document_id)
+        # Tag it
+        tag_document_in_class(document_id, class_name)
+
+    return links_found
+
+def canvas_tag_smc_resources(class_id, class_name):
+    # print("canvas_tag_smc_resources " + str(class_id) + "/" + str(class_name))
+    print("Processing " + str(class_name) + "/" + str(class_id))
+
+    log_txt = ""
+
+    # === Pull all pages and extract links ===
+    items = Canvas.get_page_list_for_course(class_id)
+    total_pages = len(items)
+    total_pages_links = 0
+    for i in items:
+        orig_text = items[i]
+        
+        log_txt += "\n\nWorking on Page: " + str(i)
+        links_found = find_smc_media_in_text(class_id, class_name, orig_text)
+        total_pages_links += links_found
+        log_txt += "\n - " + str(links_found) + " links found in text"
+
+
+    # === Pull all quizzes and extract links ===
+    items = Canvas.get_quiz_list_for_course(class_id)
+    total_quizzes = len(items)
+    total_quizzes_links = 0
+    total_questions_links = 0
+    for i in items:
+        orig_text = items[i]
+        log_txt += "\n\nWorking on Quiz: " + str(i)
+
+        links_found = find_smc_media_in_text(class_id, class_name, orig_text)
+        total_quizzes_links += links_found
+        log_txt += "\n - " + str(links_found) + " links found in text"
+
+        quiz_id = i
+        # === Pull all questions and extract links ===
+        q_items = Canvas.get_quiz_questions_for_quiz(class_id, quiz_id)
+        total_questions = len(q_items)
+        for q in q_items:
+            q_orig_text = q_items[q]
+            log_txt += "\n\n&nbsp;&nbsp;&nbsp;&nbsp;Working on question: " + str(q)
+
+            links_found = find_smc_media_in_text(class_id, class_name, q_orig_text)
+            total_questions_links += links_found
+            log_txt += "\n - " + str(links_found) + " links found in text"
+
+
+    # === Pull all discussion topics and extract links ===
+    items = Canvas.get_discussion_list_for_course(class_id)
+    total_discussions = len(items)
+    total_discussions_links = 0
+    for i in items:
+        orig_text = items[i]
+        log_txt += "\n\nWorking on Discussion: " + str(i)
+
+        links_found = find_smc_media_in_text(class_id, class_name, orig_text)
+        total_discussions_links += links_found
+        log_txt += "\n - " + str(links_found) + " links found in text"
+        
+    
+    # === Pull all assignments and extract links ===
+    items = Canvas.get_assignment_list_for_course(class_id)
+    total_assignments = len(items)
+    total_assignments_links = 0
+    for i in items:
+        orig_text = items[i]
+        log_txt += "\n\nWorking on Assignment: " + str(i)
+
+        links_found = find_smc_media_in_text(class_id, class_name, orig_text)
+        total_assignments_links += links_found
+        log_txt += "\n - " + str(links_found) + " links found in text"
+   
+    total_all_links = total_pages_links + total_quizzes_links + total_questions_links + total_discussions_links + total_assignments_links
+    print(
+        "<b>SMC Links Found</b>\n" +
+        "-----------------------------\n" +
+        "Page Links                 {0}\n".format(total_pages_links) +
+        "Quizz Links                {0}\n".format(total_quizzes_links) +
+        " Quizz Question Links      {0}\n".format(total_questions_links) +
+        "Discussion Links           {0}\n".format(total_discussions_links) +
+        "Assignment Links           {0}\n".format(total_assignments_links) +
+        "-----------------------------\n" +
+        "Total Links                    {0}\n".format(total_all_links)
+    )
+
+    print(log_txt)
+    # Slight pause so that output gets sent out
+    time.sleep(2)
+    return True
 
 # Enable the scheduler
 from gluon.scheduler import Scheduler
@@ -1076,6 +1245,7 @@ scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=3,
                                  update_document_database_from_json_files=update_document_database_from_json_files,
                                  flush_redis_keys=flush_redis_keys,
                                  pull_youtube_caption=pull_youtube_caption,
+                                 canvas_tag_smc_resources=canvas_tag_smc_resources,
                                  ))
 current.scheduler = scheduler
 

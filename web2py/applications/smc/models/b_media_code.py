@@ -15,6 +15,7 @@ from gluon.contrib.simplejson import loads, dumps
 import requests
 from langcodes import *
 import webvtt
+import traceback
 
 from ednet.canvas import Canvas
 
@@ -236,6 +237,10 @@ def load_media_file_json(file_guid):
                 else:
                     meta[f] = ""
         
+        if type(meta['tags']) is list:
+            # Need to convert to string for later
+            meta['tags'] = dumps(meta['tags'])
+            
         # See if the item is in the database
         item = db.media_files(media_guid=meta['media_guid'])
         if item is None:
@@ -328,6 +333,10 @@ def load_document_file_json(file_guid):
                 else:
                     meta[f] = ""
         
+        if type(meta['tags']) is list:
+            # Need to convert to string for later
+            meta['tags'] = dumps(meta['tags'])
+
         # See if the item is in the database
         item = db.document_files(document_guid=meta['document_guid'])
         if item is None:
@@ -346,8 +355,11 @@ def load_document_file_json(file_guid):
             db.commit()
     except Exception as ex:
         print("Error processing document file: ", json_file, str(ex))
+        traceback.print_exc()
         # db.rollback()
 
+    # Make sure to release the lock on this db
+    db.commit()
     return True
 
 
@@ -483,3 +495,4 @@ def getPDFURLS(txt):
         if 'pdf' in r:
             ret.append(r)
     return ret
+

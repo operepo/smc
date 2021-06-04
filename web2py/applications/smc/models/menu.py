@@ -40,6 +40,7 @@ response.menu = [
             (T(u'Media Utilities \u2bc8 Scan Media Files'), False, URL('media', 'scan_media_files')),
             (T(u'Media Utilities \u2bc8 Re-try failed YouTube Videos'), False, URL('media', 'yt_requeue')),
             (T(u'Media Utilities \u2bc8 Refresh Google Docs'), False, URL('media', 'refresh_google_docs')),
+            (T(u'Media Utilities \u2bc8 Tag Resouces By Class'), False, URL('media', 'tag_resources_by_class')),
             (T(u'Media Utilities \u2bc8 WAMAP Import'), False, URL('media', 'wamap_import')),
         #]),
 

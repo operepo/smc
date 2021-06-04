@@ -20,6 +20,174 @@ from pytube import YouTube
 from bs4 import BeautifulSoup as bs
 
 
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def tag_resources_by_class_status():
+    running_query = (
+        (db_scheduler.scheduler_task.task_name=="canvas_tag_smc_resources") &
+        (db_scheduler.scheduler_task.status=="RUNNING")
+        )
+    
+    completed_query = (
+        (db_scheduler.scheduler_task.task_name=="canvas_tag_smc_resources") &
+        (db_scheduler.scheduler_task.status=="COMPLETED")
+        )
+    
+    queued_query = (
+        (db_scheduler.scheduler_task.task_name=="canvas_tag_smc_resources") &
+        (db_scheduler.scheduler_task.status=="QUEUED")
+        )
+    
+    failed_query = (
+        (db_scheduler.scheduler_task.task_name=="canvas_tag_smc_resources") &
+        (db_scheduler.scheduler_task.status=="FAILED")
+        )
+
+    last_run_query = (
+        (db_scheduler.scheduler_task.task_name=="canvas_tag_smc_resources") &
+        ((db_scheduler.scheduler_task.status=="FAILED") | (db_scheduler.scheduler_task.status=="COMPLETED"))
+    )
+    
+    running_count = db_scheduler(running_query).count()
+    completed_count = db_scheduler(completed_query).count()
+    queued_count = db_scheduler(queued_query).count()
+    failed_count = db_scheduler(failed_query).count()
+
+    last_task_record = db_scheduler(last_run_query).select(orderby=~db_scheduler.scheduler_task.id).first()
+    # Pull the output
+    last_run_output = ""
+    last_run_traceback = ""
+    last_run_status = ""
+    if last_task_record:
+        last_run_status = last_task_record.status
+        for r in last_task_record.scheduler_run.select():
+            last_run_output = r['run_output']
+            last_run_traceback = r['traceback']
+    
+    if last_run_output is None:
+        last_run_output = ""
+    if last_run_traceback is None:
+        last_run_traceback = ""
+
+    last_run_output = "<b style='color: blue'>" + str(last_run_status) + "</b>\n" + last_run_output + "\n" + last_run_traceback
+    last_run_output = last_run_output.replace("\n", "<br>")
+
+    # Make a table for the results
+    t = TABLE(
+        TR(
+            TH("Job Stats"),
+            TH("")
+            
+        ),
+        TR(
+            TD("Queued:", _style="font-size: small;"),
+            TD(queued_count, _style="font-size: small;")
+        ),
+        TR(
+            TD("Running:", _style="font-size: small;"),
+            TD(running_count, _style="font-size: small;")
+        ),
+        TR(
+            TD("Completed:", _style="font-size: small;"),
+            TD(completed_count, _style="font-size: small;")
+        ),
+        TR(
+            TD("Failed:", _style="font-size: small;"),
+            TD(failed_count, _style="font-size: small;")
+        ),
+        TR(
+            TD(" "),
+            TD(" ")
+        ),
+        TR(
+            TH("Last Run Output:")
+        ),
+        TR(
+            TD(
+                XML(last_run_output),
+                _colspan=2,
+                _style="font-size: x-small"
+                )
+        ),
+        _style='width: 400px; margin-left: 25px; margin-right: 25px;',
+    )
+
+    return XML(t)
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def tag_resources_by_class():
+    ret = {
+        'form': None
+    }
+
+    Canvas.Close()
+    Canvas.Init()
+    course_list = []
+    course_dict = dict()
+
+    if Canvas._canvas_integration_enabled is not True:
+        form = "<b style='color: red; font-size: 48px;'>Canvas Integration needs to be Enabled in the admin menu before this tool will work.</b>"
+        return dict(form=XML(form))
+
+    courses = Canvas.get_courses_for_faculty(auth.user.username)
+
+    sorted_course_dict = dict()
+    for c in courses:
+        sorted_course_dict[courses[c]] = str(c)
+        course_dict[str(c)] = courses[c]
+    # Sort the keys and add them to the select list
+    course_list.append(OPTION("ALL COURSES", _vaule="ALL COURSES"))
+    for k in sorted(sorted_course_dict.keys()):    
+        course_list.append(OPTION(str(k), _value=str(sorted_course_dict[k])))
+
+    course_select = SELECT(course_list, _name="current_course", _id="current_course", _style="width: 600px;")
+
+    form = FORM(TABLE(TR("Choose a course: ", course_select),
+                      TR("", INPUT(_type="submit", _value="Next"))), _name="fr_step1").process(formname="fr_step1",
+                                                                                               keepvalues=True)
+    ret['form'] = form
+
+    if form.accepted:
+        selected_course = form.vars.current_course
+        # print(selected_course)
+        # print(courses)
+        selected_courses = dict()
+        if selected_course == "ALL COURSES":
+            # print("ALL COURSES")
+            selected_courses = courses
+        else:
+            # Convert to ID
+            selected_course = int(selected_course)
+            if selected_course in courses:
+                # print("Adding Course: " + str(selected_course))
+                selected_courses[selected_course] = courses[selected_course]
+            else:
+                # print("Not in courses: " + str(selected_course))
+                pass
+
+        if len(selected_courses.keys()) < 1:
+            response.flash = "No courses selected!"
+        else:
+            job_count = 0
+            # Loop through the course list and create jobs for each one.
+            for c in selected_courses.keys():
+                class_id = c
+                class_name = selected_courses[c]
+                result = scheduler.queue_task(
+                    'canvas_tag_smc_resources',
+                    pvars=dict(class_id=c, class_name=class_name),
+                    timeout=3600,
+                    immediate=True,
+                    sync_output=1,
+                    group_name="misc"
+                )
+                # print(c)
+                job_count += 1
+            
+            response.flash = str(job_count) + " job(s) scheduled."
+
+    return ret
+
 def media_list():
     response.view = "default.json"
     ret = list()
@@ -421,11 +589,11 @@ def dl_document():
         document_file = db(db.document_files.document_guid == document_id).select().first()
         media_type = ""
         if document_file is not None:
-            title = document_file.title
-            description = document_file.description
+            title = str(document_file.title)
+            description = str(document_file.description)
             tags = ",".join(document_file.tags)
             views = document_file.views
-            original_file_name = document_file.original_file_name
+            original_file_name = str(document_file.original_file_name)
         pass
         p, media_type = os.path.splitext(original_file_name)
         mimetypes.init()
