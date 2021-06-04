@@ -1,0 +1,34 @@
+{{extend 'layout.html'}}
+
+<script>
+	$(function() {
+		GetProcessQueue();
+		window.setInterval(function() {GetProcessQueue();}, 8000);
+	});
+		
+	function GetProcessQueue() {
+		web2py_component('{{=URL('media', 'tag_resources_by_class_status.load')}}',
+							target='process_queue_view');
+		
+	}
+</script>
+
+<h1>Tag Resources By Class</h1>
+<div style="margin-bottom: 50px;">
+	This tool searches a canvas course for SMC links and tags the resource with the proper course tag 
+	making it easy to see which courses use a resource.
+</div>
+
+<div id="process_queue" class='well' style='float:right; width: 450px; height: 360px; overflow: auto; border: 1px solid black;'>
+	<div id="process_queue_view">
+		<img src="{{=URL('static', 'images/progress.gif') }}" />
+	</div>
+	<!--LOAD('media', 'process_queue.load',content=DIV(IMG(_src=URL('static', 'images/progress.gif'), _alt='Loading...', _style='float: left;'), P('Getting Process Queue')), ajax=True) -->
+</div>
+
+
+<div>
+	{{=form}}
+</div>
+
+
