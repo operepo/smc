@@ -506,7 +506,10 @@ class Canvas:
                 import_str += "\"" + tmp_str + "\"\n"
                 # 01103,bsmith01,,Bob,Smith,Bobby Smith,bob.smith@myschool.edu,active"
                 # Convert to utf-8
-                import_str = unicode(import_str, "utf-8")
+                # Note - not needed - running on py3, already unicode
+                #import_str = unicode(import_str, "utf-8")
+
+
                 # ret += "IMPORT STR: [" + import_str + "]"
                 p = dict()
                 p["import_type"] = "instructure_csv"
