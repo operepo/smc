@@ -30,6 +30,68 @@ auth.settings.allow_basic_login = True
 import module_reload
 ret = module_reload.ReloadModules()
 
+@auth.requires_membership("Administrators")
+def test_youtube():
+    response.view = 'generic.json'
+    ret = dict()
+    
+
+    yt_url = "https://www.youtube.com/watch?v=jAMGMKlBSV0"
+
+    yt, stream, res = find_best_yt_stream(yt_url)
+    ret['yt'] = str(yt)
+    ret['stream'] = str(stream)
+    ret['res'] = str(res)
+
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+    target_folder = os.path.join(app_folder, 'static', 'media')
+    output_mp4_filename = "test.mp4"
+
+    print("Downloading " + str(yt_url)+"\n\n")
+    stream.download(output_path=target_folder, filename=output_mp4_filename)  # put in folder name
+    print("\nDownload Complete!")
+
+    return ret
+
+
+@auth.requires_membership("Administrators")
+def test_imscc_import():
+    response.view = 'generic.json'
+    
+    if Canvas.Connect() is not True:
+            return dict(error="Couldn't Connect to Canvas!")
+    
+    #access_token = AppSettings.GetValue('canvas_access_token', '')
+    import urllib
+    
+    source_url = "http://gateway.<DOMAIN>/migrations/" + urllib.parse.quote("course_file.imscc")
+    course_id = "502033000000079"
+            
+    p = dict()
+    p["migration_type"] = "canvas_cartridge_importer"
+    p["settings[file_url]"] = source_url
+    
+    new_migration = None
+    new_migration = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                     "/api/v1/courses/" + course_id + "/content_migrations",
+                                      method="POST", params=p)
+    
+    ret = dict()
+    ret["url"] = Canvas._canvas_server_url
+    ret["output"] = str(new_migration)
+        
+    return ret
+
+@auth.requires_membership("Administrators")
+def test_streamlink():
+    import streamlink
+
+    streams = streamlink.streams("https://www.youtube.com/watch?v=T9gewxW9zVY")
+    trys = ['720p', '360p', 'best', 'worst']
+    stream = streams['720p']
+
+
+    return dict(s=stream)
 
 @auth.requires_membership("Administrators")
 def test_yt_proxies():

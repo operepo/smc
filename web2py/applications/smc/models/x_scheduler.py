@@ -148,7 +148,7 @@ def process_media_file(media_id):
     # Find number of CPUs
     cpus = int(multiprocessing.cpu_count())
     # Drop the number of threads so we don't use up all CPU power
-    cpus -= 2
+    cpus -= 3 # W 4 cpus, use only one, always leave 3 for processing if available.
     if cpus < 1:
         cpus = 1
     
@@ -463,7 +463,7 @@ def pull_youtube_video(yt_url, media_guid):
     target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
 
     output_mp4 = target_file + ".mp4"
-    output_mp4_filename = file_guid  # Note - don't add mp4 as yt will do that
+    output_mp4_filename = file_guid + ".mp4"  # Note - NOT -it quits adding it? - don't add mp4 as yt will do that
     output_meta = target_file + ".json"
     output_poster = target_file + ".poster.png"
     output_thumb = target_file + ".thumb.png"

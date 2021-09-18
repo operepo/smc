@@ -1,4 +1,12 @@
 
+"""
+Links to canvas resources
+
+https://github.com/ucfopen/canvasapi
+https://github.com/unsupported/canvas/tree/master/canvas_data/sync_canvas_data/python
+
+"""
+
 
 def dom_test():
     html = """
