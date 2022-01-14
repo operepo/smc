@@ -16,6 +16,8 @@ import tempfile
 import shutil
 
 from ednet.canvas import Canvas
+from ednet.appsettings import AppSettings
+
 from pytube import YouTube
 from bs4 import BeautifulSoup as bs
 
@@ -647,15 +649,24 @@ def player():
     category = ""
     tags = ""
     youtube_url = ""
-    # default to off
-    autoplay = "false"
-    if request.vars.autoplay == "true":
+    # grab default from the app settings to determine autoplay
+    autoplay = "true"
+    autoplay_disabled = AppSettings.GetValue('disable_media_auto_play', True)
+    # print(f"AutoPlayDisabled: {autoplay_disabled}")
+    if autoplay_disabled == True:
+        autoplay = "false"
+
+    # Override default if autoplay passed as a link parameter
+    autoplay_var = request.vars.autoplay
+    if autoplay_var is not None and autoplay_var.lower() == "false":
+        autoplay = "false"
+    elif autoplay_var is not None and autoplay_var.lower() == "true":
         # options for autoplay w videojs are:
         # any - try autoplay, then fall back to play muted
         # true - autoplay
         # play - run play() onload
         # muted - play muted
-        autoplay = "any"
+        autoplay = "true"
     
     is_mobile = request.vars.get('m', 'false')
     
@@ -1720,29 +1731,73 @@ def getMediaPoster(media_guid):
 def getYouTubeTaskStatus(media_guid):
     q1 = '"media_guid": "' + str(media_guid) + '"'
     q2 = '"media_guid": ' + str(media_guid) + ''
-    task = db_scheduler(db_scheduler.scheduler_task.vars.contains(q1) |
-                        db_scheduler.scheduler_task.vars.contains(q2)).select(
-        orderby=db_scheduler.scheduler_task.last_run_time).first()
+    task_sql = db_scheduler(
+        (db_scheduler.scheduler_task.task_name=='pull_youtube_video') &
+        ((db_scheduler.scheduler_task.vars.contains(q1)) |
+        (db_scheduler.scheduler_task.vars.contains(q2)))
+    )._select(
+        orderby=db_scheduler.scheduler_task.last_run_time,
+        limitby=(0, 1)
+    )
+    # Change out LIKE for GLOB so indexes are used
+    task_sql = task_sql.replace(" LIKE ", " GLOB ").replace(" ESCAPE '\\'", ""). \
+        replace("\\_", "_").replace("%", "*")
+    #print(f"TaskStatus SQL: {task_sql}")
+    rows = db_scheduler.executesql(task_sql, as_dict=True)
+    task = None
+    if not rows is None:
+        for row in rows:
+            task = row
+    
     ret = "<not run>"
     if task is not None:
-        ret = str(task.status) + " (" + str(task.last_run_time) + ")"
+        ret = str(task['status']) + " (" + str(task['last_run_time']) + ")"
     return ret
-
 
 def getYouTubeTaskProgress(media_guid):
     ret = ""
-
+    
     q1 = '"media_guid": "' + str(media_guid) + '"'
     q2 = '"media_guid": ' + str(media_guid) + ''
-    task = db_scheduler(db_scheduler.scheduler_task.vars.contains(q1) |
-                        db_scheduler.scheduler_task.vars.contains(q2)).select(join=db_scheduler.scheduler_run.on(
-        db_scheduler.scheduler_task.id == db_scheduler.scheduler_run.task_id),
-        orderby=db_scheduler.scheduler_task.last_run_time).first()
-    ret = ""
-    if task is not None:
-        # Get the output from the run record
-        ret = str(task.scheduler_run.run_output)
-
+    task_sql = db_scheduler(
+        (db_scheduler.scheduler_task.task_name=='pull_youtube_video') &
+        ((db_scheduler.scheduler_task.vars.contains(q1)) |
+        (db_scheduler.scheduler_task.vars.contains(q2)))
+        )._select(
+            db_scheduler.scheduler_task.id,
+#            db_scheduler.scheduler_run.run_output,
+#             join=db_scheduler.scheduler_run.on(
+#                 db_scheduler.scheduler_task.id == db_scheduler.scheduler_run.task_id
+#             ),
+        orderby=db_scheduler.scheduler_task.last_run_time, limitby=(0,1)
+    )
+    
+    # Change out LIKE for GLOB so indexes are used
+    task_sql = task_sql.replace(" LIKE ", " GLOB ").replace(" ESCAPE '\\'", ""). \
+        replace("\\_", "_").replace("%", "*")
+    #print(f"TaskProgress SQL: {task_sql}")
+    rows = db_scheduler.executesql(task_sql, as_dict=True)
+    task = None
+    task_id = -1
+    if not rows is None:
+        for row in rows:
+            task = row
+            task_id = row['id']
+    
+    # Now grab matching row from scheduler_run
+    rows = db_scheduler.executesql(
+        f"select run_output, status from scheduler_run where task_id={task_id} order by start_time desc limit 4 offset 0",
+        as_dict=True
+    )
+    output = ""
+    if not rows is None:
+        for row in rows:
+            output = row['run_output']
+    
+    
+    #print(f"{task}")
+    ret = output
+    
     return ret
 
 

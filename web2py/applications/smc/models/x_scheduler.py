@@ -1250,24 +1250,46 @@ scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=3,
 current.scheduler = scheduler
 
 
+# Add indexes to the scheduler database if needed
+# Do we need to do initial init? (e.g. creating indexes.....)
+db_scheduler_init_needed = cache.ram('db_scheduler_init_needed', lambda: True, time_expire=3600)
+if db_scheduler_init_needed:
+    db_scheduler.executesql('CREATE INDEX IF NOT EXISTS scheduler_task_idx ON scheduler_task (id, task_name, group_name, status, function_name);')
+    db_scheduler.executesql('CREATE INDEX IF NOT EXISTS scheduler_task_last_run_time_idx ON scheduler_task (last_run_time);')
+    db_scheduler.executesql('CREATE INDEX IF NOT EXISTS scheduler_task_vars_idx ON scheduler_task (vars);')
+    db_scheduler.executesql('CREATE INDEX IF NOT EXISTS scheduler_run_idx ON scheduler_run (id, task_id, status);')
+    db_scheduler.executesql('CREATE INDEX IF NOT EXISTS "scheduler_task_status_idx" ON "scheduler_task" ("task_name", "vars", "last_run_time")')
+    db_scheduler.executesql('CREATE INDEX IF NOT EXISTS "scheduler_run_progress_idx" ON "scheduler_run" ("task_id", "run_output")')
+
+
 # Make sure to run the ad login refresh every hour or so
 refresh_ad_login = current.cache.ram('refresh_ad_login', lambda: True, time_expire=60*60)
 if refresh_ad_login is True and request.is_scheduler is not True:
     # Set the current value to false so we don't need to refresh for a while
     current.cache.ram('refresh_ad_login', lambda: False, time_expire=-1)
-    # Update the last login value for all users (students and faculty)
-    AD.Init() # Make sur AD settings are loaded
-    print("Queueing up refresh_all_ad_logins...")
-    # print(str(request.is_scheduler))
-    # print(str(request))
-    if AD._ldap_enabled is not True:
-        # Not enabled, skip
-        print("AD Not enabled, skipping refresh_all_ad_logins...")
-    else:
-        # Schedule the process
-        result = scheduler.queue_task('refresh_all_ad_logins', timeout=1200, 
-            sync_output=5, group_name="misc", repeats=1, period=0, pvars=dict(run_from='x_scheduler.py'))
-        
+
+    # See if a task is already queued so we don't spam things
+    ts = scheduler.task_status((db_scheduler.scheduler_task.task_name=='refresh_all_ad_logins'))
+    if not ts is None:
+        if ts.status == "QUEUED":
+            #print("refresh_all_ad_logins - already queued, skipping.")
+            #print(f"TS: {ts}")
+            pass
+        else:
+            # Add a new task
+            # Update the last login value for all users (students and faculty)
+            AD.Init() # Make sur AD settings are loaded
+            print("Queueing up refresh_all_ad_logins...")
+            # print(str(request.is_scheduler))
+            # print(str(request))
+            if AD._ldap_enabled is not True:
+                # Not enabled, skip
+                print("AD Not enabled, skipping refresh_all_ad_logins...")
+            else:
+                # Schedule the process
+                result = scheduler.queue_task('refresh_all_ad_logins', timeout=1200, 
+                    sync_output=5, group_name="misc", repeats=1, period=0, pvars=dict(run_from='x_scheduler.py'))
+                
     
     # Make sure to start the scheduler process
     # cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_misc_scheduler.py') + " > /dev/null 2>&1 &"

@@ -174,8 +174,12 @@
     <div class="container-fluid main-container">
       {{include}}
       {{=response.toolbar() if response.show_toolbar else ''}}
-    </div>
 
+      <!-- Padding between body and footer -->
+      <div style="display: block; float: none; clear: both; height: 3px; width: 100%; border: 0px solid black;"></div>
+    </div>
+   
+    
     {{block footer}} <!-- this is default footer -->
     <footer class="footer container-fluid">
       <div class="row">

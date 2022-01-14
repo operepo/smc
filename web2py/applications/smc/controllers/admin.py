@@ -65,12 +65,15 @@ def config_app_settings():
         "Prevent faculty from changing passwords with SMC"
     db.my_app_settings.disable_student_self_change_password.label = \
         "Prevent students from changing passwords with SMC"
+    db.my_app_settings.disable_media_auto_play.label = \
+        "Disable Auto Play on Media (can override with autoplay=true in the link)"
 
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
                    fields=["app_name", "app_description", "app_logo",
                    "disable_student_self_change_password",
-                   "disable_faculty_self_change_password"]).process()
+                   "disable_faculty_self_change_password",
+                   "disable_media_auto_play"]).process()
     
     if form.accepted:
         # Saved

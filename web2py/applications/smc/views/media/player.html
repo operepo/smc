@@ -16,11 +16,10 @@
     width="{{=width}}"
     height="{{=height}}"
     poster="{{=poster}}"
-	data-setup="{}"
-  autoplay="{{=autoplay}}"
-  oncontextmenu="return false;"
-  >
-    <source src="{{= source_mp4 }}" type="video/mp4" />
+	  data-setup='{ "autoplay": {{=autoplay}}, "preload": "auto"}'
+    oncontextmenu="return false;"
+  ><!-- autoplay="{{=autoplay}}" -->
+  <source src="{{= source_mp4 }}" type="video/mp4" />
 	<!--source src="MY_VIDEO.webm" type="video/webm" / -->
 	{{=XML(subtitles_html)}}
 	<!--track kind="captions" src="source_en_subtitles"" srclang="en" label="English" default-->

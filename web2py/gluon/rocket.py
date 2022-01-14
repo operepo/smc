@@ -26,7 +26,7 @@ THREAD_STOP_CHECK_INTERVAL = 1  # in secs, How often should threads check for a 
 if hasattr(sys, 'frozen'):
     # py2installer
     IS_JYTHON = False
-else:    
+else:
     IS_JYTHON = platform.system() == 'Java'  # Handle special cases for Jython
 IGNORE_ERRORS_ON_CLOSE = set([errno.ECONNABORTED, errno.ECONNRESET])
 DEFAULT_LISTEN_QUEUE_SIZE = 5
@@ -106,11 +106,7 @@ class Connection(object):
             # See: http://bugs.jython.org/issue1309
             self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
-        #print(str(self.socket))
-        #print("SSL: " + str(self.ssl))
-        # Stop exception if socket not valid
-        if isinstance(self.socket, ssl.SSLSocket):
-            self.socket.settimeout(SOCKET_TIMEOUT)
+        self.socket.settimeout(SOCKET_TIMEOUT)
 
         self.shutdown = self.socket.shutdown
         self.fileno = self.socket.fileno
@@ -501,6 +497,7 @@ class Listener(Thread):
                 ca_certs = self.interface[4]
                 cert_reqs = ssl.CERT_OPTIONAL
                 sock = ssl.wrap_socket(sock,
+                                       do_handshake_on_connect=False,
                                        keyfile=self.interface[2],
                                        certfile=self.interface[3],
                                        server_side=True,
@@ -509,6 +506,7 @@ class Listener(Thread):
                                        ssl_version=ssl.PROTOCOL_SSLv23)
             else:
                 sock = ssl.wrap_socket(sock,
+                                       do_handshake_on_connect=False,
                                        keyfile=self.interface[2],
                                        certfile=self.interface[3],
                                        server_side=True,
@@ -526,7 +524,7 @@ class Listener(Thread):
             self.err_log.warning('Listener started when not ready.')
             return
 
-        if self.thread is not None and self.thread.isAlive():
+        if self.thread is not None and self.thread.is_alive():
             self.err_log.warning('Listener already running.')
             return
 
@@ -534,11 +532,11 @@ class Listener(Thread):
 
         self.thread.start()
 
-    def isAlive(self):
+    def is_alive(self):
         if self.thread is None:
             return False
 
-        return self.thread.isAlive()
+        return self.thread.is_alive()
 
     def join(self):
         if self.thread is None:
@@ -717,14 +715,14 @@ class Rocket(object):
         if background:
             return
 
-        while self._monitor.isAlive():
+        while self._monitor.is_alive():
             try:
                 time.sleep(THREAD_STOP_CHECK_INTERVAL)
             except KeyboardInterrupt:
                 # Capture a keyboard interrupt when running from a console
                 break
             except:
-                if self._monitor.isAlive():
+                if self._monitor.is_alive():
                     log.error(traceback.format_exc())
                     continue
 
@@ -744,12 +742,12 @@ class Rocket(object):
             time.sleep(0.01)
 
             for l in self.listeners:
-                if l.isAlive():
+                if l.is_alive():
                     l.join()
 
             # Stop Monitor
             self._monitor.stop()
-            if self._monitor.isAlive():
+            if self._monitor.is_alive():
                 self._monitor.join()
 
             # Stop Worker threads
@@ -1059,14 +1057,14 @@ class ThreadPool:
             self.app_info['executor'].shutdown(wait=False)
 
         # Give them the gun
-        # active_threads = [t for t in self.threads if t.isAlive()]
+        # active_threads = [t for t in self.threads if t.is_alive()]
         # while active_threads:
         #     t = active_threads.pop()
         #     t.kill()
 
         # Wait until they pull the trigger
         for t in self.threads:
-            if t.isAlive():
+            if t.is_alive():
                 t.join()
 
         # Clean up the mess
@@ -1075,7 +1073,7 @@ class ThreadPool:
     def bring_out_your_dead(self):
         # Remove dead threads from the pool
 
-        dead_threads = [t for t in self.threads if not t.isAlive()]
+        dead_threads = [t for t in self.threads if not t.is_alive()]
         for t in dead_threads:
             if __debug__:
                 log.debug("Removing dead thread: %s." % t.getName())
@@ -1362,7 +1360,9 @@ class Worker(Thread):
             raise SocketClosed(
                 'SSL bug caused closure of socket.  See '
                 '"https://groups.google.com/d/topic/web2py/P_Gw0JxWzCs".')
-
+        except ssl.SSLError:
+            d = ''
+            pass # Ignore error if client rejects self signed cert
         d = d.strip()
 
         if not d:
@@ -1636,6 +1636,7 @@ class WSGIWorker(Worker):
             environ['wsgi.url_scheme'] = 'https'
             environ['HTTPS'] = 'on'
             try:
+                conn.socket.do_handshake()
                 peercert = conn.socket.getpeercert(binary_form=True)
                 environ['SSL_CLIENT_RAW_CERT'] = \
                     peercert and to_native(ssl.DER_cert_to_PEM_cert(peercert))

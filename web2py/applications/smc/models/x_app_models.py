@@ -206,6 +206,7 @@ db.define_table("my_app_settings",
                 Field("canvas_integration_enabled", "boolean", default="False"),
                 Field("disable_student_self_change_password", "boolean", default="False"),
                 Field("disable_faculty_self_change_password", "boolean", default="False"),
+                Field("disable_media_auto_play", "boolean", default="True"),
                 )
 
 # Enable encryption
@@ -425,6 +426,7 @@ db.define_table('media_files',
 # Indexes
 if db_init_needed:
       db.executesql('CREATE INDEX IF NOT EXISTS media_guid_idx ON media_files (media_guid);')
+      db.executesql('CREATE INDEX IF NOT EXISTS media_search_idx ON media_files (title, description, category, tags, youtube_url, needs_downloading, item_version);')
 
 
 db.define_table('document_import_queue',
