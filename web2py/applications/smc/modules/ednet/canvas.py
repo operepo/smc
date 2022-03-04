@@ -158,6 +158,7 @@ class Canvas:
     def EnsureDevKey():
         # Make sure that a dev key exists for OPE-Integration
         dev_key_id = 0
+        root_account_id = 0
         msg = ""
 
         db_canvas = Canvas.ConnectDB()
@@ -210,7 +211,7 @@ class Canvas:
         admin_user = "Site Admin"
         # sql = "SELECT id FROM users WHERE name='admin@ed'"
         #sql = "SELECT user_id, account_id FROM pseudonyms WHERE unique_id='" + admin_user + "'"
-        sql = "SELECT pseudonyms.user_id, pseudonyms.account_id FROM pseudonyms, accounts " + \
+        sql = "SELECT pseudonyms.user_id, pseudonyms.account_id, accounts.root_account_id FROM pseudonyms, accounts " + \
             "WHERE pseudonyms.account_id=accounts.id and accounts.name='" + admin_user + "'"
         rows = db_canvas.executesql(sql)
         user_id = 0
@@ -218,6 +219,7 @@ class Canvas:
         for row in rows:
             user_id = row[0]
             account_id = row[1]
+            root_account_id = row[2]
 
         if user_id < 1:
             msg += "  Unable to find admin user in canvas - ensure that an admin user exists with the " + admin_user + " name"
@@ -229,12 +231,12 @@ class Canvas:
               " and developer_key_id=" + str(dev_key_id)
         db_canvas.executesql(sql)
         sql = "INSERT INTO developer_key_account_bindings (account_id, developer_key_id, " + \
-              "workflow_state, created_at, updated_at) VALUES (" + str(account_id) + \
-              ", " + str(dev_key_id) + ", 'on', now(), now())"
+              "workflow_state, created_at, updated_at, root_account_id) VALUES (" + str(account_id) + \
+              ", " + str(dev_key_id) + ", 'on', now(), now(), " + str(root_account_id) + ")"
         db_canvas.executesql(sql)
 
         # At this point we should have a dev key setup, return its id
-        return dev_key_id, msg
+        return dev_key_id, msg, root_account_id
 
     @staticmethod
     def FlushRedisKeys(pattern):
@@ -276,7 +278,7 @@ class Canvas:
             return "", "Error - Can't connect to Canvas Postgresql Database!"
 
         # Make sure there is a dev key
-        dev_key_id, msg = Canvas.EnsureDevKey()
+        dev_key_id, msg, root_account_id = Canvas.EnsureDevKey()
         if dev_key_id == 0:
             return "", "Error setting up dev key! " + msg
 
@@ -332,7 +334,7 @@ class Canvas:
     def EnsureStudentAccessToken(user_name):
         db = current.db
         # Make sure there is a dev key
-        dev_key_id, msg = Canvas.EnsureDevKey()
+        dev_key_id, msg, root_account_id = Canvas.EnsureDevKey()
         if dev_key_id == 0:
             return "", "Error setting dev key, make sure SMC is linked to canvas (Admin -> Canvas Settings/Verify) - " + msg, "", ""
 
@@ -405,8 +407,8 @@ class Canvas:
         db_canvas.executesql(sql)
         hm_token = HMAC.new(canvas_secret.encode('utf-8'), access_token.encode('utf-8'), digestmod=SHA).hexdigest()
         sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint," + \
-              " created_at, updated_at ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + \
-              "', 'OPEStudentIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now() );"
+              " created_at, updated_at, root_account_id ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + \
+              "', 'OPEStudentIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now(), " + str(root_account_id) + " );"
         db_canvas.executesql(sql)
         db_canvas.commit()
         # msg += "   RAN SQL: " + sql
