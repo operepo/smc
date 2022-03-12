@@ -220,7 +220,10 @@ class Canvas:
             user_id = row[0]
             account_id = row[1]
             root_account_id = row[2]
-
+        if root_account_id is None:
+            # Make sure we have a good root account id
+            root_account_id = 2
+        
         if user_id < 1:
             msg += "  Unable to find admin user in canvas - ensure that an admin user exists with the " + admin_user + " name"
             return "", msg
