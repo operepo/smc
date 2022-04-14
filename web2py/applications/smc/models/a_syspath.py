@@ -11,6 +11,20 @@ import sys
 global APP_VERSION
 APP_VERSION = None
 
+app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Make sure needed folders exist - private, databases, errors, cache, uploads, sessions
+need_dirs = [
+    "private",
+    "databases",
+    "errors",
+    "cache",
+    "uploads",
+    "sessions"
+]
+for d in need_dirs:
+    os.makedirs(os.path.join(app_root, d), exist_ok=True)
+
 #sys_path_imported = False
 
 # Needed because w2p import sucks and can't find modules in the modules folder
