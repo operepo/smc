@@ -820,7 +820,7 @@ def range_error_message(error_message, what_to_enter, minimum, maximum):
             error_message += " less than or equal to %(max)g"
     if type(maximum) in integer_types:
         maximum -= 1
-    return translate(error_message) % dict(min=minimum, max=maximum)
+    return str(translate(error_message)) % dict(min=minimum, max=maximum)
 
 
 class IS_INT_IN_RANGE(Validator):
@@ -3781,9 +3781,9 @@ class IS_DATETIME(Validator):
             return value
         try:
             if self.format == self.isodatetime:
-                value = value.replace('T', ' ')
+                value = value.replace("T", " ")
                 if len(value) == 16:
-                    value += ':00'
+                    value += ":00"
             (y, m, d, hh, mm, ss, t0, t1, t2) = time.strptime(value, str(self.format))
             value = datetime.datetime(y, m, d, hh, mm, ss)
             if self.timezone is not None:
@@ -4418,9 +4418,9 @@ class CRYPT(Validator):
         True
         >>> CRYPT(digest_alg='md5',salt=False)('test')[0] == a[6:]
         True
-        """
+    """
 
-    STARS = '******'
+    STARS = "******"
 
     def __init__(
         self,
@@ -4457,6 +4457,7 @@ class CRYPT(Validator):
 
     def formatter(self, value):
         return self.STARS
+
 
 #  entropy calculator for IS_STRONG
 #

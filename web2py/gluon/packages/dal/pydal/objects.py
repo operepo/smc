@@ -14,6 +14,7 @@ import sys
 import types
 import re
 from collections import OrderedDict
+from io import TextIOWrapper
 from ._compat import (
     PY2,
     StringIO,
@@ -29,7 +30,6 @@ from ._compat import (
     copyreg,
     reduce,
     to_bytes,
-    to_native,
     to_unicode,
     long,
     text_type,
@@ -70,7 +70,7 @@ from .helpers.methods import (
     attempt_upload_on_insert,
     attempt_upload_on_update,
     delete_uploaded_files,
-    uuidstr
+    uuidstr,
 )
 from .helpers.serializers import serializers
 from .utils import deprecated
@@ -100,7 +100,9 @@ DEFAULT_REGEX = {
 
 def csv_reader(utf8_data, dialect=csv.excel, encoding="utf-8", **kwargs):
     """like csv.reader but allows to specify an encoding, defaults to utf-8"""
-    csv_reader = csv.reader(utf8_data, dialect=dialect, **kwargs)
+    csv_reader = csv.reader(utf8_data if isinstance(utf8_data,TextIOWrapper) 
+                                      else TextIOWrapper(utf8_data,encoding), 
+                            dialect=dialect, **kwargs)
     for row in csv_reader:
         yield [to_unicode(cell, encoding) for cell in row]
 
@@ -254,7 +256,7 @@ class Row(BasicStorage):
 
 
 def pickle_row(s):
-    return Row, (dict(s),)
+    return Row, ({k: v for k, v in s.items() if not callable(v)},)
 
 
 copyreg.pickle(Row, pickle_row)
@@ -896,6 +898,7 @@ class Table(Serializable, BasicStorage):
 
     def _validate_fields(self, fields, defattr="default", id=None):
         from .validators import CRYPT
+
         response = Row()
         response.id, response.errors, new_fields = None, Row(), Row()
         for field in self:
@@ -910,7 +913,7 @@ class Table(Serializable, BasicStorage):
                 value, error = field.validate(ovalue, id)
             if error:
                 response.errors[field.name] = "%s" % error
-            elif field.type == 'password' and ovalue == CRYPT.STARS:
+            elif field.type == "password" and ovalue == CRYPT.STARS:
                 pass
             elif field.name in fields:
                 # only write if the field was passed and no error
@@ -1220,8 +1223,8 @@ class Table(Serializable, BasicStorage):
     def create_index(self, name, *fields, **kwargs):
         return self._db._adapter.create_index(self, name, *fields, **kwargs)
 
-    def drop_index(self, name):
-        return self._db._adapter.drop_index(self, name)
+    def drop_index(self, name, if_exists = False):
+        return self._db._adapter.drop_index(self, name, if_exists)
 
 
 class Select(BasicStorage):
@@ -1241,6 +1244,7 @@ class Select(BasicStorage):
         self.virtualfields = []
         self._sql_cache = None
         self._colnames_cache = None
+        self._cte_recursive = None
         fieldcheck = set()
 
         for item in fields:
@@ -1320,13 +1324,15 @@ class Select(BasicStorage):
             raise SyntaxError("Subselect must be aliased for use in a JOIN")
         return Expression(self._db, self._db._adapter.dialect.on, self, query)
 
-    def _compile(self, outer_scoped=[], with_alias=False):
+    def _compile(self, outer_scoped=[], with_alias=False, cte_collector = None):
         if not self._correlated:
             outer_scoped = []
         if outer_scoped or not self._sql_cache:
             adapter = self._db._adapter
             attributes = self._attributes.copy()
             attributes["outer_scoped"] = outer_scoped
+            attributes["cte_collector"] = cte_collector
+            attributes.pop('cte', None)
             colnames, sql = adapter._select_wcols(
                 self._query, self._qfields, **attributes
             )
@@ -1340,9 +1346,55 @@ class Select(BasicStorage):
             sql = self._db._adapter.dialect.alias(sql, self._tablename)
         return colnames, sql
 
+    def union(self, recursive, union_type = 'UNION'):
+        if callable(recursive):
+            recursive = recursive(self)
+        if not isinstance(recursive, (list, tuple)):
+            recursive = [recursive]
+        if not self._cte_recursive:
+            self._cte_recursive = []
+        self._cte_recursive.extend([[union_type, r] for r in recursive])
+        return self
+
+    def union_all(self, recursive):
+        return self.union(recursive, 'UNION ALL')
+
+    def cte(self, cte_collector):
+        if not self._tablename:
+            raise SyntaxError("cte must be aliased for use in a query/select")
+        if cte_collector:
+            if self._tablename in cte_collector['seen']:
+                return
+            else:
+                # must be here to prevent infinite recursion
+                cte_collector['seen'].add(self._tablename)
+        colnames, sql = self._compile(cte_collector = cte_collector)
+        sql = sql[:-1]
+        #sql_fields = ", ".join(adapter._geoexpand(x, {}) for x in self._qfields)
+
+        sql_fields = ", ".join([
+            getattr(f, 'alias', None) or getattr(f, 'name', None) or str(f)
+            for f in self._qfields
+        ])
+        recursive = self._cte_recursive
+        if recursive:
+            for r in recursive:
+                if isinstance(r[1], self.__class__):
+                    _, r_sql = r[1]._compile(cte_collector = cte_collector)
+                    r[1] = r_sql[:-1]
+        sql = self._db._adapter.dialect.cte(self._tablename, sql_fields, sql, recursive)
+        if cte_collector:
+            cte_collector['stack'].append(sql)
+            # cte_collector['seen'].add(self._tablename) - see above
+            if not cte_collector['is_recursive']:
+                cte_collector['is_recursive'] = recursive and True or False
+        return sql
+
     def query_name(self, outer_scoped=[]):
         if self._tablename is None:
-            raise SyntaxError("Subselect must be aliased for use in a JOIN")
+            raise SyntaxError("Subselect/cte must be aliased for use in a JOIN")
+        if self._attributes.get('cte'):
+            return (self.sql_shortref,)
         colnames, sql = self._compile(outer_scoped, True)
         # This method should also return list of placeholder values
         # in the future
@@ -1351,7 +1403,7 @@ class Select(BasicStorage):
     @property
     def sql_shortref(self):
         if self._tablename is None:
-            raise SyntaxError("Subselect must be aliased for use in a JOIN")
+            raise SyntaxError("Subselect/cte must be aliased for use in a JOIN")
         return self._db._adapter.dialect.quote(self._tablename)
 
     def _filter_fields(self, record, id=False):
@@ -1363,6 +1415,10 @@ class Select(BasicStorage):
             ]
         )
 
+    @property
+    def is_cte(self):
+        return self._attributes.get('cte')
+
 
 def _expression_wrap(wrapper):
     def wrap(self, *args, **kwargs):
@@ -1373,6 +1429,8 @@ def _expression_wrap(wrapper):
 
 class Expression(object):
     _dialect_expressions_ = {}
+    
+    __hash__ = object.__hash__
 
     def __new__(cls, *args, **kwargs):
         for name, wrapper in iteritems(cls._dialect_expressions_):
@@ -1502,6 +1560,13 @@ class Expression(object):
     def __add__(self, other):
         return Expression(self.db, self._dialect.add, self, other, self.type)
 
+    def __radd__(self, other):
+        if not hasattr(other, "type"):
+            if isinstance(other, str):
+                other = self._dialect.quote(other)
+            other = Expression(self.db, other, type = self.type)
+        return Expression(self.db, self._dialect.add, other, self, self.type)
+
     def __sub__(self, other):
         if self.type in ("integer", "bigint"):
             result_type = "integer"
@@ -1608,13 +1673,17 @@ class Expression(object):
                 return self.contains("")
             else:
                 return reduce(all and AND or OR, subqueries)
-        if self.type not in (
-            "string",
-            "text",
-            "json",
-            "jsonb",
-            "upload",
-        ) and not self.type.startswith("list:"):
+        if (
+            self.type
+            not in (
+                "string",
+                "text",
+                "json",
+                "jsonb",
+                "upload",
+            )
+            and not self.type.startswith("list:")
+        ):
             raise SyntaxError("contains used with incompatible field type")
         return Query(
             self.db, self._dialect.contains, self, value, case_sensitive=case_sensitive
@@ -1622,7 +1691,7 @@ class Expression(object):
 
     def with_alias(self, alias):
         return Expression(self.db, self._dialect._as, self, alias, self.type)
-    
+
     @property
     def alias(self):
         if self.op == self._dialect._as:
@@ -2035,7 +2104,7 @@ class Field(Expression, Serializable):
         m = re.search(REGEX_UPLOAD_EXTENSION, filename)
         extension = m and m.group(1) or "txt"
         uuid_key = uuidstr().replace("-", "")[-16:]
-        encoded_filename = to_native(base64.b16encode(to_bytes(filename)).lower())
+        encoded_filename = to_unicode(base64.urlsafe_b64encode(to_bytes(filename)))
         # Fields that are not bound to a table use "tmp" as the table name
         tablename = getattr(self, "_tablename", "tmp")
         newfilename = "%s.%s.%s.%s" % (
@@ -2073,9 +2142,7 @@ class Field(Expression, Serializable):
                 if self.uploadseparate:
                     if self.uploadfs:
                         raise RuntimeError("not supported")
-                    path = pjoin(
-                        path, "%s.%s" % (tablename, self.name), uuid_key[:2]
-                    )
+                    path = pjoin(path, "%s.%s" % (tablename, self.name), uuid_key[:2])
                 if not exists(path):
                     os.makedirs(path)
                 pathfilename = pjoin(path, newfilename)
@@ -2133,13 +2200,17 @@ class Field(Expression, Serializable):
         self_uploadfield = self.uploadfield
         if self.custom_retrieve_file_properties:
             return self.custom_retrieve_file_properties(name, path)
-        if m.group("name"):
+        try:
             try:
-                filename = base64.b16decode(m.group("name"), True).decode("utf-8")
-                filename = re.sub(REGEX_UPLOAD_CLEANUP, "_", filename)
-            except (TypeError, AttributeError, binascii.Error):
-                filename = name
-        else:
+                filename = to_unicode(
+                    base64.b16decode(m.group("name"), True)
+                )  # Legacy file encoding is base 16 lowercase
+            except (binascii.Error, TypeError):
+                filename = to_unicode(
+                    base64.urlsafe_b64decode(m.group("name"))
+                )  # New encoding is base 64
+            filename = re.sub(REGEX_UPLOAD_CLEANUP, "_", filename)
+        except (TypeError, AttributeError):
             filename = name
         # ## if file is in DB
         if isinstance(self_uploadfield, (str, Field)):
@@ -2671,6 +2742,21 @@ class Set(Serializable):
         )
         fields = adapter.expand_all(fields, tablenames)
         return adapter.nested_select(self.query, fields, attributes)
+
+    def cte(self, name, *fields, **attributes):
+        adapter = self.db._adapter
+        tablenames = adapter.tables(
+            self.query,
+            attributes.get("join", None),
+            attributes.get("left", None),
+            attributes.get("orderby", None),
+            attributes.get("groupby", None),
+        )
+        attributes['cte'] = True
+        fields = adapter.expand_all(fields, tablenames)
+        return adapter.nested_select(self.query, fields, attributes).with_alias(name)
+
+
 
     def delete(self):
         db = self.db
@@ -3593,7 +3679,7 @@ class IterRows(BasicRows):
 
         # fetch and drop the first key - 1 elements
         for i in xrange(n_to_drop):
-            self.cursor._fetchone()
+            self.cursor.fetchone()
         row = next(self)
         if row is None:
             raise IndexError

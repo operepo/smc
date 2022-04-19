@@ -131,6 +131,7 @@ import threading
 import time
 import traceback
 import urllib
+import contextlib
 
 from ._compat import (
     PY2,
@@ -154,7 +155,13 @@ from .helpers.classes import (
     RecordDeleter,
     TimingHandler,
 )
-from .helpers.methods import hide_password, smart_query, auto_validators, auto_represent, uuidstr
+from .helpers.methods import (
+    hide_password,
+    smart_query,
+    auto_validators,
+    auto_represent,
+    uuidstr,
+)
 from .helpers.regex import REGEX_PYTHON_KEYWORDS, REGEX_DBNAME
 from .helpers.rest import RestParser
 from .helpers.serializers import serializers
@@ -243,8 +250,8 @@ class DAL(with_metaclass(MetaDAL, Serializable, BasicStorage)):
             web2py. Use an explicit path when using DAL outside web2py
         db_codec: string encoding of the database (default: 'UTF-8')
         table_hash: database identifier with .tables. If your connection hash
-                    change you can still using old .tables if they have db_hash
-                    as prefix
+                    change you can still using old .tables if they have
+                    table_hash as prefix
         check_reserved: list of adapters to check tablenames and column names
             against sql/nosql reserved keywords. Defaults to `None`
 
@@ -372,7 +379,7 @@ class DAL(with_metaclass(MetaDAL, Serializable, BasicStorage)):
     def distributed_transaction_begin(*instances):
         if not instances:
             return
-        thread_key = "%s.%s" % (socket.gethostname(), threading.currentThread())
+        thread_key = "%s.%s" % (socket.gethostname(), threading.current_thread())
         instances = enumerate(instances)
         keys = ["%s.%i" % (thread_key, i) for (i, db) in instances]
         for (i, db) in instances:
@@ -388,7 +395,7 @@ class DAL(with_metaclass(MetaDAL, Serializable, BasicStorage)):
         if not instances:
             return
         instances = enumerate(instances)
-        thread_key = "%s.%s" % (socket.gethostname(), threading.currentThread())
+        thread_key = "%s.%s" % (socket.gethostname(), threading.current_thread())
         keys = ["%s.%i" % (thread_key, i) for (i, db) in instances]
         for (i, db) in instances:
             if not db._adapter.support_distributed_transaction():
@@ -556,6 +563,18 @@ class DAL(with_metaclass(MetaDAL, Serializable, BasicStorage)):
                 serializers._custom_[k] = v
         if auto_import or tables:
             self.import_table_definitions(adapter.folder, tables=tables)
+
+    @contextlib.contextmanager
+    def single_transaction(self):
+        self._adapter.reconnect()
+        try:
+            yield self
+        except Exception:
+            self._adapter.rollback()
+        else:
+            self._adapter.commit()
+        finally:
+            self.close()
 
     @property
     def tables(self):
@@ -925,7 +944,7 @@ class DAL(with_metaclass(MetaDAL, Serializable, BasicStorage)):
             else:
                 #: extracted_fields is empty we should make it from colnames
                 # what 'col_fields' is for
-                col_fields = [] # [[tablename, fieldname], ....]
+                col_fields = []  # [[tablename, fieldname], ....]
                 newcolnames = []
                 for tf in colnames:
                     if "." in tf:
@@ -939,8 +958,9 @@ class DAL(with_metaclass(MetaDAL, Serializable, BasicStorage)):
                 colnames = newcolnames
             data = adapter.parse(
                 data,
-                fields = extracted_fields or [tf and self[tf[0]][tf[1]] for tf in col_fields],
-                colnames=colnames
+                fields=extracted_fields
+                or [tf and self[tf[0]][tf[1]] for tf in col_fields],
+                colnames=colnames,
             )
         return data
 

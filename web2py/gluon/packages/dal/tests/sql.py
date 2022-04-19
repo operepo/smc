@@ -322,7 +322,15 @@ class TestFields(DALtest):
         db.define_table(
             "tt", Field("aa", "datetime", default=datetime.datetime.today())
         )
-        t0 = datetime.datetime(1971, 12, 21, 10, 30, 55, 0,)
+        t0 = datetime.datetime(
+            1971,
+            12,
+            21,
+            10,
+            30,
+            55,
+            0,
+        )
         self.assertEqual(db.tt.insert(aa=t0), 1)
         self.assertEqual(db().select(db.tt.aa)[0].aa, t0)
 
@@ -769,6 +777,50 @@ class TestSubselect(DALtest):
         self.assertEqual(sub.query_name()[0], str(sub))
         self.assertEqual(sub.sql_shortref, db._adapter.dialect.quote("foo"))
         self.assertIsInstance(sub.on(sub.aa != None), Expression)
+
+    def testCTE(self):
+        db = self.connect()
+        db.define_table('org', Field('name'), Field('boss', 'reference org'))
+        org = db.org
+        def insert_workers(boss, *names):
+            return [org.insert(name = name, boss = boss) for name in names]
+        alice = org.insert(name = 'Alice')
+        jim, tim = insert_workers(alice, 'Jim', 'Tim')
+        jessy, jenny =  insert_workers(jim, 'Jessy', 'Jenny')
+        insert_workers(tim, 'Tom')
+        insert_workers(jessy, 'John', 'Jacob')
+
+        works_for = db(org.name == 'Alice').cte(
+            'works_for',
+            org.id,
+            org.name.with_alias('top_boss'),  # i.e. Alice is top_boss
+            org.name,
+            org.boss,
+            Expression(db, '0', type = 'integer').with_alias('xdepth'),
+            Expression(db, '" "', type = 'string').with_alias('boss_chain')
+        ).union( lambda works_for: \
+            db((org.boss == works_for.id) & (org.id != org.boss)).nested_select(
+                org.id,
+                works_for.top_boss,
+                org.name,
+                org.boss,
+                (works_for.xdepth + 1).with_alias('xdepth'),
+                (' ' + works_for.name + works_for.boss_chain).with_alias('boss_chain')
+            )
+        )
+        rows = db().select(works_for.ALL).as_dict()
+        #  reconstruct boss_chain/depth and test them against query result
+        for row in rows.values():
+            r = row
+            boss_chain = []
+            while True:
+                r = rows.get(r['boss'])
+                if not r:
+                    break
+                boss_chain.append(r['name'])
+            depth = len(boss_chain)
+            self.assertEqual(depth, row['xdepth'])
+            self.assertEqual(' '.join(boss_chain), row['boss_chain'].strip())
 
     def testSelectArguments(self):
         db = self.connect()
@@ -2214,7 +2266,9 @@ class TestSelectAsDict(DALtest):
         if IS_ORACLE:
             # if lowercase fieldnames desired in return, must be quoted in oracle
             db.define_table(
-                "a_table", Field("b_field"), Field("a_field"),
+                "a_table",
+                Field("b_field"),
+                Field("a_field"),
             )
             db.a_table.insert(a_field="aa1", b_field="bb1")
             rtn = db.executesql(
@@ -2229,7 +2283,9 @@ class TestSelectAsDict(DALtest):
 
         else:
             db.define_table(
-                "a_table", Field("b_field"), Field("a_field"),
+                "a_table",
+                Field("b_field"),
+                Field("a_field"),
             )
             db.a_table.insert(a_field="aa1", b_field="bb1")
             rtn = db.executesql(
@@ -2249,7 +2305,9 @@ class TestExecuteSQL(DALtest):
             # see note on prior test
             db = self.connect(DEFAULT_URI, entity_quoting=True)
             db.define_table(
-                "a_table", Field("b_field"), Field("a_field"),
+                "a_table",
+                Field("b_field"),
+                Field("a_field"),
             )
             db.a_table.insert(a_field="aa1", b_field="bb1")
             rtn = db.executesql(
@@ -2291,7 +2349,9 @@ class TestExecuteSQL(DALtest):
         if not IS_ORACLE:
             db = self.connect(DEFAULT_URI, entity_quoting=False)
             db.define_table(
-                "a_table", Field("b_field"), Field("a_field"),
+                "a_table",
+                Field("b_field"),
+                Field("a_field"),
             )
             db.a_table.insert(a_field="aa1", b_field="bb1")
             rtn = db.executesql(
@@ -2813,7 +2873,15 @@ class TestRNameFields(DALtest):
             "tt",
             Field("aa", "datetime", default=datetime.datetime.today(), rname=rname),
         )
-        t0 = datetime.datetime(1971, 12, 21, 10, 30, 55, 0,)
+        t0 = datetime.datetime(
+            1971,
+            12,
+            21,
+            10,
+            30,
+            55,
+            0,
+        )
         self.assertEqual(db.tt.insert(aa=t0), 1)
         self.assertEqual(db().select(db.tt.aa)[0].aa, t0)
 
@@ -3182,8 +3250,8 @@ class TestQuotesByDefault(unittest.TestCase):
     def testme(self):
         return
 
-class TestGis(DALtest):
 
+class TestGis(DALtest):
     @unittest.skipIf(True, "WIP")
     def testGeometry(self):
         from pydal import geoPoint, geoLine, geoPolygon
@@ -3356,7 +3424,9 @@ class TestLazy(DALtest):
         db = self.connect(check_reserved=None, lazy_tables=True)
         db.define_table("tt", Field("value", "integer"))
         db.define_table(
-            "ttt", Field("value", "integer"), Field("tt_id", "reference tt"),
+            "ttt",
+            Field("value", "integer"),
+            Field("tt_id", "reference tt"),
         )
         # Force table definition
         db.ttt.value.writable = False

@@ -1692,42 +1692,6 @@ def start_wamap_videos():
     # ret = ""
     return ret
 
-
-def getMediaThumb(media_guid):
-    if media_guid is None or media_guid == "":
-        return ""
-
-    prefix = media_guid[0:2]
-    url = URL('static', 'media/' + prefix + '/' + media_guid + '.thumb.png')
-    thumb = get_media_file_path(media_guid, ".thumb.png")
-    if os.path.exists(thumb) is not True:
-        url = URL('static', 'images/media_file.png')
-    return url
-
-
-def getDocumentThumb(document_guid):
-    if document_guid is None or document_guid == "":
-        return ""
-    prefix = document_guid[0:2]
-    url = URL('static', 'documents/' + prefix + '/' + document_guid + '.thumb.png')
-    thumb = get_document_file_path(document_guid, ".thumb.png")
-
-    if os.path.exists(thumb) is not True:
-        url = URL('static', 'images/document_file.png')
-    return url
-
-
-def getMediaPoster(media_guid):
-    if media_guid is None or media_guid =="":
-        return ""
-    prefix = media_guid[0:2]
-    url = URL('static', 'media/' + prefix + '/' + media_guid + '.poster.png')
-    thumb = get_media_file_path(media_guid, ".thumb.png")
-    if os.path.exists(thumb) is not True:
-        url = URL('static', 'images/media_file.png')
-    return url
-
-
 def getYouTubeTaskStatus(media_guid):
     q1 = '"media_guid": "' + str(media_guid) + '"'
     q2 = '"media_guid": ' + str(media_guid) + ''

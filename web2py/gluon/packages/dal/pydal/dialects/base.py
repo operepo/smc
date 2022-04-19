@@ -166,6 +166,25 @@ class SQLDialect(CommonDialect):
             whr = " %s" % self.where(where)
         return "DELETE FROM %s%s;" % (tablename, whr)
 
+
+    def cte(self, tname, fields, sql, recursive = None):
+        '''
+        recursive:list = [union_type, recursive_sql]
+        '''
+        if recursive:
+            r_sql_parts = ['%s %s'%(union, sql) for union, sql in recursive]
+            recursive = ' '.join(r_sql_parts)
+            cte_select = '{select} {recursive}'
+        else:
+            cte_select = '{select}'
+
+        return ('{tname}({fields}) AS (%s)' % cte_select).format(
+            tname = tname,
+            fields = fields,
+            select = sql,
+            recursive = recursive
+        )
+
     def select(
         self,
         fields,
@@ -177,6 +196,7 @@ class SQLDialect(CommonDialect):
         limitby=None,
         distinct=False,
         for_update=False,
+        with_cte=None  # ['recursive' | '', sql]
     ):
         dst, whr, grp, order, limit, offset, upd = "", "", "", "", "", "", ""
         if distinct is True:
@@ -197,7 +217,14 @@ class SQLDialect(CommonDialect):
             offset = " OFFSET %i" % lmin
         if for_update:
             upd = " FOR UPDATE"
-        return "SELECT%s %s FROM %s%s%s%s%s%s%s;" % (
+        if with_cte:
+            recursive, cte = with_cte
+            recursive = ' RECURSIVE' if recursive else ''
+            with_cte = "WITH%s %s " % (recursive, cte)
+        else:
+            with_cte = ""
+        return "%sSELECT%s %s FROM %s%s%s%s%s%s%s;" % (
+            with_cte,
             dst,
             fields,
             tables,
@@ -477,13 +504,17 @@ class SQLDialect(CommonDialect):
         )
 
     def _is_numerical(self, field_type):
-        return field_type in (
-            "integer",
-            "float",
-            "double",
-            "bigint",
-            "boolean",
-        ) or field_type.startswith("decimal")
+        return (
+            field_type
+            in (
+                "integer",
+                "float",
+                "double",
+                "bigint",
+                "boolean",
+            )
+            or field_type.startswith("decimal")
+        )
 
     def add(self, first, second, query_env={}):
         if self._is_numerical(first.type) or isinstance(first.type, Field):
@@ -602,8 +633,9 @@ class SQLDialect(CommonDialect):
             )
         return rv
 
-    def drop_index(self, name, table):
-        return "DROP INDEX %s;" % self.quote(name)
+    def drop_index(self, name, table, if_exists = False):
+        if_exists = "IF EXISTS " if if_exists else ""
+        return "DROP INDEX %s%s;" % (if_exists, self.quote(name))
 
     def constraint_name(self, table, fieldname):
         return "%s_%s__constraint" % (table, fieldname)
