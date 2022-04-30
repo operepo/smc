@@ -829,17 +829,20 @@ def upload_document():
         original_file_name = form.vars.document_file
         db(db.document_import_queue.id == new_id).update(original_file_name=original_file_name)
         db.commit()
-        document_file = db(db.document_import_queue.id == new_id).select().first()
+        document_record = db(db.document_import_queue.id == new_id).select().first()
 
         # Copy the file to the documents folder
+        #TEST THIS
+        #original_filename, stream = db.document_import_queue.document_file.retrieve(document_record.document_file)
+        ##tmp_path = db.document_import_queue.image.retrieve(document_file.image)
         tmp_path = db.document_import_queue.document_file.retrieve_file_properties(
             db.document_import_queue(new_id).document_file)['path']
         # NOTE Has stupid databases/../uploads in the path, replace databases/../ with nothing
         tmp_path = tmp_path.replace("\\", "/").replace('databases/../', '')
         uploads_folder = os.path.join(w2py_folder, tmp_path)
-        input_file = os.path.join(uploads_folder, document_file.document_file).replace("\\", "/")
+        input_file = os.path.join(uploads_folder, document_record.document_file).replace("\\", "/")
 
-        file_guid = document_file.document_guid.replace('-', '')
+        file_guid = document_record.document_guid.replace('-', '')
 
         target_folder = os.path.join(app_folder, 'static')
 
@@ -854,20 +857,21 @@ def upload_document():
             os.makedirs(target_folder)
         except OSError as message:
             pass
-
+        
+        print(f"{input_file}  -> {target_file}")
         # Copy the file
         try:
             shutil.copyfile(input_file, target_file)
         except Exception as ex:
             err = "ERROR COPYING FILE! " + str(ex)
 
-        db.document_files.insert(title=document_file.title,
-                                 document_guid=document_file.document_guid.replace('-', ''),
-                                 description=document_file.description,
-                                 original_file_name=document_file.original_file_name,
-                                 media_type=document_file.media_type,
-                                 category=document_file.category,
-                                 tags=document_file.tags,
+        db.document_files.insert(title=document_record.title,
+                                 document_guid=document_record.document_guid.replace('-', ''),
+                                 description=document_record.description,
+                                 original_file_name=document_record.original_file_name,
+                                 media_type=document_record.media_type,
+                                 category=document_record.category,
+                                 tags=document_record.tags,
                                  )
 
         # media_file.update(status='done')
@@ -877,10 +881,10 @@ def upload_document():
 
         # Dump meta data to the folder along side the files
         # This can be used for export/import
-        meta = {'title': document_file.title, 'document_guid': document_file.document_guid.replace('-', ''),
-                'description': document_file.description, 'original_file_name': document_file.original_file_name,
-                'media_type': document_file.media_type, 'category': document_file.category,
-                'tags': dumps(document_file.tags)}
+        meta = {'title': document_record.title, 'document_guid': document_record.document_guid.replace('-', ''),
+                'description': document_record.description, 'original_file_name': document_record.original_file_name,
+                'media_type': document_record.media_type, 'category': document_record.category,
+                'tags': dumps(document_record.tags)}
 
         meta_json = dumps(meta)
         #f = os.open(target_file + ".json", os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
@@ -890,7 +894,7 @@ def upload_document():
         f.write(meta_json)
         f.close()
 
-        last_doc = A(document_file.title, _href=URL('media', 'view_document', args=[file_guid]))
+        last_doc = A(document_record.title, _href=URL('media', 'view_document', args=[file_guid]))
 
         response.flash = "Document Uploaded"  # + str(result)
         pass

@@ -11,19 +11,28 @@ import sys
 global APP_VERSION
 APP_VERSION = None
 
-app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Do we need to do initial init?
+folder_init_needed = cache.ram('folder_init_needed', lambda: True, time_expire=3600)
 
-# Make sure needed folders exist - private, databases, errors, cache, uploads, sessions
-need_dirs = [
-    "private",
-    "databases",
-    "errors",
-    "cache",
-    "uploads",
-    "sessions"
-]
-for d in need_dirs:
-    os.makedirs(os.path.join(app_root, d), exist_ok=True)
+## Make sure that these entries are present in the database
+# Groups
+if folder_init_needed:
+    app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    # Make sure needed folders exist - private, databases, errors, cache, uploads, sessions
+    need_dirs = [
+        "private",
+        "databases",
+        "errors",
+        "cache",
+        "uploads",
+        "sessions"
+    ]
+    for d in need_dirs:
+        os.makedirs(os.path.join(app_root, d), exist_ok=True)
+    
+    # Mark that we did it so we quit doing it on every page view
+    cache.ram('folder_init_needed', lambda: False, 0)
 
 #sys_path_imported = False
 

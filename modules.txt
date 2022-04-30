@@ -27,3 +27,4 @@ lxml
 streamlink
 langcodes
 pylti1p3
+jwcrypto

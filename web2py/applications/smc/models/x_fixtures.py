@@ -77,5 +77,5 @@ if (startup == True):
 
 
 if db_init_needed:
-      # Mark that we did it so we quit doing it on every page view
+    # Mark that we did it so we quit doing it on every page view
     cache.ram('db_init_needed', lambda: False, 0)
