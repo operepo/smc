@@ -1610,20 +1610,26 @@ def yt_requeue():
         if is_media_file_present(file_guid) is not True:
             # Media file isn't here? Re-schedule the task
             msg += "Re-queue missing YT File : " + m["youtube_url"] + " <br />"
-            result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=m["youtube_url"],
-                                                                           media_guid=file_guid
-                                                                           ),
-                                          timeout=18000, immediate=True, sync_output=3,
-                                          group_name="download_videos", retry_failed=30, period=300)
+            m.update_record(needs_downloading=True)
+            db.commit()
+            # result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=m["youtube_url"],
+            #                                                                media_guid=file_guid
+            #                                                                ),
+            #                               timeout=18000, immediate=True, sync_output=3,
+            #                               group_name="download_videos", retry_failed=30, period=300)
 
         if is_media_captions_present(file_guid) is not True:
             # Re-queue captions
             msg += "Re-queue missing YT Captions : " + m["youtube_url"] + " <br />"
-            result = scheduler.queue_task('pull_youtube_caption', pvars=dict(yt_url=m["youtube_url"],
-                                                                            media_guid=file_guid
-                                                                            ),
-                                            timeout=18000, immediate=True, sync_output=3,
-                                            group_name="download_videos", retry_failed=30, period=300)
+            r = m.update_record(needs_caption_downloading=True)
+            #print(f" -- {r}")
+            db.commit()
+            #print("Done.")
+            # result = scheduler.queue_task('pull_youtube_caption', pvars=dict(yt_url=m["youtube_url"],
+            #                                                                 media_guid=file_guid
+            #                                                                 ),
+            #                                 timeout=18000, immediate=True, sync_output=3,
+            #                                 group_name="download_videos", retry_failed=30, period=300)
 
 
     response.flash = "YouTube downloads re-queued."
