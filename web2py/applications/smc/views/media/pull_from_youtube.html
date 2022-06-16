@@ -3,20 +3,41 @@
 <script>
 $(function() {
 		GetProcessQueue();
-		window.setInterval(function() {GetProcessQueue();}, 8000);
+		window.setInterval(function() {GetProcessQueue();}, 5000);
+		//window.setTimeout(function() {GetProcessQueue();}, 100);
+
+		GetProcessQueueCount();
+		window.setInterval(function() {GetProcessQueueCount();}, 5000);
     });
 
-	function GetProcessQueue() {
-		web2py_component('{{=URL('media', 'pull_from_youtube_download_queue.load', user_signature=True)}}',
-                         target='process_queue_view');
+	function GetProcessQueue(click=false) {
+		if (click===true) {
+			// Clear the current queue
+			
+			$('#process_queue_view').val("<img src='{{=URL('static', 'images/spinner.gif') }}' />");
+		}
 
+		if (click===true || $("#auto_refresh").prop("checked") == true) {
+			web2py_component("{{=URL('media', 'pull_from_youtube_download_queue.load', user_signature=True)}}",
+                         target="process_queue_view");
+		}
+		
+	}
+
+	function GetProcessQueueCount() {
+		web2py_component("{{=URL('media', 'pull_from_youtube_download_queue_count.load', user_signature=True)}}",
+                         target="waiting_count");
+		web2py_component("{{=URL('media', 'pull_from_youtube_download_queue_captions_count.load', user_signature=True)}}",
+                         target="waiting_captions_count");
+		web2py_component("{{=URL('media', 'pull_from_youtube_download_queue_current.load', user_signature=True)}}",
+                         target="currently_working_on");
 	}
 </script>
 
 <h1>Pull Media From YouTube</h1>
 <div>
 	Download media file directly from YouTube and insert into the SMC media library.
-    <span style="color: green;">Requires online connection.</span>
+    <span style="color: green; font-weight: bolder;">Requires online connection.</span>
 </div>
 <div>
     {{=LOAD('media', 'pull_from_youtube_step_1.load', ajax=True, user_signature=True)}}
@@ -29,7 +50,16 @@ $(function() {
 	<p>
 		<b>NOTE: </b> Download goes only as fast as your internet connection. You must be ONLINE for this to work. You can use the retry link to make the system try again if a media file gets stuck in the queue.
 	</p>
+	<div>
+		<span id="waiting_count">0</span> videos waiting to download, <span id="waiting_captions_count">0</span> captions waiting to download.<br />
+		<span id="currently_working_on"></span>
+	</div>
+	<hr />
+	<div id="refresh_queue" style="width: 800px;">
+		 <input type="checkbox" id="auto_refresh" value="Yes" checked /> Auto Refresh List (every 5 seconds) 
+		 <a style="color: red; font-size: 10px;" href="#" onclick="GetProcessQueue(true);">[ Force Refresh ]</a>
+	</div>
 	<div id="process_queue_view">
-		<!-- img src="{{=URL('static', 'images/progress.gif') }}" / -->
+		<img src="{{=URL('static', 'images/spinner.gif') }}" />
 	</div>
 </div>

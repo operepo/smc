@@ -30,6 +30,32 @@ auth.settings.allow_basic_login = True
 import module_reload
 ret = module_reload.ReloadModules()
 
+
+@auth.requires_membership("Administrators")
+def test_scheduler_process_videos():
+    response.view = 'generic.json'
+    ret = dict()
+    ts = db_scheduler(
+        (db_scheduler.scheduler_task.task_name=='process_youtube_queue') &
+        ((db_scheduler.scheduler_task.status=='QUEUED') | (db_scheduler.scheduler_task.status=='RUNNING'))
+        ).select(orderby=~db_scheduler.scheduler_task.id).first()
+    ret["ts"] = ts
+    return ret
+
+@auth.requires_membership("Administrators")
+def test_youtube_captions():
+    response.view = 'generic.json'
+    ret = dict()
+
+    yt_url = "https://www.youtube.com/watch?v=mn98cBZBg7s"
+
+    #yt, stream, res = find_best_yt_stream(yt_url)
+    #ret["captions"] = str(yt.captions)
+    pull_youtube_caption(yt_url, "db5f752fa6d74e76b725c788ed62607b")
+
+
+    return ret
+
 @auth.requires_membership("Administrators")
 def test_youtube():
     response.view = 'generic.json'
@@ -243,7 +269,9 @@ def ad_test():
 
 
 
-    #last_login_time = AD.GetLastLoginTime(dn)
+    last_login_time = AD.GetLastLoginTime(dn)
+
+    refresh_all_ad_logins()
 
     #grp_dn = "cn=test_group,OU=StudentGroups,DC=pencol,DC=local"
     #cg = AD.CreateGroup(grp_dn)

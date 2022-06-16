@@ -1,9 +1,25 @@
 # -*- coding: utf-8 -*-
 
 import uuid
-
 from ednet.appsettings import AppSettings
 from ednet.util import Util
+
+# Help shut up pylance warnings
+if 1 == 2:
+      Field = Field
+      cache = cache
+      db = db
+      db_laptops = db_laptops
+      db_lti = db_lti
+      IS_IN_SET = IS_IN_SET
+      IS_IN_DB = IS_IN_DB
+      auth = auth
+      IS_NOT_EMPTY = IS_NOT_EMPTY
+      response = response
+      request = request
+      IMG = IMG
+      URL = URL
+
 
 # Do we need to do initial init? (e.g. creating indexes.....)
 db_init_needed = cache.ram('db_init_needed', lambda: True, time_expire=3600)
@@ -131,7 +147,7 @@ db.define_table("my_app_settings",
                 Field("app_name", default="SMC"),
                 Field("app_description",
                       default="Student Management Console - Import/Enrollment for Active Directory and Canvas"),
-                Field("app_logo", "upload", length=128, autodelete=True),
+                Field("app_logo", "upload", length=240, autodelete=True),
                 
                 Field("ad_import_enabled", "boolean", default="False"),
                 Field("file_server_import_enabled", "boolean", default="False"),
@@ -291,7 +307,7 @@ db.define_table("student_canvas_import_status",
                 )
 
 db.define_table("student_excel_uploads",
-                Field("excel_file", 'upload', length=128, autodelete=True, requires=IS_NOT_EMPTY(error_message="Please upload an excel file!")),
+                Field("excel_file", 'upload', length=240, autodelete=True, requires=IS_NOT_EMPTY(error_message="Please upload an excel file!")),
                 auth.signature
                 )
 
@@ -373,7 +389,7 @@ db.define_table("faculty_canvas_import_status",
                 )
 
 db.define_table("faculty_excel_uploads",
-                Field("excel_file", 'upload', length=128, autodelete=True, requires=IS_NOT_EMPTY(error_message="Please upload an excel file!")),
+                Field("excel_file", 'upload', length=240, autodelete=True, requires=IS_NOT_EMPTY(error_message="Please upload an excel file!")),
                 auth.signature
                 )
 
@@ -394,7 +410,7 @@ db.define_table('media_file_import_queue',
                 Field('media_type', 'string', default='video', requires=IS_IN_SET(['video', 'song'])),
                 Field('category', 'string'),
                 Field('tags', 'list:string'),
-                Field('media_file', 'upload', length=128, autodelete=True, uploadseparate=True,
+                Field('media_file', 'upload', length=240, autodelete=True, uploadseparate=True,
                       requires=IS_NOT_EMPTY()),
                 Field('width', 'integer', default=0),
                 Field('height', 'integer', default=0),
@@ -421,6 +437,10 @@ db.define_table('media_files',
                 Field('needs_downloading', 'boolean', default=False),
                 auth.signature,
                 Field('item_version', 'bigint', default=0),
+                Field('download_failures', 'integer', default=0),
+                Field('download_log', 'text', default=''),
+                Field('current_download', 'boolean', default=False),
+                Field('needs_caption_downloading', 'boolean', default=False),
                 )
 
 # Indexes
@@ -437,7 +457,7 @@ db.define_table('document_import_queue',
                 Field('media_type', 'string', default='document', requires=IS_IN_SET(['document'])),
                 Field('category', 'string'),
                 Field('tags', 'list:string'),
-                Field('document_file', 'upload', length=128, autodelete=True, uploadseparate=True,
+                Field('document_file', 'upload', length=240, autodelete=True, uploadseparate=True,
                       requires=IS_NOT_EMPTY()),
                 Field('status', 'string', default='queued',
                       requires=IS_IN_SET(['queued', 'processing', 'done'])),
@@ -529,7 +549,7 @@ if db_init_needed:
 
 
 # Tables for inmate laptop firewall rules
-db.define_table('ope_laptop_firewall_rules',
+db_laptops.define_table('ope_laptop_firewall_rules',
                 Field('rule_name', 'string', requires=IS_NOT_EMPTY()),
                 Field('direction', 'string', default='in', requires=IS_IN_SET(['in', 'out'])),
                 Field('fw_action', 'string', default='allow', requires=IS_IN_SET(['allow', 'block', 'bypass'])),
@@ -557,7 +577,7 @@ db.define_table('ope_laptop_firewall_rules',
 
 
 # Tables for laptop logs and information
-db.define_table("ope_laptops",
+db_laptops.define_table("ope_laptops",
       Field('auth_key', 'string', default=str(uuid.uuid4()).replace('-', '')),
       Field('bios_serial_number', 'string', requires=IS_NOT_EMPTY()),
       Field('boot_disk_serial_number', 'string', default=''),
@@ -572,33 +592,29 @@ db.define_table("ope_laptops",
       Field('admin_password_status', 'string', default=""),
       Field('archived', 'boolean', default=False),
       Field('extra_info', 'json'),
-      auth.signature,
       Field('laptop_version', 'string', default='')
 )
 
-db.define_table("ope_laptop_logs",
+db_laptops.define_table("ope_laptop_logs",
       Field("parent_id", "reference ope_laptops"),
       Field("push_date", 'datetime'),
       Field("log_type", 'string', requires=IS_IN_SET(
-            ["machine_info", "event_logs"]
+            ["machine_info", "event_logs", "file_changes"]
             )),
       #Field(""),
-
+      Field('log_name', 'string', required=True),
       Field('extra_info', 'json'),
-
-      auth.signature,
 )
 
-db.define_table("ope_laptop_screen_shots",
+db_laptops.define_table("ope_laptop_screen_shots",
       Field("parent_id", "reference ope_laptops"),
       Field("file_date", 'datetime'),
       Field("push_date", 'datetime'),
       Field("credentialed_user", 'string', default=""),
       Field("archived", 'boolean', default=False),
       Field("flagged", 'boolean', default=False),
-      Field('img_file', 'upload', length=128, autodelete=True, uploadseparate=True,
+      Field('img_file', 'upload', length=240, autodelete=True, uploadseparate=True,
             requires=IS_NOT_EMPTY(error_message="Please attach a screen shot file!")),
-      auth.signature,
 )
 
 db.define_table("youtube_proxy_list",
@@ -607,14 +623,16 @@ db.define_table("youtube_proxy_list",
       Field("enabled", "boolean", default=True),
       Field("last_429_error_on", "datetime"),
       auth.signature,
+      Field("last_error_on", "datetime"),
+      Field("last_request_on", "datetime"),
 )
 
 
-db.define_table("ope_quizzes",
+db_lti.define_table("ope_quizzes",
       Field("imported_canvas_quiz_id", 'integer', default=0, required=True),
       Field("lms_parent_course", "string", default=""),
-      Field("title", 'string', default=""),
-      Field("description", 'string', default=""),
+      Field("title", 'string', requires=IS_NOT_EMPTY()),
+      Field("description", 'text', default=""),
       Field("quiz_type", 'string', default="assignment", requires=IS_IN_SET(["assignment", "practice_quiz", "graded_survey", "survey"])),
       Field("assignment_group_id", 'integer', default=0),
       Field("time_limit", 'integer', default=0),                        # in minutes
@@ -640,11 +658,12 @@ db.define_table("ope_quizzes",
       Field("version_number", 'integer', default=1),
       Field("anonymous_submissions", 'boolean', default=False),   # For survey types where you want data anonymzied
       Field("available_on_offline_laptop", 'boolean', default=False),
-      
+      Field("enc_key", 'string', default=str(uuid.uuid4()).replace("-", "")),  # Used by the laptop to encrypt the quiz information
+      Field("quiz_position", 'integer', default=0),
 
 )
 
-db.define_table("ope_quiz_questions",
+db_lti.define_table("ope_quiz_questions",
       Field("parent_quiz", "reference ope_quizzes"),
       Field("question_position", "integer", default=0),
       Field("question_name", "string", required=True),
@@ -662,7 +681,7 @@ db.define_table("ope_quiz_questions",
       Field("text_after_answers", "string", default=""),
 )
 
-db.define_table("ope_quiz_answers",
+db_lti.define_table("ope_quiz_answers",
       Field("ope_quiz_question", "reference ope_quiz_questions"),
       Field("is_correct_answer", 'boolean', default=False),
       Field("answer_text", "string", default=""),
@@ -685,14 +704,14 @@ db.define_table("ope_quiz_answers",
 # Adjust the app logo if it is set
 app_logo = AppSettings.GetValue('app_logo', '<none>')
 if app_logo != "<none>":
-    app_logo = IMG(_src=URL('download', app_logo), _alt="App Logo", _class="brand",_style="height: 30px;")
+    app_logo = IMG(_src=URL('download', app_logo), _alt="SMC - App Logo", _class="brand",_style="height: 50px;")
 else:
-    app_logo = IMG(_src=URL('static','images/pc_logo.png'), _alt="App Logo", _class="brand",_style="height: 30px;")
+    app_logo = IMG(_src=URL('static','images/sbctc_logo.png'), _alt="SMC - App Logo", _class="brand",_style="height: 50px;")
 
 response.logo = app_logo
 response.title = AppSettings.GetValue('app_name', request.application.replace('_',' ').title())
 response.subtitle = AppSettings.GetValue('app_description',
-                                    'Student Management Console - Import/Enrollment for Active Directory and Canvas')
+                                    'OPE Support tools for secure Canvas installations')
 
 
 

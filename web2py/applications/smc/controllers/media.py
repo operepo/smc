@@ -21,6 +21,58 @@ from ednet.appsettings import AppSettings
 from pytube import YouTube
 from bs4 import BeautifulSoup as bs
 
+# Help shut up pylance warnings
+if 1 == 2:
+      Field = Field
+      cache = cache
+      db = db
+      db_scheduler = db_scheduler
+      DAL = DAL
+      IS_IN_SET = IS_IN_SET
+      IS_IN_DB = IS_IN_DB
+      auth = auth
+      IS_NOT_EMPTY = IS_NOT_EMPTY
+      response = response
+      request = request
+      session = session
+      IMG = IMG
+      URL = URL
+      HTTP = HTTP
+      TABLE = TABLE
+      TR = TR
+      TD = TD
+      TH = TH
+      XML = XML
+      BR = BR
+      OPTION = OPTION
+      SELECT = SELECT
+      FORM = FORM
+      INPUT = INPUT
+      LABEL = LABEL
+      TEXTAREA = TEXTAREA
+      SQLFORM = SQLFORM
+      A = A
+      T = T
+      DIV = DIV
+      redirect = redirect
+      scheduler = scheduler
+      get_media_captions_list = get_media_captions_list
+      get_cc_icon = get_cc_icon
+      getMediaThumb = getMediaThumb
+      save_media_file_json = save_media_file_json
+      save_media_caption_file = save_media_caption_file
+      get_media_file_path = get_media_file_path
+      getDocumentThumb = getDocumentThumb
+      queue_up_yt_video = queue_up_yt_video
+      getMediaPoster = getMediaPoster
+      getPDFURLS = getPDFURLS
+      save_document_file_json = save_document_file_json
+      getURLS = getURLS
+      get_app_folders = get_app_folders
+      find_best_yt_stream = find_best_yt_stream
+      is_media_file_present = is_media_file_present
+      is_media_captions_present = is_media_captions_present
+
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
@@ -1814,7 +1866,11 @@ def pull_from_youtube():
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def pull_from_youtube_step_1():
-    form = FORM(TABLE(TR("YouTube Link: ", INPUT(_type="text", _name="yt_url", requires=IS_NOT_EMPTY())),
+    msg = request.vars.get('msg', '')
+    if len(msg) > 0:
+        response.flash = msg
+    
+    form = FORM(TABLE(TR("YouTube Link: ", INPUT(_type="text", _name="yt_url", requires=IS_NOT_EMPTY(), _style="width: 600px;")),
                       TR("", INPUT(_type="submit", _value="Next"))), keepvalues=True, _name="yt_step1")
 
     if form.process(formname="yt_step1").accepted:
@@ -1830,11 +1886,11 @@ def pull_from_youtube_step_1():
             # Video exists already
             response.flash = "Video already in SMC!"
 
-            # Pull caption file if it doesn't exist?
-            caption_result = scheduler.queue_task('pull_youtube_caption',
-                pvars=dict(yt_url=yt_url, media_guid=vid.media_guid),
-                timeout=90, immediate=True, sync_output=2,
-                group_name="download_videos", retry_failed=30, period=300)
+            # Pull caption file if it doesn't exist? - Done in scheduler now
+            # caption_result = scheduler.queue_task('pull_youtube_caption',
+            #     pvars=dict(yt_url=yt_url, media_guid=vid.media_guid),
+            #     timeout=90, immediate=True, sync_output=2,
+            #     group_name="download_videos", retry_failed=30, period=300)
 
         else:
             redirect(URL('media', 'pull_from_youtube_step_2.load', vars=dict(yt_url=yt_url), user_signature=True))
@@ -1897,10 +1953,11 @@ def pull_from_youtube_step_2():
         media_file.update_record(title=form.vars.title, description=form.vars.desc, category=form.vars.category)
         db.commit()
 
-        response.flash = 'Video queued for download.'  # + str(result)
+        #response.flash = 'Video queued for download.'  # + str(result)
 
         # Show a start over button
-        form = A('Download another video', _href=URL('media', 'pull_from_youtube.html   '))
+        #form = A('Download another video', _href=URL('media', 'pull_from_youtube.html'))
+        redirect(URL('media', 'pull_from_youtube_step_1.load', vars=dict(msg='Video Queued')))
     elif form.errors:
         response.flash = "ERROR " + str(form.errors)
     else:
@@ -1911,24 +1968,61 @@ def pull_from_youtube_step_2():
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def pull_from_youtube_download_queue_count():
+    response.view = 'generic.json'
+
+    download_queue_count  = db(db.media_files.needs_downloading==True).count()
+    db.commit()
+
+    return download_queue_count
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def pull_from_youtube_download_queue_captions_count():
+    response.view = 'generic.json'
+
+    download_queue_captions_count  = db(db.media_files.needs_caption_downloading==True).count()
+    db.commit()
+
+    return download_queue_captions_count
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
+def pull_from_youtube_download_queue_current():
+    response.view = 'generic.json'
+
+    current_video = ""
+
+    row = db(db.media_files.current_download == True).select().first()
+    if not row is None:
+        current_video = f"{row.title} ({row.youtube_url})"
+    db.commit()
+
+    msg = " "
+    if len(current_video) > 0:
+        msg = f"Currently working on: {current_video}"
+    
+    return msg
+
+
+@auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def pull_from_youtube_download_queue():
 
-    query = (db.media_files.youtube_url != "")
+    query = ((db.media_files.youtube_url != "") & (db.media_files.needs_downloading==True))
     fields = [db.media_files.title, db.media_files.needs_downloading,
               db.media_files.modified_on, db.media_files.id,
-              db.media_files.media_guid]
+              db.media_files.media_guid, db.media_files.download_log]
     links = [
         (dict(header=T('Title'), body=lambda row: A(row.title,
                                                     _href=(URL('media', 'player', extension=False) + "/"
                                                            + row.media_guid), _target='blank'))),
-        (dict(header=T('Status'), body=lambda row: DIV(getYouTubeTaskStatus(row.media_guid), ))),  # BR(), A('Re-Queue',
+        #(dict(header=T('Status'), body=lambda row: DIV(getYouTubeTaskStatus(row.media_guid), ))),  # BR(), A('Re-Queue',
                                                                               #        _href=URL('media',
                                                                               #                  'reset_queued_item',
                                                                               #                  args=[row.id],
                                                                               #                  user_signature=True))))),
         (dict(header=T('Queued On'), body=lambda row: row.modified_on)),
         # Check if getTaskProgress is generic enough for this too?
-        (dict(header=T('Progress'), body=lambda row: getYouTubeTaskProgress(row.media_guid))),
+        #(dict(header=T('Progress'), body=lambda row: getYouTubeTaskProgress(row.media_guid))),
+        #(dict(header=T('Download Log'), body=lambda row: row.download_log)),
     ]
 
     db.media_files.id.readable = False
@@ -1937,15 +2031,19 @@ def pull_from_youtube_download_queue():
     db.media_files.needs_downloading.readable = False
     db.media_files.title.readable = False
     db.media_files.modified_on.readable = False
+    db.media_files.download_log.readable = False
     headers = {'media_files.modified_on': 'Queued On'}
 
-    maxtextlengths = {'media_files.title': 80, 'media_files.media_guid': 80}
+    maxtextlengths = {'media_files.title': 80, 'media_files.media_guid': 80,}
 
     # rows = db(query).select()
     process_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False, csv=False,
                                 links=links, links_in_grid=True, details=False, searchable=False,
-                                orderby=[~db.media_files.modified_on], fields=fields,
-                                headers=headers, maxtextlengths=maxtextlengths)
+                                orderby=[~db.media_files.needs_downloading, ~db.media_files.modified_on], fields=fields,
+                                headers=headers, maxtextlengths=maxtextlengths, paginate=100)
+
+    # Hide the web2py_counter (?? records found)
+    process_grid.element('.web2py_counter', replace=None)
     return dict(process_grid=process_grid)
 
 
@@ -2057,6 +2155,7 @@ def find_replace_step_2():
     if form2.accepted:
         # Save which option and redirect to that page
         if form2.vars.fr_option == "auto_youtube_tool":
+            #print("chose youtube")
             redirect(URL('media', 'find_replace_step_youtube.load', user_signature=True))
             pass
         elif form2.vars.fr_option == "auto_google_docs_tool":
@@ -3929,22 +4028,23 @@ def find_replace_step_youtube_progress():
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))
 def find_replace_step_youtube_progress_dl_queue():
-    query = (db.media_files.youtube_url != "")
+    query = ((db.media_files.youtube_url != "") & (db.media_files.needs_downloading==True))
     fields = [db.media_files.title, db.media_files.needs_downloading,
               db.media_files.modified_on, db.media_files.id,
-              db.media_files.media_guid]
+              db.media_files.media_guid, db.media_files.download_log]
     links = [
         (dict(header=T('Title'), body=lambda row: A(row.title,
                                                     _href=(URL('media', 'player', extension=False) + "/"
                                                            + row.media_guid), _target='blank'))),
-        (dict(header=T('Status'), body=lambda row: DIV(getYouTubeTaskStatus(row.media_guid), ))),  # BR(), A('Re-Queue',
-        #        _href=URL('media',
-        #                  'reset_queued_item',
-        #                  args=[row.id],
-        #                  user_signature=True))))),
+        #(dict(header=T('Status'), body=lambda row: DIV(getYouTubeTaskStatus(row.media_guid), ))),  # BR(), A('Re-Queue',
+                                                                              #        _href=URL('media',
+                                                                              #                  'reset_queued_item',
+                                                                              #                  args=[row.id],
+                                                                              #                  user_signature=True))))),
         (dict(header=T('Queued On'), body=lambda row: row.modified_on)),
         # Check if getTaskProgress is generic enough for this too?
-        (dict(header=T('Progress'), body=lambda row: getYouTubeTaskProgress(row.media_guid))),
+        #(dict(header=T('Progress'), body=lambda row: getYouTubeTaskProgress(row.media_guid))),
+        #(dict(header=T('Download Log'), body=lambda row: row.download_log)),
     ]
 
     db.media_files.id.readable = False
@@ -3953,15 +4053,19 @@ def find_replace_step_youtube_progress_dl_queue():
     db.media_files.needs_downloading.readable = False
     db.media_files.title.readable = False
     db.media_files.modified_on.readable = False
+    db.media_files.download_log.readable = False
     headers = {'media_files.modified_on': 'Queued On'}
 
-    maxtextlengths = {'media_files.title': 80, 'media_files.media_guid': 80}
+    maxtextlengths = {'media_files.title': 80, 'media_files.media_guid': 80,}
 
     # rows = db(query).select()
     process_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False, csv=False,
                                 links=links, links_in_grid=True, details=False, searchable=False,
-                                orderby=[~db.media_files.modified_on], fields=fields,
-                                headers=headers, maxtextlengths=maxtextlengths)
+                                orderby=[~db.media_files.needs_downloading, ~db.media_files.modified_on], fields=fields,
+                                headers=headers, maxtextlengths=maxtextlengths, paginate=100)
+
+    # Hide the web2py_counter (?? records found)
+    #process_grid.element('.web2py_counter', replace=None)
 
     response.js = "setTimeout(function() {web2py_component('" + \
                   URL('media', 'find_replace_step_youtube_progress_dl_queue.load', user_signature=True) + \

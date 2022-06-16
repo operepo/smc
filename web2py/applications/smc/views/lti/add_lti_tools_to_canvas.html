@@ -1,0 +1,27 @@
+{{extend 'layout.html'}}
+
+<h1>OPE LTI Tools</h1>
+
+<div style="color: green; font-weight: bold;">
+    {{=lti_msg}}
+</div>
+<div class="header">
+    <style>
+        #lti_response_header:hover {
+            color: blue;
+        }
+    </style>
+    <span id="lti_response_header" style="font-weight: bold;  cursor: pointer;" onclick="$('#lti_response_content').toggle();">
+        LTI Response <span style="font-size: 8px;">(click to toggle log)</span>
+    </span>
+
+    <div id="lti_response_content" style="display: none;">
+        <pre>
+{{=XML(lti_logs)}}
+
+
+
+{{=XML(lti_response)}}
+        </pre>
+    </div>
+</div>

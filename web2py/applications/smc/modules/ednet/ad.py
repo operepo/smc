@@ -1000,7 +1000,10 @@ For more information, please view the <a target='docs' href='""" % str(str(messa
             ret = None
             pass
         # except ldap.LDAPError as error_message:
-        except ldap3.core.exceptions.LDAPOperationsErrorResult as error_message:
+        except (
+            ldap3.core.exceptions.LDAPOperationsErrorResult,
+            ldap3.core.exceptions.LDAPNoSuchObjectResult
+        ) as error_message:
             r = "Exception: CN (" + cn + ") does not exist! %s" % error_message
             AD._errors.append(r)
             ret = None

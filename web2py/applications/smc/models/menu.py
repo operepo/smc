@@ -1,19 +1,38 @@
 # -*- coding: utf-8 -*-
 # this file is released under public domain and you can use without limitations
 
+# Help shut up pylance warnings
+if 1 == 2:
+      Field = Field
+      cache = cache
+      db = db
+      DAL = DAL
+      IS_IN_SET = IS_IN_SET
+      IS_IN_DB = IS_IN_DB
+      auth = auth
+      IS_NOT_EMPTY = IS_NOT_EMPTY
+      response = response
+      request = request
+      session = session
+      IMG = IMG
+      URL = URL
+      HTTP = HTTP
+      SPAN = SPAN
+      T = T
+
 #########################################################################
 ## Customize your APP title, subtitle and menus here
 #########################################################################
 
 ##response.logo = A(B('web',SPAN(2),'py'),XML('&trade;&nbsp;'),
 ##                  _class="brand",_href="http://www.web2py.com/")
-response.logo = IMG(_src=URL('static','images/pc_logo.png'), _alt="Peninsula College", _class="brand", _style="height: 30px;")
+response.logo = IMG(_src=URL('static','images/sbctc_logo.png'), _alt="SMC - App Logo", _class="brand", _style="height: 50px;")
 response.title = request.application.replace('_', ' ').title()
-response.subtitle = 'Student Management Console - Import/Enrollment for Active Directory and Canvas'
+response.subtitle = 'OPE Support tools for secure Canvas installations'
 
 ## read more at http://dev.w3.org/html5/markup/meta.name.html
-response.meta.author = 'Ray Pulsipher <ray@correctionsed.com>'
-response.meta.keywords = 'admin, student, sms, import, canvas, active directory, peninsula college web2py, python, framework'
+response.meta.author = 'Ray Pulsipher <ray@cmagic.biz>'
+response.meta.keywords = 'smc, lti, admin, student, sms, import, canvas, active directory, peninsula college, sbctc, wa state, web2py, python, framework'
 response.meta.generator = 'Web2py Web Framework'
 
 ## your http://google.com/analytics id
@@ -41,7 +60,7 @@ response.menu = [
             (T(u'Media Utilities \u2bc8 Re-try failed YouTube Videos'), False, URL('media', 'yt_requeue')),
             (T(u'Media Utilities \u2bc8 Refresh Google Docs'), False, URL('media', 'refresh_google_docs')),
             (T(u'Media Utilities \u2bc8 Tag Resouces By Class'), False, URL('media', 'tag_resources_by_class')),
-            (T(u'Media Utilities \u2bc8 WAMAP Import'), False, URL('media', 'wamap_import')),
+            #(T(u'Media Utilities \u2bc8 WAMAP Import'), False, URL('media', 'wamap_import')),
         #]),
 
     ]),
@@ -71,6 +90,7 @@ response.menu = [
                 (T(u'Configure App \u2bc8 Verify Settings'), False, URL('admin', 'config_verify')),
                 (T(u'Configure App \u2bc8 Verify Settings (auto create)'), False, URL('admin', 'config_verify_auto')),
                 (T(u'Configure App \u2bc8 Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
+                (T(u'Configure App \u2bc8 Add LTI Tools to Canvas'), False, URL('lti', 'add_lti_tools_to_canvas')),
             # ]),
             # (T('Manage Users'), False, URL('admin', 'users')),
             # (T('Switch Mode'), False, URL('admin', 'switchmode')),

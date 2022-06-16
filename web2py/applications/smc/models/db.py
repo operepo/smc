@@ -4,6 +4,24 @@
 from gluon.custom_import import track_changes
 track_changes(True)
 
+# Help shut up pylance warnings
+if 1 == 2:
+      Field = Field
+      cache = cache
+      db = db
+      DAL = DAL
+      IS_IN_SET = IS_IN_SET
+      IS_IN_DB = IS_IN_DB
+      auth = auth
+      IS_NOT_EMPTY = IS_NOT_EMPTY
+      response = response
+      request = request
+      session = session
+      IMG = IMG
+      URL = URL
+      HTTP = HTTP
+
+
 # Make sure the appconfig.ini file exists
 import os
 import shutil
@@ -119,6 +137,12 @@ if not request.env.web2py_runtime_gae:
     db_scheduler = DAL('sqlite://storage_scheduler.sqlite', pool_size=0, check_reserved=['all'])
     db_scheduler.executesql('PRAGMA journal_mode=WAL')
 
+    db_laptops = DAL('sqlite://storage_laptops.sqlite', pool_size=0, check_reserved=['all'])
+    db_laptops.executesql('PRAGMA journal_mode=WAL')
+
+    db_lti = DAL('sqlite://storage_lti.sqlite', pool_size=0, check_reserved=['all'])
+    db_lti.executesql('PRAGMA journal_mode=WAL')
+
 else:
     # connect to Google BigTable (optional 'google:datastore://namespace')
     db = DAL('google:datastore')
@@ -220,6 +244,8 @@ auth.enable_record_versioning(db)
 from gluon import current
 current.db = db
 current.db_scheduler = db_scheduler
+current.db_laptops = db_laptops
+current.db_lti = db_lti
 current.auth = auth
 current.smc_log = ""
 current.config = myconf

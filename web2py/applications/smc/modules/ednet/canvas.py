@@ -837,6 +837,54 @@ class Canvas:
                 ret += key + "=" + v
 
         return ret
+
+    @staticmethod
+    def get_sections_for_course(course_id):
+        Canvas.Init()
+        api = f"/api/v1/courses/{course_id}/sections"
+
+        p = dict()
+        p["per_page"] = 200000
+
+        sections_list = dict()
+
+        current_sections = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+            api, params=p)
+        
+        if current_sections is None:
+            print(f"Error pulling canvas sections for course: {api}")
+            return sections_list
+         
+        # Save next_url in case there are more pages to get
+        next_url = Canvas._api_next
+
+        for c in current_sections:
+            if 'id' in c and 'name' in c:
+                sections_list[c['id']] = c['name']
+            else:
+                sections_list["ERROR"] = f"ERR ({course_id}) - Unable to find sections."
+
+        # Keep grabbing more until we run out of pages
+        while next_url != '':
+            # Strip off server name
+            api = next_url.replace(Canvas._canvas_server_url, "")
+            current_sections = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                                api)  # don't send params, params=p)
+            if current_sections is None:
+                print(f"Error pulling canvas course sections - {api}")
+                return sections_list
+
+            next_url = Canvas._api_next
+
+            for c in current_sections:
+                if 'id' in c and 'name' in c:
+                    sections_list[c['id']] = c['name']
+                else:
+                    sections_list["ERROR"] = f"ERR ({course_id}) - Unable to find sections."
+
+        return sections_list
+
+
     @staticmethod
     def get_courses_for_student(student):
         Canvas.Init()

@@ -16,22 +16,55 @@ import requests
 from langcodes import *
 import webvtt
 import traceback
+import datetime
 
 from ednet.canvas import Canvas
 
 from pytube import YouTube
 #import pytube
 
-def get_youtube_proxies():
+if 1 == 2:
+    # Stop pylance highlighting everything
+    cache = cache
+    db = db
+    db_scheduler = db_scheduler
+    session = session
+    DAL = DAL
+    current = current
+    request = request
+    response = response
+    URL = URL
+    Canvas = Canvas
+    get_app_folders = get_app_folders
+    load_media_file_json = load_media_file_json
+    get_media_file_path = get_media_file_path
+    load_document_file_json = load_document_file_json
+    find_ffmpeg = find_ffmpeg
+    w2py_folder = w2py_folder
+    save_media_file_json = save_media_file_json
+    save_document_file_json = save_document_file_json
+    get_youtube_proxies = get_youtube_proxies
+    is_media_captions_present = is_media_captions_present
+
+
+def get_youtube_proxies(randomize=False):
+    # Skip proxies if they have had a 429 error less than this
+    not_before = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
+
     query = (db.youtube_proxy_list.enabled==True)
     # Random order so you get a possible different item from the list each time
-    rows = db(query).select(orderby='<random>')
-    ret = None
+    if randomize == True:
+        rows = db(query).select(orderby='<random>')
+    else:
+        rows = db(query).select(orderby=db.youtube_proxy_list.last_request_on)
+    ret = list()
     for row in rows:
-        if ret is None:
-            ret = {}
-        
-        ret[row["protocol"]] = row["proxy_url"]
+        if row.last_429_error_on is None or row.last_429_error_on < not_before:
+            #print(f"Adding Proxy URL {row.proxy_url}")
+            ret.append(row["proxy_url"])
+        else:
+            #print(f"Skipping proxy - too soon since since last 429 error: {row.proxy_url}")
+            pass
 
     return ret
 
@@ -410,24 +443,26 @@ def queue_up_yt_video(yt_url, category=None):
         db.media_files.insert(title=title, youtube_url=yt_url,
                               description=description, original_file_name=title,
                               category=category, tags=tags,
-                              media_guid=vid_guid, needs_downloading=True)
+                              media_guid=vid_guid, needs_downloading=True, needs_caption_downloading=True)
         db.commit()
 
-        # Launch the background process to download the video
-        result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=yt_url,
-                                                                       media_guid=vid_guid
-                                                                       ),
-                                      timeout=18000, immediate=True, sync_output=2,
-                                      group_name="download_videos", retry_failed=30, period=300)
+        # NOTE - scheduler replaced with the new process_youtube_queue method that is run continually
+        # # Launch the background process to download the video
+        # result = scheduler.queue_task('pull_youtube_video', pvars=dict(yt_url=yt_url,
+        #                                                                media_guid=vid_guid
+        #                                                                ),
+        #                               timeout=18000, immediate=True, sync_output=2,
+        #                               group_name="download_videos", retry_failed=30, period=300)
 
-        # Launch background process to download caption files
-        caption_result = scheduler.queue_task('pull_youtube_caption',
-            pvars=dict(yt_url=yt_url, media_guid=vid_guid),
-            timeout=90, immediate=True, sync_output=5,
-            group_name="download_videos", retry_failed=30, period=300)
+        # # Launch background process to download caption files
+        # caption_result = scheduler.queue_task('pull_youtube_caption',
+        #     pvars=dict(yt_url=yt_url, media_guid=vid_guid),
+        #     timeout=90, immediate=True, sync_output=5,
+        #     group_name="download_videos", retry_failed=30, period=300)
 
         # Make sure to grab the new record now that it has been inserted
         media_file = db(db.media_files.youtube_url == yt_url).select().first()
+        db.commit()
     else:
         # Video exists, just return the db record
         pass
