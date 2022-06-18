@@ -1978,7 +1978,9 @@ def pull_from_youtube_download_queue_count():
     response.view = 'generic.json'
 
     download_queue_count  = db(db.media_files.needs_downloading==True).count()
+    #print(f"LastSQL: {db._lastsql}  - {db._timings}")
     db.commit()
+    
 
     return download_queue_count
 

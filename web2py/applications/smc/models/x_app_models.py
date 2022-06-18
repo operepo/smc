@@ -704,6 +704,14 @@ db_lti.define_table("ope_quiz_answers",
       Field("fill_in_the_blank_answer", "string", default=""),
 )
 
+
+# Indexes - Add indexes for system tables
+if db_init_needed:
+      db.executesql('CREATE INDEX IF NOT EXISTS auth_membership_idx ON auth_membership (id, user_id, group_id);')
+      db.executesql('CREATE INDEX IF NOT EXISTS auth_group_idx ON auth_group (id, role);')
+      db.executesql('CREATE INDEX IF NOT EXISTS auth_user_idx ON auth_user (id, username, email, first_name, last_name);')
+
+
 # Adjust the app logo if it is set
 app_logo = AppSettings.GetValue('app_logo', '<none>')
 if app_logo != "<none>":
