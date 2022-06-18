@@ -662,7 +662,7 @@ def pull_youtube_video(yt_url, media_guid):
         yt, stream, res, return_code = find_best_yt_stream(yt_url)
         if return_code != "OK":
             print(f"Unable to get video {yt_url}.")
-            log_to_video(yt_url, f"Faild to download video from {yt_url}, will stop trying.")
+            log_to_video(yt_url, f"Failed to download video from {yt_url}, will stop trying.")
             media_file = db(db.media_files.media_guid==media_guid).select().first()
             media_file.needs_downloading = False
             media_file.needs_caption_downloading = False
@@ -1502,6 +1502,31 @@ def process_youtube_queue(run_from=""):
     
     return True
 
+def cleanup_youtube_urls():
+    # Many youtube urls end up with crap in them (e.g. html tags) try to clean them up.
+    import re
+    clean_tags = re.compile('<.*?>')
+
+    media_files_count = 0
+    yt_urls_fixed_count = 0
+
+    media_files = db(db.media_files.youtube_url!='').select()
+    for media_file in media_files:
+        media_files_count += 1
+        yt_url = media_file.youtube_url
+
+        new_yt_url = re.sub(clean_tags, '', yt_url)
+        if new_yt_url != yt_url:
+            yt_urls_fixed_count += 1
+            print(f"Fixed YT URL: {yt_url} -> {new_yt_url}")
+
+            # media_file.youtube_url = yt_url
+            # media_file.update_record()
+            # db.commit()
+
+    print(f"Fixed {yt_urls_fixed_count} out of {media_files_count} youtube urls.")
+    return
+
 
 # Enable the scheduler
 from gluon.scheduler import Scheduler
@@ -1549,6 +1574,9 @@ if time_to_run_youtube_queue == True:
         (db_scheduler.scheduler_task.task_name=='pull_youtube_caption')
         ).delete()
     db_scheduler.commit()
+
+    # Some old youtube urls end up with crap in them (e.g. html tags) - clean them up a little.
+    cleanup_youtube_urls()
     
     # See if a task is already queued so we don't spam things
     #ts = scheduler.task_status((db_scheduler.scheduler_task.task_name=='process_youtube_queue'))

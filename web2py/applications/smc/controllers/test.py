@@ -32,6 +32,17 @@ ret = module_reload.ReloadModules()
 
 
 @auth.requires_membership("Administrators")
+def test_cleanup_youtube_urls():
+    response.view = 'generic.json'
+    ret = dict()
+
+    cleanup_youtube_urls()
+    ret["Result"] = "Done."
+
+    return ret
+
+
+@auth.requires_membership("Administrators")
 def test_scheduler_process_videos():
     response.view = 'generic.json'
     ret = dict()
