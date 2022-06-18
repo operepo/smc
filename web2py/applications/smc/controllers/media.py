@@ -2014,7 +2014,7 @@ def pull_from_youtube_download_queue():
 
     query = ((db.media_files.youtube_url != "") & (db.media_files.needs_downloading==True))
     fields = [db.media_files.title, db.media_files.needs_downloading,
-              db.media_files.modified_on, db.media_files.id,
+              db.media_files.last_download_attempt, db.media_files.id,
               db.media_files.media_guid, db.media_files.download_log]
     links = [
         (dict(header=T('Title'), body=lambda row: A(row.title,
@@ -2025,7 +2025,7 @@ def pull_from_youtube_download_queue():
                                                                               #                  'reset_queued_item',
                                                                               #                  args=[row.id],
                                                                               #                  user_signature=True))))),
-        (dict(header=T('Queued On'), body=lambda row: row.modified_on)),
+        (dict(header=T('Last Download Attempt'), body=lambda row: row.last_download_attempt)),
         # Check if getTaskProgress is generic enough for this too?
         #(dict(header=T('Progress'), body=lambda row: getYouTubeTaskProgress(row.media_guid))),
         #(dict(header=T('Download Log'), body=lambda row: row.download_log)),
@@ -2033,19 +2033,19 @@ def pull_from_youtube_download_queue():
 
     db.media_files.id.readable = False
     db.media_files.media_guid.readable = False
-    db.media_files.modified_on.readable = True
+    db.media_files.last_download_attempt.readable = True
     db.media_files.needs_downloading.readable = False
     db.media_files.title.readable = False
-    db.media_files.modified_on.readable = False
+    db.media_files.last_download_attempt.readable = False
     db.media_files.download_log.readable = False
-    headers = {'media_files.modified_on': 'Queued On'}
+    headers = {'media_files.last_download_attempt': 'Queued On'}
 
     maxtextlengths = {'media_files.title': 80, 'media_files.media_guid': 80,}
 
     # rows = db(query).select()
     process_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False, csv=False,
                                 links=links, links_in_grid=True, details=False, searchable=False,
-                                orderby=[~db.media_files.needs_downloading, ~db.media_files.modified_on], fields=fields,
+                                orderby=[~db.media_files.needs_downloading, ~db.media_files.last_download_attempt], fields=fields,
                                 headers=headers, maxtextlengths=maxtextlengths, paginate=100)
 
     # Hide the web2py_counter (?? records found)
@@ -4036,7 +4036,7 @@ def find_replace_step_youtube_progress():
 def find_replace_step_youtube_progress_dl_queue():
     query = ((db.media_files.youtube_url != "") & (db.media_files.needs_downloading==True))
     fields = [db.media_files.title, db.media_files.needs_downloading,
-              db.media_files.modified_on, db.media_files.id,
+              db.media_files.last_download_attempt, db.media_files.id,
               db.media_files.media_guid, db.media_files.download_log]
     links = [
         (dict(header=T('Title'), body=lambda row: A(row.title,
@@ -4047,7 +4047,7 @@ def find_replace_step_youtube_progress_dl_queue():
                                                                               #                  'reset_queued_item',
                                                                               #                  args=[row.id],
                                                                               #                  user_signature=True))))),
-        (dict(header=T('Queued On'), body=lambda row: row.modified_on)),
+        (dict(header=T('Last Download Attempt'), body=lambda row: row.last_download_attempt)),
         # Check if getTaskProgress is generic enough for this too?
         #(dict(header=T('Progress'), body=lambda row: getYouTubeTaskProgress(row.media_guid))),
         #(dict(header=T('Download Log'), body=lambda row: row.download_log)),
@@ -4055,19 +4055,19 @@ def find_replace_step_youtube_progress_dl_queue():
 
     db.media_files.id.readable = False
     db.media_files.media_guid.readable = False
-    db.media_files.modified_on.readable = True
+    db.media_files.last_download_attempt.readable = True
     db.media_files.needs_downloading.readable = False
     db.media_files.title.readable = False
-    db.media_files.modified_on.readable = False
+    db.media_files.last_download_attempt.readable = False
     db.media_files.download_log.readable = False
-    headers = {'media_files.modified_on': 'Queued On'}
+    headers = {'media_files.last_download_attempt': 'Queued On'}
 
     maxtextlengths = {'media_files.title': 80, 'media_files.media_guid': 80,}
 
     # rows = db(query).select()
     process_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False, csv=False,
                                 links=links, links_in_grid=True, details=False, searchable=False,
-                                orderby=[~db.media_files.needs_downloading, ~db.media_files.modified_on], fields=fields,
+                                orderby=[~db.media_files.needs_downloading, ~db.media_files.last_download_attempt], fields=fields,
                                 headers=headers, maxtextlengths=maxtextlengths, paginate=100)
 
     # Hide the web2py_counter (?? records found)

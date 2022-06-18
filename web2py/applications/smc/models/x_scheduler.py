@@ -393,6 +393,7 @@ def find_best_yt_stream(yt_url):
     yt = None
     res = '480p'
     stream = None
+    return_code = "OK"
 
     if yt_url is None:
         print("ERROR: yt_url was none?")
@@ -410,7 +411,7 @@ def find_best_yt_stream(yt_url):
     #proxies.insert(0, None)
     proxies.append(None)
 
-    for proxy in proxies:
+    for proxy in proxies[0:5]:  # Only try the first 5 proxies - don't try forever
         # Try each proxy in order trying to get this video.
         proxy_item = db(db.youtube_proxy_list.proxy_url==proxy).select().first()
         if proxy_item:
@@ -451,7 +452,8 @@ def find_best_yt_stream(yt_url):
             stream = s
 
             # Got one - break the loop and return it.
-            break
+            return_code = "OK"
+            return yt, stream, res, return_code
         ## These exceptions mean we can't get it - don't keep trying other proxies
         except (
             pytube.exceptions.AgeRestrictedError,
@@ -471,9 +473,10 @@ def find_best_yt_stream(yt_url):
             session.yt_urls_error_msg += msg
             print(msg)
             log_to_video(yt_url, msg)
+            return_code = "Permanent Error"
 
-            #return yt, stream, res
-            raise Exception(msg)
+            return yt, stream, res, return_code
+            #raise Exception(msg)
 
 
         ## These exceptions mean there as a parsing/temp error - don't keep trying other proxies
@@ -490,7 +493,8 @@ def find_best_yt_stream(yt_url):
             session.yt_urls_error_msg += msg
             print(msg)
             log_to_video(yt_url, msg)
-            return yt, stream, res
+            return_code = "Permanent Error"
+            return yt, stream, res, return_code
         
         
         # Other exceptions inherit from this - just catch a general exception
@@ -519,9 +523,12 @@ def find_best_yt_stream(yt_url):
             log_to_video(yt_url, msg)
 
             # For unknown errors - call it - quit trying.
-            return yt, stream, res
+            return_code = "Permanent Error"
+            return yt, stream, res, return_code
     
-    return yt, stream, res
+    # If getting here, we didn't find a good one!
+    return_code = "Temporary Error"
+    return yt, stream, res, return_code
 
 def pull_youtube_caption(yt_url, media_guid):
     # Download the specified caption file.
@@ -652,7 +659,17 @@ def pull_youtube_video(yt_url, media_guid):
 
     from pytube import YouTube
     try:
-        yt, stream, res = find_best_yt_stream(yt_url)
+        yt, stream, res, return_code = find_best_yt_stream(yt_url)
+        if return_code != "OK":
+            print(f"Unable to get video {yt_url}.")
+            log_to_video(yt_url, f"Faild to download video from {yt_url}, will stop trying.")
+            media_file = db(db.media_files.media_guid==media_guid).select().first()
+            media_file.needs_downloading = False
+            media_file.needs_caption_downloading = False
+            media_file.update_record()
+            db.commit()
+            time.sleep(5)
+            return True
     except Exception as ex:
         print("Unknown HTTP error pulling yt video? " + str(ex))
         return False
@@ -1424,7 +1441,17 @@ def process_youtube_queue(run_from=""):
                 ).first()
             if next_row:
                 try:
-                    pull_youtube_video(next_row.youtube_url, next_row.media_guid)
+                    r = pull_youtube_video(next_row.youtube_url, next_row.media_guid)
+                    if r == False:
+                        # Unable to download video?
+                        next_row = db(db.media_files.id==next_row.id).select().first()
+                        if next_row.download_failures is None:
+                            next_row.download_failures = 0
+                        next_row.download_failures += 1
+                        next_row.needs_downloading=False
+                        next_row.needs_caption_downloading=False
+                        next_row.update_record()
+                        db.commit()
                 except Exception as ex:
                     # Had issues downloading from youtube.
                     ## requery as row changed during pull youtube
@@ -1446,7 +1473,16 @@ def process_youtube_queue(run_from=""):
             if next_row:
                 
                 try:
-                    pull_youtube_caption(next_row.youtube_url, next_row.media_guid)
+                    r = pull_youtube_caption(next_row.youtube_url, next_row.media_guid)
+                    if r == False:
+                        # Unable to download caption?
+                        next_row = db(db.media_files.id==next_row.id).select().first()
+                        if next_row.download_failures is None:
+                            next_row.download_failures = 0
+                        next_row.download_failures += 1
+                        next_row.needs_caption_downloading=False
+                        next_row.update_record()
+                        db.commit()
                 except Exception as ex:
                     # Had issues downloading from youtube.
                     ## requery as row changed during pull
@@ -1507,7 +1543,13 @@ time_to_run_youtube_queue = current.cache.ram('time_to_run_youtube_queue', lambd
 if time_to_run_youtube_queue == True:
     current.cache.ram('time_to_run_youtube_queue', lambda: False, time_expire=-1)
 
-    # See if the task is already queued so we don't spam things
+    # Kill old scheduled items so they can just go away...
+    db_scheduler(
+        (db_scheduler.scheduler_task.task_name=='pull_youtube_video') |
+        (db_scheduler.scheduler_task.task_name=='pull_youtube_caption')
+        ).delete()
+    db_scheduler.commit()
+    
     # See if a task is already queued so we don't spam things
     #ts = scheduler.task_status((db_scheduler.scheduler_task.task_name=='process_youtube_queue'))
     ts = db_scheduler(
