@@ -1520,9 +1520,9 @@ def cleanup_youtube_urls():
             yt_urls_fixed_count += 1
             print(f"Fixed YT URL: {yt_url} -> {new_yt_url}")
 
-            # media_file.youtube_url = yt_url
-            # media_file.update_record()
-            # db.commit()
+            #media_file.youtube_url = yt_url
+            media_file.update_record(youtube_url=new_yt_url)
+            db.commit()
 
     print(f"Fixed {yt_urls_fixed_count} out of {media_files_count} youtube urls.")
     return
