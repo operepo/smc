@@ -147,7 +147,8 @@ db.define_table("my_app_settings",
                 Field("app_name", default="SMC"),
                 Field("app_description",
                       default="Student Management Console - Import/Enrollment for Active Directory and Canvas"),
-                Field("app_logo", "upload", length=240, autodelete=True),
+                # NOTE - keep length at 30 - full length lets it add a = to the filename which download then doesn't like
+                Field("app_logo", "upload", length=30, autodelete=True),
                 
                 Field("ad_import_enabled", "boolean", default="False"),
                 Field("file_server_import_enabled", "boolean", default="False"),
