@@ -435,6 +435,8 @@ class Canvas:
         Canvas._errors = []
         Canvas.Close()
         con = Canvas.Connect()
+
+        had_errors = False
         
         # Ensure that you can connect to canvas properly
         if Canvas._canvas_enabled is not True:
@@ -445,18 +447,23 @@ class Canvas:
             Canvas._errors.append("<b>Canvas Integration Connection Successful</b> " + Canvas._canvas_server_url +
                                   "<br />")
             Canvas._errors.append("<b>Dev Key Verified</b> <br />")
-            ret = True
+        else:
+            had_errors = True
 
         db = Canvas.ConnectDB()
         if db is not None:
             Canvas._errors.append(
                 "<b>Canvas DB Connection Successful</b><br />")
-            ret = True
         else:
             Canvas._errors.append(
                 "<b>Canvas DB Connection Failed</b><br />")
-            ret = False
+            had_errors = True
 
+        if had_errors == True:
+            ret = False
+        else:
+            ret = True
+            
         return ret
     
     @staticmethod
