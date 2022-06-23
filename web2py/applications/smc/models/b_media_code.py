@@ -231,6 +231,7 @@ def is_media_captions_present(file_guid):
     return False
 
 def get_cc_icon(file_guid):
+    # NOTE - This checks the file system for captions, slower... use get_cc_icon2
     # Return a Xed cc pic or a good cc pic depending on the state of cc files for this movie.
     ret = URL('static', 'images/no_cc.png')
 
@@ -239,6 +240,15 @@ def get_cc_icon(file_guid):
 
     return ret
 
+def get_cc_icon2(has_captions):
+    # NOTE - This only checks the data row - much faster
+    # Return a Xed cc pic or a good cc pic depending on the state of cc files for this movie.
+    ret = URL('static', 'images/no_cc.png')
+
+    if has_captions == True:
+        ret = URL('static', 'images/cc.png')
+
+    return ret
 
 def load_media_file_json(file_guid):
     """

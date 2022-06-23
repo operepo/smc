@@ -178,6 +178,15 @@ def update_media_database_from_json_files():
     # Make sure to do this and unlock the db
     db.commit()
 
+    # Go through videos and mark them in the db as having captions if the caption file is present.
+    # Some have captions, but it isn't marked in the database.
+    media_files = db(db.media_files.has_captions!=True).select()
+    for media_file in media_files:
+        if is_media_captions_present(media_file.media_guid):
+            media_file.has_captions = True
+            media_file.update_record()
+            db.commit()
+    
     return True
 
 def update_document_database_from_json_files():
@@ -1190,7 +1199,7 @@ def process_youtube_queue(run_from=""):
         if needs_downloading > 0:
             # Grab one, make it current, and start it downloading.
             
-            next_row = db((db.media_files.needs_downloading==True) & (db.media_files.youtube_url!='')).select(
+            next_row = db(((db.media_files.needs_downloading==True) | (db.media_files.needs_caption_downloading==True)) & (db.media_files.youtube_url!='')).select(
                 orderby=[~db.media_files.needs_downloading, db.media_files.download_failures, ~db.media_files.modified_on]
                 ).first()
             if next_row:
@@ -1198,9 +1207,7 @@ def process_youtube_queue(run_from=""):
                     r = pull_youtube_video(next_row)  #next_row.youtube_url, next_row.media_guid)
                 except Exception as ex:
                     # Had issues downloading from youtube.
-                    if next_row.download_failures is None:
-                        next_row.download_failures = 0
-                    next_row.download_failures += 1
+                    next_row.download_failures = next_row.get("download_failures", 0) + 1
                     # if next_row.download_failures > 5:
                     #     next_row.needs_downloading = False
                     next_row.update_record()
@@ -1579,6 +1586,8 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                 print(msg)
                 log_to_video(media_file, msg)
                 continue
+        
+        media_file.has_captions = is_media_captions_present(media_file.media_guid)
         media_file.needs_caption_downloading=False
     
     # Mark that this is done downloading.

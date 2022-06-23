@@ -343,9 +343,9 @@ def index():
             A('[Delete]', _style='font-size: 10px; color: red;', _href=URL('media', 'delete_media', args=[row.media_guid], user_signature=True)),
             ) ) )
         #links.append(dict(header=T(''),body=lambda row:  ) )
-    links.append(dict(header=T(''),body=lambda row: IMG(_src=get_cc_icon(row.media_guid), _style="width: 24px; height: auto; max-width: 24px;", _alt="Close Captioning Available")))
+    links.append(dict(header=T(''),body=lambda row: IMG(_src=get_cc_icon2(row.has_captions), _style="width: 24px; height: auto; max-width: 24px;", _alt="Close Captioning Available")))
     links.append(dict(header=T(''),body=lambda row: A(IMG(_src=getMediaThumb(row.media_guid), _style="width: 128px; height: auto; max-width: 128px;"), _href=URL('media', 'player', args=[row.media_guid], user_signature=True)) ) )
-    fields = [db.media_files.id, db.media_files.title, db.media_files.tags, db.media_files.description, db.media_files.media_guid, db.media_files.category] #[db.media_files.title]
+    fields = [db.media_files.id, db.media_files.title, db.media_files.tags, db.media_files.description, db.media_files.media_guid, db.media_files.category, db.media_files.has_captions] #[db.media_files.title]
     maxtextlengths = {'media_files.title': 150, 'media_files.tags': 50, 'media_files.description': 150}
     
     # Hide columns
@@ -356,6 +356,7 @@ def index():
     db.media_files.original_file_name.readable=False
     db.media_files.media_type.readable=False
     db.media_files.quality.readable=False
+    db.media_files.has_captions.readable=False
     
     # rows = db(query).select()
     media_grid = SQLFORM.grid(query, editable=False, create=False, deletable=False,
@@ -1643,10 +1644,10 @@ def scan_media_files():
         formname="run_import")
     if form.accepted:
         # Look for videos
-        result = scheduler.queue_task('update_media_database_from_json_files', pvars=dict(), timeout=18000,
+        result = scheduler.queue_task('update_media_database_from_json_files', pvars=dict(), timeout=600,
                                       immediate=True, sync_output=5, group_name="process_videos")
         # Look for documents
-        result = scheduler.queue_task('update_document_database_from_json_files', pvars=dict(), timeout=18000,
+        result = scheduler.queue_task('update_document_database_from_json_files', pvars=dict(), timeout=600,
                                       immediate=True, sync_output=5, group_name="process_videos")
         response.flash = "Import process started!"  # + str(result)
 
