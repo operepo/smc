@@ -443,6 +443,8 @@ db.define_table('media_files',
                 Field('current_download', 'boolean', default=False),
                 Field('needs_caption_downloading', 'boolean', default=False),
                 Field('last_download_attempt', 'datetime', default=None),
+                Field('has_captions', 'boolean', default=False),
+                Field('youtube_url_cleaned', 'boolean', default=False),
                 )
 
 # Indexes
@@ -450,6 +452,7 @@ if db_init_needed:
       db.executesql('CREATE INDEX IF NOT EXISTS media_guid_idx ON media_files (media_guid);')
       db.executesql('CREATE INDEX IF NOT EXISTS media_search_idx ON media_files (title, description, category, tags, youtube_url, needs_downloading, item_version);')
       db.executesql('CREATE INDEX IF NOT EXISTS media_download_idx ON media_files (last_download_attempt, current_download, download_failures, needs_caption_downloading);')
+      db.executesql('CREATE INDEX IF NOT EXISTS media_url_cleaned_idx ON media_files (has_captions, youtube_url_cleaned);')
 
 
 db.define_table('document_import_queue',

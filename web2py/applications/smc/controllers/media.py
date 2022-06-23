@@ -1919,8 +1919,16 @@ def pull_from_youtube_step_2():
     res = ''
     try:
         # Get yt video info
-        yt, stream, res = find_best_yt_stream(yt_url)
+        yt, stream, res, return_code = find_best_yt_stream(yt_url)
 
+        if return_code != "OK":
+            msg = f"Error getting YouTube Video - Video not available or blocked."  # + str(yt_url) + " " + str(ex)
+            response.flash = msg
+            return dict(form2=XML(f"<span style='color: red; font-weight:bold;'>" +
+                              f"Error Downloading video</span> ({yt_url}" +
+                              f") - reload page and try again.<br /> " +
+                              f"<span style='font-size: 10px; font-weight: bold;'>" +
+                              f"Error: {return_code}</span><br />{msg}<br /><br /><a href='{URL('media', 'pull_from_youtube.html')}'>[ Try Again ]</a>"))
     except Exception as ex:
         response.flash = "Error getting YouTube Video - Are you online?"  # + str(yt_url) + " " + str(ex)
         return dict(form2=XML("<span style='color: red; font-weight:bold;'>" +

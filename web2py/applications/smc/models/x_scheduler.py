@@ -33,6 +33,7 @@ if 1 == 2:
     save_document_file_json = save_document_file_json
     get_youtube_proxies = get_youtube_proxies
     is_media_captions_present = is_media_captions_present
+    is_media_file_present = is_media_file_present
 
 ### Monkeypatch YT Caption class to fix caption issue: https://github.com/pytube/pytube/issues/1085
 ## review after 7/1/22
@@ -374,9 +375,9 @@ def process_media_file(media_id):
     return dict(mp4_ret=mp4_ret, ogv_ret=ogv_ret, webm_ret=webm_ret, poster_ret=poster_ret, thumb_ret=thumb_ret)
 
 
-def log_to_video(yt_url, msg):
+def log_to_video(media_item, msg):
     # Add to the download_log on the selected video
-    media_item = db(db.media_files.youtube_url==yt_url).select().first()
+
     if media_item:
         log = media_item.download_log
         if log is None:
@@ -385,15 +386,15 @@ def log_to_video(yt_url, msg):
             log += "\n"
         log += f"{msg}"
         media_item.download_log = log
-        media_item.update_record()
-        db.commit()
+                
     return True
 
-def find_best_yt_stream(yt_url):
+def find_best_yt_stream(yt_url, media_file=None):
     yt = None
     res = '480p'
     stream = None
     return_code = "OK"
+    msg = ""
 
     if yt_url is None:
         print("ERROR: yt_url was none?")
@@ -421,7 +422,7 @@ def find_best_yt_stream(yt_url):
         try:
             msg = f"Trying to get {yt_url} from proxy {proxy}"
             print(msg)
-            log_to_video(yt_url, msg)
+            log_to_video(media_file, msg)
             p = None
             if not proxy is None:
                 # Youtube proxy wants it in p['https']='https://123.123.321.321:35000' form
@@ -472,7 +473,7 @@ def find_best_yt_stream(yt_url):
             msg = f"Error grabbing YT video - Video not availalble or blocked - check to see if the url is correct, that it isn't private, that it is available in your region, etc... {yt_url} -- {ex}"
             session.yt_urls_error_msg += msg
             print(msg)
-            log_to_video(yt_url, msg)
+            log_to_video(media_file, msg)
             return_code = "Permanent Error"
 
             return yt, stream, res, return_code
@@ -492,8 +493,8 @@ def find_best_yt_stream(yt_url):
             msg = f"Error grabbing YT video - PyTube error - Youtube might have changed something, update PyTube and try again: {yt_url} -- {ex}"
             session.yt_urls_error_msg += msg
             print(msg)
-            log_to_video(yt_url, msg)
-            return_code = "Permanent Error"
+            log_to_video(media_file, msg)
+            return_code = "Termporary Error"
             return yt, stream, res, return_code
         
         
@@ -511,7 +512,7 @@ def find_best_yt_stream(yt_url):
                     proxy_item.update_record()
                     db.commit()
                 msg = f"429 error on this proxy: {proxy}"
-                log_to_video(yt_url, msg)
+                log_to_video(media_file, msg)
                 
                 # Try next proxy in list - don't return yet
         
@@ -520,265 +521,15 @@ def find_best_yt_stream(yt_url):
             msg = f"Error grabbing YT video - Bad YT URL? {yt_url} -- {ex}"
             session.yt_urls_error_msg += msg
             print(msg)
-            log_to_video(yt_url, msg)
+            log_to_video(media_file, msg)
 
             # For unknown errors - call it - quit trying.
             return_code = "Permanent Error"
             return yt, stream, res, return_code
     
-    # If getting here, we didn't find a good one!
+    # If getting here, we didn't find a good one, try again later!
     return_code = "Temporary Error"
     return yt, stream, res, return_code
-
-def pull_youtube_caption(yt_url, media_guid):
-    # Download the specified caption file.
-
-    if is_media_captions_present(media_guid):
-        msg = "VTT file present."
-        print(msg)
-        log_to_video(yt_url, msg)
-        time.sleep(5)
-        return True
-    
-    # Pull the db info
-    media_file = db(db.media_files.media_guid==media_guid).select().first()
-    if media_file is None:
-        print("ERROR - Unable to find a db record for " + str(media_guid))
-        # Slight pause - let scheduler grab output
-        return False
-
-    (w2py_folder, applications_folder, app_folder) = get_app_folders()
-
-    # Mark this as the currently downloading item.
-    media_file.current_download=True
-    media_file.update_record()
-    db.commit()
-
-    target_file = get_media_file_path(media_guid, "srt")
-    from pytube import YouTube
-    try:
-        #yt = YouTube(yt_url.replace("/embed/", "/watch?v="), proxies=get_youtube_proxies())
-        yt, stream, res = find_best_yt_stream(yt_url)
-    except Exception as ex:
-        msg = "YT Captions - Bad YT URL? " + yt_url + " -- " + str(ex)
-        log_to_video(yt_url, msg)
-        print(msg)
-        return False
-
-    for cap in yt.captions:
-        lang = cap.code
-        output_caption_file = target_file.replace(".srt", "_" + lang + ".srt")
-        log_to_video(yt_url, f"Trying to save {lang} to {output_caption_file}")
-
-        try:
-            msg = f"Saving {lang} to {output_caption_file}"
-            print(msg)
-            log_to_video(yt_url, msg)
-            #caption_url = cap.url
-            #r = requests.get(caption_url)
-            caption_srt = cap.generate_srt_captions()
-            if len(caption_srt) > 1:
-                # Save SRT file
-                f = open(output_caption_file, "wb")
-                f.write(caption_srt.encode('utf-8'))
-                f.close()
-
-                # Convert to webvtt format
-                vtt = webvtt.from_srt(output_caption_file)
-                output_caption_file = output_caption_file.replace("srt", "vtt")
-                vtt.save(output_caption_file)
-                msg = f"Converted to VTT - Saved {lang} to {output_caption_file}"
-                print(msg)
-                log_to_video(yt_url, msg)
-            else:
-                msg = f"Error - generate_srt_captions returned nothing - {lang}"
-                print(msg)
-                log_to_video(yt_url, msg)
-            
-        except Exception as ex:
-            msg = f"Error - unable to grab caption for lang: {yt_url} / {lang}\n{ex}\n{traceback.format_exc()}"
-            print(msg)
-            log_to_video(yt_url, msg)
-            continue
-
-    # Mark this as the currently downloading item.
-    media_file = db(db.media_files.media_guid==media_guid).select().first()
-    media_file.current_download=False
-    media_file.needs_caption_downloading=False
-    media_file.update_record()
-    db.commit()
-    # Slight pause - let scheduler grab output
-    time.sleep(5)
-    return True
-    
-
-def pull_youtube_video(yt_url, media_guid):
-    # Download the specified movie.
-    had_errors = False
-
-    # Pull the db info
-    media_file = db(db.media_files.media_guid==media_guid).select().first()
-    if media_file is None:
-        print("ERROR - Unable to find a db record for " + str(media_guid))
-        # Slight pause - let scheduler grab output
-        time.sleep(5)
-        return False
-
-    # Mark this as the currently downloading item.
-    media_file.current_download=True
-    media_file.update_record()
-    db.commit()
-    
-    (w2py_folder, applications_folder, app_folder) = get_app_folders()
-    (ffmpeg, acodec) = find_ffmpeg()
-
-    # Figure out output file name (use media guid)
-    # static/media/01/010102alj29vsor3.webm
-    file_guid = media_file.media_guid.replace('-', '')
-    # print("File GUID: " + str(file_guid))
-    target_folder = os.path.join(app_folder, 'static', 'media')
-
-    file_prefix = file_guid[0:2]
-
-    target_folder = os.path.join(target_folder, file_prefix)
-    # print("Target Dir: " + target_folder)
-
-    try:
-        os.makedirs(target_folder)
-    except OSError as message:
-        pass
-
-    target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
-
-    output_mp4 = target_file + ".mp4"
-    output_mp4_filename = file_guid + ".mp4"  # Note - NOT -it quits adding it? - don't add mp4 as yt will do that
-    output_meta = target_file + ".json"
-    output_poster = target_file + ".poster.png"
-    output_thumb = target_file + ".thumb.png"
-    output_en_caption = target_file + "_en.xml"
-
-    from pytube import YouTube
-    try:
-        yt, stream, res, return_code = find_best_yt_stream(yt_url)
-        if return_code != "OK":
-            print(f"Unable to get video {yt_url}.")
-            log_to_video(yt_url, f"Failed to download video from {yt_url}, will stop trying.")
-            media_file = db(db.media_files.media_guid==media_guid).select().first()
-            media_file.needs_downloading = False
-            media_file.needs_caption_downloading = False
-            media_file.update_record()
-            db.commit()
-            time.sleep(5)
-            return True
-    except Exception as ex:
-        print("Unknown HTTP error pulling yt video? " + str(ex))
-        return False
-
-    try:
-        msg = f"Downloading {yt_url}\n\n"
-        print(msg)
-        log_to_video(yt_url, msg)
-        
-        stream.download(output_path=target_folder, filename=output_mp4_filename, max_retries=3, timeout=300)  # put in folder name
-
-        msg = f"Downlaod Complete!"
-        print(msg)
-        log_to_video(yt_url, msg)
-    
-    except Exception as ex:
-        print("Error Downloading YouTube Video!  Are you online? " + str(ex))
-        # Slight pause - let scheduler grab output
-        time.sleep(5)
-        return False
-
-    # print("TN File: " + output_thumb)
-    make_own_thumbnail = False
-    thumbnail_url = ""
-    try:
-        thumbnail_url = yt.thumbnail_url
-    except:
-        make_own_thumbnail = True
-
-    # Download the thumbnail file if its set
-    if thumbnail_url != "":
-        try:
-            tn = urlopen(thumbnail_url)
-            with open(output_thumb, 'wb') as f:
-                f.write(tn.read())
-            # Copy the thumbnail to the poster
-            shutil.copy(output_thumb, output_poster)
-        except Exception as ex:
-            print("Error trying to save thumbnail file: " + str(thumbnail_url) + " - " + str(ex))
-            make_own_thumbnail = True
-
-    if make_own_thumbnail is True:
-        # Unable to pull thumbnail - make our own.
-        if ffmpeg is None:
-            print("FFMPEG NOT FOUND! Can't make thumbnail.")
-            # note - let things keep going so at least we have the video
-        else:
-            # Process the video
-            # Generate thumbnail image
-            input_file = output_mp4
-            print("Input File: " + input_file)
-            cmd = ffmpeg + " -y -ss 5 -i \"" + input_file + "\" -vf  \"thumbnail,scale=128:-1\" -frames:v 1 \"" + \
-                output_thumb + "\""
-            # print("Creating thumbnail image..."  + " [" + str(time.time()) + "]")
-            print("Generating Thumbnail...")
-            try:
-                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-                thumb_ret = p.communicate()[0].decode()
-            except Exception as ex:
-                print("Error generating thumbnail: " + str(output_thumb) + " - " + str(ex))
-
-            # Generate poster image
-            cmd = ffmpeg + " -y -ss 5 -i \"" + input_file + "\" -vf  \"thumbnail,scale=640:-1\" -frames:v 1 \"" + \
-                output_poster + "\""
-            # print("Creating poster image..." + " [" + str(time.time()) + "]")
-            print("Generating Poster Image...")
-            try:
-                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-                poster_ret = p.communicate()[0].decode()
-            except Exception as ex:
-                print("Error generating poster: " + str(output_poster) + " - " + str(ex))
-
-    # Update media file to show it has been downloaded
-    title = yt.title
-    description = yt.description
-
-    media_file.update_record(needs_downloading=False, title=title, description=description)
-    db.commit()
-    # pull w updated info
-    media_file = db(db.media_files.media_guid == media_guid).select().first()
-
-    # Save JSON info
-    meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),
-            'description': media_file.description, 'original_file_name': media_file.original_file_name,
-            'media_type': media_file.media_type, 'category': media_file.category,
-            'tags': dumps(media_file.tags), 'width': media_file.width,
-            'height': media_file.height, 'quality': media_file.quality, 'youtube_url': media_file.youtube_url}
-
-    meta_json = dumps(meta)
-    #f = os_open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-    #os.write(f, meta_json)
-    #os.close(f)
-    f = open(output_meta, "w")
-    f.write(meta_json)
-    f.close()
-
-    # Mark that this is done downloading.
-    media_file = db(db.media_files.media_guid==media_guid).select().first()
-    media_file.current_download=False
-    if had_errors == False:
-        media_file.needs_downloading = False
-    media_file.update_record()
-    # Have to call commit in tasks if changes made to the db
-    db.commit()
-
-    # Scheduler delays now, don't need this.
-    # Throw a little delay in here to help keep from getting blocked by youtube
-    #time.sleep(15)
-    return True
 
 
 def remove_old_wamap_video_files():
@@ -1423,12 +1174,15 @@ def canvas_tag_smc_resources(class_id, class_name):
 def process_youtube_queue(run_from=""):
     print(f"Processing youtube queue...")
 
+    # Some old youtube urls end up with crap in them (e.g. html tags) - clean them up a little.
+    cleanup_youtube_urls()
+
     # See if there are any videos needing to download...
     try:
 
         # Get how many videos or captions need to dl
-        needs_downloading = db((db.media_files.youtube_url!='') & (db.media_files.needs_downloading==True)).count()
-        needs_caption_downloading = db((db.media_files.youtube_url!='') & (db.media_files.needs_caption_downloading==True)).count()
+        needs_downloading = db((db.media_files.youtube_url!='') & ((db.media_files.needs_downloading==True) | (db.media_files.needs_caption_downloading==True))).count()
+        #needs_caption_downloading = db((db.media_files.youtube_url!='') & (db.media_files.needs_caption_downloading==True)).count()
         # Mark none of the videos as currently downloading
         db(db.media_files).update(current_download=False)
         db.commit()
@@ -1441,57 +1195,14 @@ def process_youtube_queue(run_from=""):
                 ).first()
             if next_row:
                 try:
-                    r = pull_youtube_video(next_row.youtube_url, next_row.media_guid)
-                    if r == False:
-                        # Unable to download video?
-                        next_row = db(db.media_files.id==next_row.id).select().first()
-                        if next_row.download_failures is None:
-                            next_row.download_failures = 0
-                        next_row.download_failures += 1
-                        next_row.needs_downloading=False
-                        next_row.needs_caption_downloading=False
-                        next_row.update_record()
-                        db.commit()
+                    r = pull_youtube_video(next_row)  #next_row.youtube_url, next_row.media_guid)
                 except Exception as ex:
                     # Had issues downloading from youtube.
-                    ## requery as row changed during pull youtube
-                    next_row = db(db.media_files.id==next_row.id).select().first()
                     if next_row.download_failures is None:
                         next_row.download_failures = 0
                     next_row.download_failures += 1
                     # if next_row.download_failures > 5:
                     #     next_row.needs_downloading = False
-                    next_row.update_record()
-                    db.commit()
-                
-        elif needs_caption_downloading > 0:
-            # Try to grab a set of captions for the video
-            
-            next_row = db((db.media_files.needs_caption_downloading==True) & (db.media_files.youtube_url!='')).select(
-                orderby=[~db.media_files.needs_caption_downloading, db.media_files.download_failures, ~db.media_files.modified_on]
-                ).first()
-            if next_row:
-                
-                try:
-                    r = pull_youtube_caption(next_row.youtube_url, next_row.media_guid)
-                    if r == False:
-                        # Unable to download caption?
-                        next_row = db(db.media_files.id==next_row.id).select().first()
-                        if next_row.download_failures is None:
-                            next_row.download_failures = 0
-                        next_row.download_failures += 1
-                        next_row.needs_caption_downloading=False
-                        next_row.update_record()
-                        db.commit()
-                except Exception as ex:
-                    # Had issues downloading from youtube.
-                    ## requery as row changed during pull
-                    next_row = db(db.media_files.id==next_row.id).select().first()
-                    if next_row.download_failures is None:
-                        next_row.download_failures = 0
-                    next_row.download_failures += 1
-                    # if next_row.download_failures > 5:
-                    #     next_row.needs_caption_downloading = False
                     next_row.update_record()
                     db.commit()
         else:
@@ -1510,7 +1221,7 @@ def cleanup_youtube_urls():
     media_files_count = 0
     yt_urls_fixed_count = 0
 
-    media_files = db(db.media_files.youtube_url!='').select()
+    media_files = db((db.media_files.youtube_url!='') & (db.media_files.youtube_url_cleaned != True)).select()
     for media_file in media_files:
         media_files_count += 1
         yt_url = media_file.youtube_url
@@ -1520,13 +1231,363 @@ def cleanup_youtube_urls():
             yt_urls_fixed_count += 1
             print(f"Fixed YT URL: {yt_url} -> {new_yt_url}")
 
-            #media_file.youtube_url = yt_url
-            media_file.update_record(youtube_url=new_yt_url)
-            db.commit()
+        media_file.update_record(youtube_url=new_yt_url, youtube_url_cleaned=True)
+        db.commit()
 
     print(f"Fixed {yt_urls_fixed_count} out of {media_files_count} youtube urls.")
     return
 
+def pull_youtube_caption(yt_url, media_guid):
+    # NOTE - Don't use - captions get pulled in pull_youtube_video now
+    return False
+    # Download the specified caption file.
+
+    if is_media_captions_present(media_guid):
+        msg = "VTT file present."
+        print(msg)
+        log_to_video(yt_url, msg)
+        time.sleep(5)
+        return True
+    
+    # Pull the db info
+    media_file = db(db.media_files.media_guid==media_guid).select().first()
+    if media_file is None:
+        print("ERROR - Unable to find a db record for " + str(media_guid))
+        # Slight pause - let scheduler grab output
+        return False
+
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+
+    # Mark this as the currently downloading item.
+    media_file.current_download=True
+    media_file.update_record()
+    db.commit()
+
+    target_file = get_media_file_path(media_guid, "srt")
+    from pytube import YouTube
+    try:
+        #yt = YouTube(yt_url.replace("/embed/", "/watch?v="), proxies=get_youtube_proxies())
+        yt, stream, res = find_best_yt_stream(yt_url)
+    except Exception as ex:
+        msg = "YT Captions - Bad YT URL? " + yt_url + " -- " + str(ex)
+        log_to_video(yt_url, msg)
+        print(msg)
+        return False
+
+    for cap in yt.captions:
+        lang = cap.code
+        output_caption_file = target_file.replace(".srt", "_" + lang + ".srt")
+        log_to_video(yt_url, f"Trying to save {lang} to {output_caption_file}")
+
+        try:
+            msg = f"Saving {lang} to {output_caption_file}"
+            print(msg)
+            log_to_video(yt_url, msg)
+            #caption_url = cap.url
+            #r = requests.get(caption_url)
+            caption_srt = cap.generate_srt_captions()
+            if len(caption_srt) > 1:
+                # Save SRT file
+                f = open(output_caption_file, "wb")
+                f.write(caption_srt.encode('utf-8'))
+                f.close()
+
+                # Convert to webvtt format
+                vtt = webvtt.from_srt(output_caption_file)
+                output_caption_file = output_caption_file.replace("srt", "vtt")
+                vtt.save(output_caption_file)
+                msg = f"Converted to VTT - Saved {lang} to {output_caption_file}"
+                print(msg)
+                log_to_video(yt_url, msg)
+            else:
+                msg = f"Error - generate_srt_captions returned nothing - {lang}"
+                print(msg)
+                log_to_video(yt_url, msg)
+            
+        except Exception as ex:
+            msg = f"Error - unable to grab caption for lang: {yt_url} / {lang}\n{ex}\n{traceback.format_exc()}"
+            print(msg)
+            log_to_video(yt_url, msg)
+            continue
+
+    # Mark this as the currently downloading item.
+    media_file = db(db.media_files.media_guid==media_guid).select().first()
+    media_file.current_download=False
+    media_file.needs_caption_downloading=False
+    media_file.update_record()
+    db.commit()
+    # Slight pause - let scheduler grab output
+    time.sleep(5)
+    return True
+    
+
+def pull_youtube_video(media_file, force_video=False, force_captions=False):
+    # Force makes it re-download the video/captions even if they are present
+    # Download the specified movie.
+
+    from pytube import YouTube
+
+    if media_file is None:
+        print(f"ERROR - Unable to find a db record for null media file")
+        # Slight pause - let scheduler grab output
+        time.sleep(5)
+        return False
+
+    # Mark this as the currently downloading item.
+    media_file.current_download=True
+    media_file.update_record()
+    db.commit()
+
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+    (ffmpeg, acodec) = find_ffmpeg()
+
+    yt = stream = res = None
+
+    yt_url = media_file.youtube_url
+    
+    if not is_media_file_present(media_file.media_guid) or force_video == True:
+        # Need to download the video
+    
+        # Figure out output file name (use media guid)
+        # static/media/01/010102alj29vsor3.webm
+        file_guid = media_file.media_guid.replace('-', '')
+        # print("File GUID: " + str(file_guid))
+        target_folder = os.path.join(app_folder, 'static', 'media')
+
+        file_prefix = file_guid[0:2]
+
+        target_folder = os.path.join(target_folder, file_prefix)
+        # print("Target Dir: " + target_folder)
+
+        try:
+            os.makedirs(target_folder, exist_ok=True)
+        except OSError as message:
+            pass
+
+        target_file = os.path.join(target_folder, file_guid).replace("\\", "/")
+
+        output_mp4 = target_file + ".mp4"
+        output_mp4_filename = file_guid + ".mp4"  # Note - NOT -it quits adding it? - don't add mp4 as yt will do that
+        output_meta = target_file + ".json"
+        output_poster = target_file + ".poster.png"
+        output_thumb = target_file + ".thumb.png"
+        output_en_caption = target_file + "_en.xml"
+
+    
+        try:
+            yt, stream, res, return_code = find_best_yt_stream(yt_url)
+
+            if return_code == "Permanent Error":
+                print(f"Permanent Error - Unable to get video {yt_url}.")
+                log_to_video(media_file, f"Failed to download video from {yt_url}, will stop trying.")
+                media_file.needs_downloading = False
+                media_file.needs_caption_downloading = False
+                media_file.download_failures = media_file.get("download_failures", 0) + 1
+                media_file.update_record()
+                db.commit()                
+                return True
+            elif return_code == "Termporary Error":
+                print(f"Temporary Error - Unable to get video {yt_url}.")
+                log_to_video(media_file, f"Failed to download video from {yt_url}, will keep trying.")
+                media_file.needs_downloading = True
+                media_file.download_failures = media_file.get("download_failures", 0) + 1
+                media_file.update_record()
+                db.commit()
+                return True
+            elif return_code == "OK":
+                log_to_video(media_file, f"Got YTVideo {yt_url}")
+        except Exception as ex:
+            print(f"Unknown HTTP error pulling yt video? {yt_url}\n{ex}")
+            log_to_video(media_file, f"Unknown Error - Failed to download video from {yt_url}, will keep trying.\n{ex}")
+            media_file.needs_downloading = True
+            media_file.download_failures = media_file.get("download_failures", 0) + 1
+            media_file.update_record()
+            db.commit()
+            return False
+
+        try:
+            msg = f"Attempting to download {yt_url}\n\n"
+            print(msg)
+            log_to_video(media_file, msg)
+            
+            stream.download(output_path=target_folder, filename=output_mp4_filename, max_retries=3, timeout=300)  # put in folder name
+
+            msg = f"Download Complete!"
+            print(msg)
+            log_to_video(media_file, msg)
+        
+        except Exception as ex:
+            print("Error Downloading YouTube Video!  Are you online? " + str(ex))
+            # Slight pause - let scheduler grab output
+            
+            return False
+
+        # print("TN File: " + output_thumb)
+        make_own_thumbnail = False
+        thumbnail_url = ""
+        try:
+            thumbnail_url = yt.thumbnail_url
+        except:
+            make_own_thumbnail = True
+
+        # Download the thumbnail file if its set
+        if thumbnail_url != "":
+            try:
+                tn = urlopen(thumbnail_url)
+                with open(output_thumb, 'wb') as f:
+                    f.write(tn.read())
+                # Copy the thumbnail to the poster
+                shutil.copy(output_thumb, output_poster)
+            except Exception as ex:
+                msg = f"Error trying to download thumbnail file - will try to make one: {thumbnail_url} - {ex}"
+                print(msg)
+                log_to_video(media_file, msg)
+                make_own_thumbnail = True
+
+        if make_own_thumbnail is True:
+            # Unable to pull thumbnail - make our own.
+            if ffmpeg is None:
+                msg = f"FFMPEG NOT FOUND! Can't make thumbnail for {yt_url}"
+                print(msg)
+                log_to_video(media_file, msg)
+                # note - let things keep going so at least we have the video
+            else:
+                # Process the video
+                # Generate thumbnail image
+                input_file = output_mp4
+                log_to_video(media_file, f"Input File: {input_file}")
+                cmd = ffmpeg + " -y -ss 5 -i \"" + input_file + "\" -vf  \"thumbnail,scale=128:-1\" -frames:v 1 \"" + \
+                    output_thumb + "\""
+                # print("Creating thumbnail image..."  + " [" + str(time.time()) + "]")
+                log_to_video(media_file, f"Generating Thumbnail...")
+                try:
+                    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+                    thumb_ret = p.communicate()[0].decode()
+                except Exception as ex:
+                    log_to_video(media_file, f"Error generating thumbnail: {output_thumb} - {ex}")
+
+                # Generate poster image
+                cmd = ffmpeg + " -y -ss 5 -i \"" + input_file + "\" -vf  \"thumbnail,scale=640:-1\" -frames:v 1 \"" + \
+                    output_poster + "\""
+                # print("Creating poster image..." + " [" + str(time.time()) + "]")
+                log_to_video(media_file, f"Generating Poster Image...")
+                try:
+                    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+                    poster_ret = p.communicate()[0].decode()
+                except Exception as ex:
+                    log_to_video(media_file, f"Error generating poster: {output_poster} - {ex}")
+
+        # Update media file to show it has been downloaded
+        title = yt.title
+        description = yt.description
+
+        media_file.needs_downloading = False
+        media_file.title = title
+        media_file.description = description
+        media_file.update_record()
+        db.commit()
+
+        
+        # pull w updated info
+        #media_file = db(db.media_files.media_guid == media_file.media_guid).select().first()
+
+        # Save JSON info
+        meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),
+                'description': media_file.description, 'original_file_name': media_file.original_file_name,
+                'media_type': media_file.media_type, 'category': media_file.category,
+                'tags': dumps(media_file.tags), 'width': media_file.width,
+                'height': media_file.height, 'quality': media_file.quality, 'youtube_url': media_file.youtube_url}
+
+        meta_json = dumps(meta)
+        #f = os_open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+        #os.write(f, meta_json)
+        #os.close(f)
+        f = open(output_meta, "w")
+        f.write(meta_json)
+        f.close()
+
+    
+    if not is_media_captions_present(media_file.media_guid) or force_captions == True:
+        # Try to download caption files.
+        
+        target_file = get_media_file_path(media_file.media_guid, "srt")
+        try:
+            if yt is None:
+                # Use the current yt object if it isn't already init
+                yt, stream, res, return_code = find_best_yt_stream(yt_url)
+
+                if return_code == "Permanent Error":
+                    print(f"Permanent Error - Unable to get captions {yt_url}.")
+                    log_to_video(media_file, f"Failed to download captions from {yt_url}, will stop trying.")
+                    media_file.needs_caption_downloading = False
+                    media_file.download_failures = media_file.get("download_failures", 0) + 1
+                    media_file.update_record()
+                    db.commit()                
+                    return True
+                elif return_code == "Termporary Error":
+                    print(f"Temporary Error - Unable to get captions {yt_url}.")
+                    log_to_video(media_file, f"Failed to download captions from {yt_url}, will keep trying.")
+                    media_file.needs_caption_downloading = True
+                    media_file.download_failures = media_file.get("download_failures", 0) + 1
+                    media_file.update_record()
+                    db.commit()
+                    return True
+                elif return_code == "OK":
+                    log_to_video(media_file, f"Got YTCaptions {yt_url}")
+        except Exception as ex:
+            print(f"Unknown HTTP error pulling yt captions? {yt_url}\n{ex}")
+            log_to_video(media_file, f"Unknown Error - Failed to download captions from {yt_url}, will keep trying.\n{ex}")
+            media_file.needs_caption_downloading = True
+            media_file.download_failures = media_file.get("download_failures", 0) + 1
+            media_file.update_record()
+            db.commit()
+            return False
+
+        # Now we have a list of captions, go get them.
+        for cap in yt.captions:
+            lang = cap.code
+            output_caption_file = target_file.replace(".srt", "_" + lang + ".srt")
+            log_to_video(media_file, f"Trying to save {lang} to {output_caption_file}")
+
+            try:
+                msg = f"Saving {lang} to {output_caption_file}"
+                print(msg)
+                log_to_video(media_file, msg)
+                #caption_url = cap.url
+                #r = requests.get(caption_url)
+                caption_srt = cap.generate_srt_captions()
+                if len(caption_srt) > 1:
+                    # Save SRT file
+                    f = open(output_caption_file, "wb")
+                    f.write(caption_srt.encode('utf-8'))
+                    f.close()
+
+                    # Convert to webvtt format
+                    vtt = webvtt.from_srt(output_caption_file)
+                    output_caption_file = output_caption_file.replace("srt", "vtt")
+                    vtt.save(output_caption_file)
+                    msg = f"Converted to VTT - Saved {lang} to {output_caption_file}"
+                    print(msg)
+                    log_to_video(media_file, msg)
+                else:
+                    msg = f"Error - generate_srt_captions returned nothing - {lang}"
+                    print(msg)
+                    log_to_video(media_file, msg)
+                
+            except Exception as ex:
+                msg = f"Error - unable to grab caption for lang: {yt_url} / {lang}\n{ex}\n{traceback.format_exc()}"
+                print(msg)
+                log_to_video(media_file, msg)
+                continue
+        media_file.needs_caption_downloading=False
+    
+    # Mark that this is done downloading.
+    media_file.current_download=False
+    media_file.update_record()
+    # Have to call commit in tasks if changes made to the db
+    db.commit()
+    
+    return True
 
 # Enable the scheduler
 from gluon.scheduler import Scheduler
@@ -1575,9 +1636,6 @@ if time_to_run_youtube_queue == True:
         ).delete()
     db_scheduler.commit()
 
-    # Some old youtube urls end up with crap in them (e.g. html tags) - clean them up a little.
-    cleanup_youtube_urls()
-    
     # See if a task is already queued so we don't spam things
     #ts = scheduler.task_status((db_scheduler.scheduler_task.task_name=='process_youtube_queue'))
     ts = db_scheduler(
