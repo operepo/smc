@@ -180,7 +180,7 @@ def update_media_database_from_json_files():
 
     # Go through videos and mark them in the db as having captions if the caption file is present.
     # Some have captions, but it isn't marked in the database.
-    media_files = db(db.media_files.has_captions!=True).select()
+    media_files = db((db.media_files.has_captions!=True)|(db.media_files.has_captions==None)).select()
     for media_file in media_files:
         if is_media_captions_present(media_file.media_guid):
             media_file.has_captions = True
@@ -1190,7 +1190,11 @@ def process_youtube_queue(run_from=""):
     try:
 
         # Get how many videos or captions need to dl
-        needs_downloading = db((db.media_files.youtube_url!='') & ((db.media_files.needs_downloading==True) | (db.media_files.needs_caption_downloading==True))).count()
+        query = (
+            (db.media_files.youtube_url!='') &
+            ((db.media_files.needs_downloading==True) | (db.media_files.needs_caption_downloading==True))
+        )
+        needs_downloading = db(query).count()
         #needs_caption_downloading = db((db.media_files.youtube_url!='') & (db.media_files.needs_caption_downloading==True)).count()
         # Mark none of the videos as currently downloading
         db(db.media_files).update(current_download=False)
@@ -1199,7 +1203,7 @@ def process_youtube_queue(run_from=""):
         if needs_downloading > 0:
             # Grab one, make it current, and start it downloading.
             
-            next_row = db(((db.media_files.needs_downloading==True) | (db.media_files.needs_caption_downloading==True)) & (db.media_files.youtube_url!='')).select(
+            next_row = db(query).select(
                 orderby=[~db.media_files.needs_downloading, db.media_files.download_failures, ~db.media_files.modified_on]
                 ).first()
             if next_row:
@@ -1228,7 +1232,7 @@ def cleanup_youtube_urls():
     media_files_count = 0
     yt_urls_fixed_count = 0
 
-    media_files = db((db.media_files.youtube_url!='') & (db.media_files.youtube_url_cleaned != True)).select()
+    media_files = db((db.media_files.youtube_url!='') & ((db.media_files.youtube_url_cleaned==False) | (db.media_files.youtube_url_cleaned==None))).select()
     for media_file in media_files:
         media_files_count += 1
         yt_url = media_file.youtube_url
