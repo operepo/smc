@@ -2,6 +2,74 @@
 
 <h1>Create OPE Quiz</h1>
 
-<div class="well" style="width: 100%">
-    {{=quiz_create_form}}
+<style>
+    .ui.selection.dropdown {
+        min-height: 2.914286em;
+    }
+</style>
+
+<FORM id="new_quiz" class="ui form" enctype="multipart/form-data" method="post" action="#">
+<div class="ui segment">
+    <div class="required field">
+        <label>Title</label>
+        <input type="text" name="quiz_title" placeholder="Quiz Title">
+    </div>
+    <div class="field">
+        <label>Description</label>
+        <textarea rows="4" name="quiz_description" placeholder="Enter description here"></textarea>
+    </div>
+    <div class="required field">
+        <label>Quiz Type</label>
+        <select name="quiz_type" class="ui selection dropdown">
+            <!--option value="">Pick Type</option-->
+            <option value="assignment">Assignment</option>
+            <option value="practice_quiz">Practice Quiz</option>
+            <option value="graded_survey">Graded Survey</option>
+            <option value="survey">Survey</option>
+        </select>
+    </div>
+    <div class="required field">
+        <div class="ui toggle checked checkbox">
+            <input type="checkbox" name="available_on_offline_laptop" checked="">
+            <label>Allow students to take this quiz on laptops</label>
+        </div>
+    </div>
 </div>
+    <button class="ui primary submit button" type="submit">Create</button>
+    <button class="ui cancel button" type="button" onclick="window.location='{{=URL('lti','quiz_list')}}'">Cancel</button>
+    
+</FORM>
+
+
+<script>
+
+    $('#select').dropdown();
+
+    $('#new_quiz').form({
+        on: 'blur',
+        inline: true,
+        fields: {
+            quiz_title: {
+                identifier: 'quiz_title',
+                rules: [{
+                        type: 'minLength[4]',
+                        prompt: 'Please enter a valid name for the quiz'
+            
+                }]
+            },
+            quiz_type: {
+                identifier: 'quiz_type',
+                rules: [{
+                    type: 'empty',
+                    prompt: 'Quiz type required.'
+                }]
+            }
+            
+
+        }
+    });
+
+    //});
+    
+    
+</script>

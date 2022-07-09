@@ -17,34 +17,98 @@ from langcodes import *
 import webvtt
 import traceback
 import datetime
+from gluon.storage import Storage
 
 from ednet.canvas import Canvas
+
+# Help shut up pylance warnings
+if 1==2: from ..common import *
 
 from pytube import YouTube
 #import pytube
 
-if 1 == 2:
-    # Stop pylance highlighting everything
-    cache = cache
-    db = db
-    db_scheduler = db_scheduler
-    session = session
-    DAL = DAL
-    current = current
-    request = request
-    response = response
-    URL = URL
-    Canvas = Canvas
-    get_app_folders = get_app_folders
-    load_media_file_json = load_media_file_json
-    get_media_file_path = get_media_file_path
-    load_document_file_json = load_document_file_json
-    find_ffmpeg = find_ffmpeg
-    w2py_folder = w2py_folder
-    save_media_file_json = save_media_file_json
-    save_document_file_json = save_document_file_json
-    get_youtube_proxies = get_youtube_proxies
-    is_media_captions_present = is_media_captions_present
+
+def get_session_values(namespace="ui", control=None):
+    # Get ALL values stored for this session.
+    ret = dict()
+    #print(f"{control}....")
+    if namespace is None or control is None:
+        #print(f"Exit Early1")
+        return ret
+    
+    if session.namespaces is None:
+        #print(f"Exit Early2")
+        return ret
+    
+    if namespace not in session.namespaces:
+        #print(f"Exit Early3")
+        return ret
+    
+    controls = session.namespaces[namespace]
+
+    if control not in controls:
+        #print(f"Exit Early4")
+        return ret
+
+    ctrl = controls[control]
+
+    for key in ctrl.keys():
+        ret[key] = ctrl[key]
+
+    return ret
+
+def get_session_value(namespace="ui", control=None, key=None, value=None, default=None):
+    ret = default
+
+    # If any of the namespace, control or key are None, dont bother.
+    if namespace is None or control is None or key is None:
+        #print(f"Returning {ret}")
+        return ret
+
+    # Make sure the namespaces exists
+    if session.namespaces is None:
+        session.namespaces = Storage()
+    
+    namespaces = session.namespaces
+
+    if namespace in namespaces:
+        controls = namespaces[namespace]
+        if control in controls:
+            ctrl = controls[control]
+
+            if key in ctrl.keys():
+                ret = ctrl[key]
+    #print(f"returning {ret}")
+    return ret
+
+def set_session_value(namespace="ui", control=None, key=None, value=None):
+    ret = True
+
+    # If any of the namespace, control or key are None, dont bother.
+    if namespace is None or control is None or key is None:
+        #print(f"Returning {ret}")
+        return False
+    
+    # Make sure the namespaces exists
+    if session.namespaces is None:
+        session.namespaces = Storage()
+    
+    namespaces = session.namespaces
+    if namespace not in namespaces:
+        # Add list of controls to namespace
+        namespaces[namespace] = Storage()
+    
+    controls = namespaces[namespace]
+    
+    if control not in controls:
+        controls[control] = Storage()
+
+    ctrl = controls[control]
+    
+    #print(f"{key}")
+    ctrl[key] = value
+    
+    return True
 
 
 def get_youtube_proxies(randomize=False):
@@ -246,7 +310,7 @@ def get_cc_icon2(has_captions):
     ret = URL('static', 'images/no_cc.png')
 
     if has_captions == True:
-        ret = URL('static', 'images/cc.png')
+        ret = URL('static', 'images/captions.png')
 
     return ret
 

@@ -6,6 +6,8 @@
 
 from gluon import current
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
 
 # Required to use basic authentication
 auth.settings.allow_basic_login = True

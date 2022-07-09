@@ -8,6 +8,9 @@ track_changes(True)
 import os
 import sys
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
+
 global APP_VERSION
 APP_VERSION = None
 

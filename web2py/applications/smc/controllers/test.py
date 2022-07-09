@@ -13,6 +13,9 @@ from pytube import YouTube
 import os
 import ssl
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
+
 # import ldap
 # import ldap
 import ssl
@@ -30,6 +33,19 @@ auth.settings.allow_basic_login = True
 import module_reload
 ret = module_reload.ReloadModules()
 
+@auth.requires_membership("Administrators")
+def test_parse_names():
+    response.view = 'generic.json'
+    ret = dict()
+
+    name1 = "Twiringiyimana, Viater"
+    name2 = "Magana-Sanchez, Juan Manuel"
+
+    ret[name1] = Util.ParseName(name1)
+    ret[name2] = Util.ParseName(name2)
+
+
+    return ret
 
 @auth.requires_membership("Administrators")
 def test_cleanup_youtube_urls():

@@ -2,6 +2,8 @@
 import os
 from ednet.ad import AD
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
 
 # Do we need to do initial init? (e.g. creating indexes.....)
 db_init_needed = cache.ram('db_init_needed', lambda: True, time_expire=3600)

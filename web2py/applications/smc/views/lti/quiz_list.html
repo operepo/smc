@@ -1,16 +1,54 @@
 {{ extend 'lti_minimal_layout.html' }}
 
 <h1>OPE Quizzes</h1>
+<button id="new_quiz" class="ui button right floated primary"><i class="icon plus"></i>New Quiz</button>
 
-<div>
-    {{=new_quiz_button}}
+<br /><br /><br />
+
+<div class="ui styled fluid accordion" style="width:100%;">
+    <div class="{{=get_session_value(control='Assignment Quizzes ' +session.canvas_course_id, key='active', default='active')}} title" style="background-color: #f8f8f8;">
+        <i class="dropdown icon"></i>
+        Assignment Quizzes
+    </div>
+    <div class="{{=get_session_value(control='Assignment Quizzes ' +session.canvas_course_id, key='active', default='active')}} content" data-control_id="Assignment Quizzes {{=session.canvas_course_id}}">
+        {{=assignment}}
+    </div>
+
 </div>
 
-<div class="" style="width: 100%">
-    {{=quiz_list}}
+<div class="ui styled fluid accordion" style="width:100%;">
+    <div class="{{=get_session_value(control='Practice Quizzes ' +session.canvas_course_id, key='active', default='')}} title" style="background-color: #f8f8f8;">
+        <i class="dropdown icon"></i>
+        Practice Quizzes
+    </div>
+    <div class="{{=get_session_value(control='Practice Quizzes ' +session.canvas_course_id, key='active', default='')}} content" data-control_id="Practice Quizzes {{=session.canvas_course_id}}">
+        {{=practice_quiz}}
+    </div>
+
 </div>
 
-<!-- =LOAD('lti', 'rce_insert_media_ajax.load', ajax=True) -->
+
+<div class="ui styled fluid accordion" style="width:100%;">
+    <div class="{{=get_session_value(control='Graded Surveys ' +session.canvas_course_id, key='active', default='')}} title" style="background-color: #f8f8f8;">
+        <i class="dropdown icon"></i>
+        Graded Surveys
+    </div>
+    <div class="{{=get_session_value(control='Graded Surveys ' +session.canvas_course_id, key='active', default='')}} content" data-control_id="Graded Surveys {{=session.canvas_course_id}}">
+        {{=graded_survey}}
+    </div>
+
+</div>
+
+<div class="ui styled fluid accordion" style="width:100%;">
+    <div class="{{=get_session_value(control='Surveys ' +session.canvas_course_id, key='active', default='')}} title" style="background-color: #f8f8f8;">
+        <i class="dropdown icon"></i>
+        Surveys
+    </div>
+    <div class="{{=get_session_value(control='Surveys ' +session.canvas_course_id, key='active', default='')}} content" data-control_id="Surveys {{=session.canvas_course_id}}">
+        {{=survey}}
+    </div>
+
+</div>
 
 
 <!--
@@ -18,3 +56,221 @@
 {{=vars}}
 
 -->
+<style>
+    /* Bootstrap has modal settings that are bleeding into fomantic modal, clear the attributes. */
+    .ui .modal {
+        top: auto;
+        bottom: auto;
+        left: auto;
+        right: auto;
+    }
+</style>
+<script>
+    // Setup the API enpoints
+    $.fn.api.settings.api = {
+        // {??} for required parameters, {/??} for optional parameters
+        'delete_quiz' : "{{=URL('lti', 'api_delete_quiz')}}/{quiz_id}",
+        'toggle_quiz' : "{{=URL('lti', 'api_toggle_quiz')}}/{quiz_id}",
+        'toggle_laptop': "{{=URL('lti', 'api_toggle_laptop')}}/{quiz_id}"
+    };
+
+    $('.button.toggle_laptop').api({
+        action: 'toggle_laptop',
+        method: 'post',
+        successTest: function(response) {
+            // API should return ret=true or ret=false
+            if (response && response.ret) {
+                return response.ret;
+            }
+            return false;
+        },
+
+        onSuccess: function(response, element, xhr) {
+            var laptop_enabled_icon = "{{=laptop_enabled_icon}}";
+            var laptop_disabled_icon = "{{=laptop_disabled_icon}}";
+            var laptop_slash_svg = `{{=laptop_slash_svg}}`;
+
+            var quiz_id = element.data('quiz_id');
+            var quiz_item = "#quiz_toggle_laptop_" + quiz_id;
+
+            icon = $("#quiz_toggle_laptop_icon_" + quiz_id);
+            slash_icon = $("#quiz_toggle_laptop_icon_slash_" + quiz_id);
+            if (icon.hasClass(laptop_enabled_icon)) {
+                icon.removeClass(laptop_enabled_icon);
+                icon.addClass(laptop_disabled_icon);
+                slash_icon.html(laptop_slash_svg);
+            } else {
+                icon.removeClass(laptop_disabled_icon);
+                icon.addClass(laptop_enabled_icon);
+                slash_icon.empty();
+            }
+        },
+
+    });
+
+    $('.button.toggle_quiz').api({
+        action: 'toggle_quiz',
+        method: 'post',
+        // beforeSend: function(settings) {
+        //     console.log("beforeSend - toggle_quiz");
+        //     return settings;
+        // },
+        successTest: function(response) {
+            // API should return ret=true or ret=false
+            if (response && response.ret){
+                return response.ret;
+            }
+            return false;
+        },
+        onSuccess: function(response, element, xhr) {
+            var checked_icon = "{{=checked_icon}}";
+            var unchecked_icon = "{{=unchecked_icon}}";
+            // Got a valid response from the server, change the icon
+            //console.log(element);
+            var quiz_id = element.data('quiz_id');
+            //var quiz_row = "#quiz_row_" + element.data('quiz_id');
+            //console.log("Deleted... removing html element: " + quiz_row);
+            //$(quiz_row).remove();
+            console.log("Quiz Toggled..." + quiz_id)
+            // Have the button - need to get the child icon
+            item = element.children(0);
+            if (item.hasClass(checked_icon)) {
+                item.removeClass(checked_icon);
+                item.addClass(unchecked_icon);
+            } else {
+                item.removeClass(unchecked_icon);
+                item.addClass(checked_icon);
+            }
+        }
+    });
+
+    $('.item.delete_quiz').api({
+        action: 'delete_quiz',
+        method: 'post', // NOTE post uses settings.data, get uses settings.urlData
+        // beforeSend: function(settings) {
+        //     var quiz_id = $(this).data('quiz_id');
+        //     var quiz_title = $(this).data('quiz_title');
+        //     console.log("beforeSend");
+        //     console.log(settings.data);
+        //     console.log(settings.urlData);
+
+        //     console.log("after modal");
+
+        //     // NOTE - this should be protected by the modal confirm box!
+        //     // let the api endpoint continue processing this event.
+        //     // Need to set the urlData so it can translate the URL values
+        //     //settings.urlData.quiz_id = quiz_id;
+        //     return settings;
+        // },
+
+        successTest: function(response) {
+            // API should return ret=true or ret=false
+            if (response && response.ret){
+                return response.ret;
+            }
+            return false;
+        },
+        onSuccess: function(response, element, xhr) {
+            // Got a valid response from the server, remove the element on the client.
+            //console.log(element);
+            var quiz_row = "#quiz_row_" + element.data('quiz_id');
+            //console.log("Deleted... removing html element: " + quiz_row);
+            $(quiz_row).remove();
+        }
+    });
+
+    $('#new_quiz').click(function() {
+        window.location='{{=URL("lti", "create_quiz")}}';
+    });
+
+    $('.ui.accordion').accordion({
+        onChange: function(element) {
+            // Accordion has been clicked (open or close)
+            console.log("Accordion On Change")
+            console.log(this);
+            var active = '';
+            if ($(this).hasClass('active')) {
+                active='active';
+            }
+            var control_id = $(this).data('control_id');
+            // Send the event back to the server
+            $.ajax({
+                method: "POST",
+                url: "{{=URL('lti', 'api_set_ui_state')}}/" + control_id,
+                data: {active: active},
+                cache: false
+            });
+
+        }
+    });
+    $('.dropdown').dropdown();
+
+    // Enable popups
+    $('.button').popup();
+
+
+    function edit_quiz(quiz_id) {
+        console.log("Edit Quiz: " + quiz_id);
+    }
+
+    function confirm_delete(item, event) {
+        // Show modal confirm box. Need to cancel enent bubbling so it doesn't go ahead and
+        // submit to api while we are waiting for popup (called async...)
+
+        //event.preventDefault();
+        event.stopImmediatePropagation();
+
+        // Show modal dialog - let it start the API call if confirmed.
+
+        // $('body').modal(
+        //     'confirm', 'Are you sure you want to remve the quiz: ' + item.data('quiz_title'),
+        //     function (choice) {
+        //         if (choice === true) {
+        //             // Clicked yes - start the API call to delete it.
+        //             console.log("Confirmed - delete quiz " + item.data('quiz_id'));
+        //             // Manually launch the query using existing settings/definition
+        //             item.api('query');
+        //         }
+
+        //         // clicked cancel, done here...
+        //         return false;
+        //     }
+        // );
+
+        var m = $('body').modal({
+            title: 'Delete ' + item.data('quiz_title'),
+            class: 'mini',
+            //closeIcon: false,
+            closable: false,
+            content: 'Are you sure you want to delete this quiz?',
+            //description: '',
+            //debug: true,
+            //classContent: 'centered',
+            centered: true,
+            actions: [
+                {
+                    text: 'Confirm Delete',
+                    class: 'positive green'
+                },
+                {
+                    text: 'Cancel',
+                    class: 'negative red'
+                }
+            ],
+            
+            onDeny: function() {
+                //console.log("OnDeny");
+            },
+            onApprove: function() {
+                // Clicked confirm, fire off the API to remove the quiz.
+                console.log("Confirmed - trying to delete quiz " + item.data('quiz_id'));
+                item.api('query');
+            },
+
+        }).modal('show');
+
+        return true;
+    }
+
+       
+</script>

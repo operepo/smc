@@ -15,6 +15,9 @@ from ednet.canvas import Canvas
 from ednet.appsettings import AppSettings
 from ednet.util import Util
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
+
 # Needed for remote connection?
 auth.settings.allow_basic_login = True
 # auth.settings.actions_disabled.append('login')

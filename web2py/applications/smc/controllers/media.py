@@ -18,61 +18,11 @@ import shutil
 from ednet.canvas import Canvas
 from ednet.appsettings import AppSettings
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
+
 from pytube import YouTube
 from bs4 import BeautifulSoup as bs
-
-# Help shut up pylance warnings
-if 1 == 2:
-      Field = Field
-      cache = cache
-      db = db
-      db_scheduler = db_scheduler
-      DAL = DAL
-      IS_IN_SET = IS_IN_SET
-      IS_IN_DB = IS_IN_DB
-      auth = auth
-      IS_NOT_EMPTY = IS_NOT_EMPTY
-      response = response
-      request = request
-      session = session
-      IMG = IMG
-      URL = URL
-      HTTP = HTTP
-      TABLE = TABLE
-      TR = TR
-      TD = TD
-      TH = TH
-      XML = XML
-      BR = BR
-      OPTION = OPTION
-      SELECT = SELECT
-      FORM = FORM
-      INPUT = INPUT
-      LABEL = LABEL
-      TEXTAREA = TEXTAREA
-      SQLFORM = SQLFORM
-      A = A
-      T = T
-      DIV = DIV
-      redirect = redirect
-      scheduler = scheduler
-      get_media_captions_list = get_media_captions_list
-      get_cc_icon = get_cc_icon
-      getMediaThumb = getMediaThumb
-      save_media_file_json = save_media_file_json
-      save_media_caption_file = save_media_caption_file
-      get_media_file_path = get_media_file_path
-      getDocumentThumb = getDocumentThumb
-      queue_up_yt_video = queue_up_yt_video
-      getMediaPoster = getMediaPoster
-      getPDFURLS = getPDFURLS
-      save_document_file_json = save_document_file_json
-      getURLS = getURLS
-      get_app_folders = get_app_folders
-      find_best_yt_stream = find_best_yt_stream
-      is_media_file_present = is_media_file_present
-      is_media_captions_present = is_media_captions_present
-
 
 
 @auth.requires(auth.has_membership('Faculty') or auth.has_membership('Administrators'))

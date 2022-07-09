@@ -3,36 +3,8 @@ from gluon import current
 
 from ednet.canvas import Canvas
 
-
 # Help shut up pylance warnings
-if 1 == 2:
-      Field = Field
-      cache = cache
-      db = db
-      db_lti = db_lti
-      DAL = DAL
-      IS_IN_SET = IS_IN_SET
-      IS_IN_DB = IS_IN_DB
-      auth = auth
-      IS_NOT_EMPTY = IS_NOT_EMPTY
-      response = response
-      request = request
-      session = session
-      IMG = IMG
-      URL = URL
-      HTTP = HTTP
-      A = A
-      TABLE = TABLE
-      TR = TR
-      TD = TD
-      SQLFORM = SQLFORM
-      LABEL = LABEL
-      redirect = redirect
-      getMediaThumb = getMediaThumb
-      getDocumentThumb = getDocumentThumb
-      XML = XML
-      T = T
-      BUTTON = BUTTON
+if 1==2: from ..common import *
 
 
 lti_settings = {
@@ -361,7 +333,7 @@ def quizzes():
 
     #lti['custom_*'] = Custom fields sent
     lti['custom_canvas_user_id'] = request.vars.get('custom_canvas_user_id', None) # The database ID for the user (e.g. 49800000002)
-    lti['custom_canvas_login_id'] = request.vars.get('custom_canvas_login_id', None) # The login id: s777777
+    lti['custom_canvas_user_login_id'] = request.vars.get('custom_canvas_user_login_id', None) # The login id: s777777
     lti['custom_canvas_course_id'] = request.vars.get('custom_canvas_course_id', None) # The database ID for the course (e.g. 4980000012)
     lti['custom_canvas_workflow_state'] = request.vars.get('custom_canvas_workflow_state', None) # available
     lti['custom_canvas_enrollment_state'] = request.vars.get('custom_canvas_enrollment_state', None) # active
@@ -438,7 +410,8 @@ def quizzes():
         return error_string
 
  
-    session.current_lti_params = lti
+    session.lti = lti
+    session.canvas_course_id = lti["custom_canvas_course_id"]
     session.return_url = lti["launch_presentation_return_url"]
     session.is_teacher = False
     session.is_student = False
@@ -459,7 +432,231 @@ def quizzes():
     redirect(URL('quiz_list'))
 
 
-def quiz_list(): #lti=lti):  # Flask param - use on web2py??
+def api_delete_quiz():
+    response.view = 'generic.json'
+    ret = False
+    quiz_id = request.args(0)
+
+    if session.is_teacher or session.is_admin:
+        quiz_item = db_lti(
+            (db_lti.ope_quizzes.lms_parent_course==session.lti.get("custom_canvas_course_id", -1)) &
+            (db_lti.ope_quizzes.id==quiz_id)
+        ).select().first()
+        if not quiz_item is None:
+            #print(f"Trying to delete quiz: {quiz_id}")
+            db_lti(db_lti.ope_quizzes.id==quiz_item.id).delete()
+            db_lti.commit()
+            ret = True
+        else:
+            ret = False
+            print(f"{session.lti.get('custom_canvas_user_login_id', '<UNKNOWN>')} is not allowed to delete quiz: {quiz_id}")
+    else:
+        ret = False
+        print(f"{session.lti.get('custom_canvas_user_login_id', '<UNKNOWN>')} is not allowed to delete quiz: {quiz_id}")
+    
+    return dict(ret=ret)
+
+def api_toggle_quiz():
+    response.view = 'generic.json'
+    quiz_id = request.args(0)
+    ret = False
+
+    if session.is_teacher or session.is_admin:
+        quiz_item = db_lti(
+            (db_lti.ope_quizzes.lms_parent_course==session.lti.get("custom_canvas_course_id", -1)) &
+            (db_lti.ope_quizzes.id==quiz_id)
+        ).select().first()
+        if not quiz_item is None:
+            published = False if quiz_item.published==True else True
+            #print(f"Trying to toggle/enable quiz: {quiz_id} {published}")
+            
+            r = db_lti(db_lti.ope_quizzes.id==quiz_item.id).update(
+                published=published
+            )
+            #print(f"{r}")
+            db_lti.commit()
+            ret = True
+        else:
+            ret = False
+            print(f"{session.lti.get('custom_canvas_user_login_id', '<UNKNOWN>')} is not allowed to toggle this quiz: {quiz_id}")
+    else:
+        ret = False
+        print(f"{session.lti.get('custom_canvas_user_login_id', '<UNKNOWN>')} is not allowed to toggle this quiz: {quiz_id}")
+    
+    return dict(ret=ret)
+
+def api_toggle_laptop():
+    response.view = 'generic.json'
+    quiz_id = request.args(0)
+    ret = False
+
+    if session.is_teacher or session.is_admin:
+        quiz_item = db_lti(
+            (db_lti.ope_quizzes.lms_parent_course==session.lti.get("custom_canvas_course_id", -1)) &
+            (db_lti.ope_quizzes.id==quiz_id)
+        ).select().first()
+        if not quiz_item is None:
+            available_on_offline_laptop = False if quiz_item.available_on_offline_laptop==True else True
+            print(f"Trying to toggle/enable laptop quizzes: {quiz_id} {available_on_offline_laptop}")
+            
+            r = db_lti(db_lti.ope_quizzes.id==quiz_item.id).update(
+                available_on_offline_laptop = available_on_offline_laptop
+            )
+            #print(f"{r}")
+            db_lti.commit()
+            ret = True
+        else:
+            ret = False
+            print(f"{session.lti.get('custom_canvas_user_login_id', '<UNKNOWN>')} is not allowed to toggle this quiz for delivery on laptops: {quiz_id}")
+    else:
+        ret = False
+        print(f"{session.lti.get('custom_canvas_user_login_id', '<UNKNOWN>')} is not allowed to toggle this quiz for delivery on laptops: {quiz_id}")
+    
+    return dict(ret=ret)
+
+def api_get_ui_state():
+    response.view = 'generic.json'
+    # GetStored values in the session in response to UI changes
+    # Params are /{control_id} - key=values are posted
+    if len(request.args) < 1:
+        print(f"api_set_ui_state - bad request - no control_id")
+        return False
+    
+    control_id = request.args(0)
+    if control_id is None:
+        print(f"api_set_ui_state - bad request - no control_id")
+        return False
+
+    values = get_session_values(control=control_id)
+
+    return dict(**values)
+
+def api_set_ui_state():
+    response.view = 'generic.json'
+    # Store values in the session in response to UI changes
+    # Params are /{control_id} - key=values are posted
+    if len(request.args) < 1:
+        print(f"api_set_ui_state - bad request - no control_id")
+        return False
+    
+    control_id = request.args(0)
+    if control_id is None:
+        print(f"api_set_ui_state - bad request - no control_id")
+        return False
+
+    for key in request.vars:
+        #print(f"api_set_ui_state ({control_id}): {key} -> {request.vars[key]}")
+        
+        set_session_value(control=control_id, key=key, value=request.vars[key])
+
+    return True
+
+def quiz_list():
+    slash_svg = """<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-slash" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path fill-rule="evenodd" d="M11.354 4.646a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708l6-6a.5.5 0 0 1 .708 0z"/>
+</svg>"""
+
+    checked_icon = "small inverted circular colored green check icon"
+    unchecked_icon = "large ban icon"
+
+    laptop_enabled_icon = "large colored green laptop icon"
+    laptop_disabled_icon = "large disabled laptop icon"
+    #laptop_dont_icon = "big dont icon"
+
+    class_query = None
+    if session.is_admin or session.is_teacher:
+        class_query = (db_lti.ope_quizzes.lms_parent_course==session.lti.get("custom_canvas_course_id", -1))
+    else:
+        # Go away - if not a teacher, don't show anything!
+        redirect(URL('lti', 'index'))
+        return None
+
+    quiz_types = {
+        "assignment": "(None)",
+        "practice_quiz": "(None)",
+        "graded_survey": "(None)",
+        "survey": "(None)"
+    }
+
+    for quiz_type in quiz_types.keys():
+
+        quiz_rows = db_lti(
+            (class_query) & (db_lti.ope_quizzes.quiz_type==quiz_type)
+            ).select(orderby=[db_lti.ope_quizzes.quiz_position,db_lti.ope_quizzes.title])
+
+        t_rows = []
+        
+        for row in quiz_rows:
+            published_toggle = unchecked_icon
+            if row.published == True:
+                published_toggle = checked_icon
+            laptop_icon = laptop_disabled_icon
+            laptop_slash_icon = slash_svg
+            if row.available_on_offline_laptop == True:
+                laptop_icon = laptop_enabled_icon
+                laptop_slash_icon = ""
+
+            tr = TR(
+                TD(
+                    XML(f"<div class='ui image'><img style='width: 24px;' src='{URL('static', 'images/quiz_icon.png')}' /></div>"),
+                    _class="collapsing"
+                ),
+                TD(
+                    XML(f"""
+                        <h4>{row.title}</h4>
+                        <span class="ui small text">{0 if row.points_possible is None else row.points_possible:.0f} pts / {row.question_count} Questions</span>
+                    """),
+                ),
+                TD(
+
+                    XML(
+                    f"""
+                        <button id="quiz_toggle_laptop_{row.id}" class="ui circular icon button toggle_laptop" style="background-color: transparent;"
+                         data-quiz_id="{row.id}" data-quiz_id="{row.id}" data-content="Toggle Delivery On Laptops">
+                            <i class="icons">
+                                <i id="quiz_toggle_laptop_icon_{row.id}" class="{laptop_icon}"></i>
+                                <i id="quiz_toggle_laptop_icon_slash_{row.id}" class="horizontally flipped huge disabled icon">{laptop_slash_icon}</i>
+                            </i>
+                        </button>
+                        <button class="ui circular icon button toggle_quiz" style="background-color: transparent;"
+                         data-quiz_id="{row.id}" data-content="Toggle Published Status">
+                            <i class="{published_toggle}"></i>
+                        </button>
+                        <div class="ui dropdown">
+                            <i class="large ellipsis vertical icon"></i>
+                            <div class="menu">
+                                <div class="item" onclick="edit_quiz({row.id}); return false;"><i class="edit outline icon"></i>Edit</div>
+                                <div class="item delete_quiz" onclick="return confirm_delete($(this), event);" data-quiz_id="{row.id}" data-quiz_title="{row.title}"><i class="trash alternate outline icon"></i>Delete</div>
+                            </div>
+                        </div>
+                    """
+                    ),
+                    _class="collapsing",
+                    _style="overflow: visible;"
+                ),
+                _style="overflow: visible; width: 100%",
+                _id=f"quiz_row_{row.id}"
+            )
+            t_rows.append(tr)
+
+        if len(t_rows) > 0:
+            quiz_types[quiz_type] = TABLE(
+                TBODY(t_rows),
+                _class="ui very basic collapsing table",
+                _style="width: 100%; overflow: visible;"
+            )
+
+    # Note - use **quiz_types to expand it to key=value parameters when it is returned (e.g. html uses =assignment rather then quiz_types['assignment'])
+    return dict(
+        **quiz_types,
+        checked_icon = checked_icon,
+        unchecked_icon = unchecked_icon,
+        laptop_enabled_icon = laptop_enabled_icon,
+        laptop_disabled_icon = laptop_disabled_icon,
+        laptop_slash_svg = XML(slash_svg)
+        )
+
+def quiz_list_w2py(): #lti=lti):  # Flask param - use on web2py??
     # Required for cookies to work in LTI land
     session.samesite('none')
 
@@ -482,20 +679,19 @@ def quiz_list(): #lti=lti):  # Flask param - use on web2py??
     links = list()
 
     if session.is_teacher or session.is_admin:
-        new_quiz_button = SQLFORM.factory(
-            submit_button="+ New Quiz",
-            _name="new_quiz_button"
-        ).process(formname="new_quiz_button")
+        # new_quiz_button = SQLFORM.factory(
+        #     submit_button="+ New Quiz",
+        #     _name="new_quiz_button"
+        # ).process(formname="new_quiz_button")
 
-        if new_quiz_button.accepted:
-            redirect(URL('create_quiz'))
-            return
+        # if new_quiz_button.accepted:
+        #     redirect(URL('create_quiz'))
+        #     return
     
         links.append(
             (dict(header=T(''), body=lambda row: (
-                A('[Edit]', _style='font-size: 10px; color: red;', _href=URL('lti', 'edit_quiz', args=[row.id], user_signature=True)),
-                " | ",
-                A('[Delete]', _style='font-size: 10px; color: red;', _href=URL('lti', 'delete_quiz', args=[row.id], user_signature=True)),
+                A('Edit', _class='ui button mini', _style2='font-size: 10px; color: red;', _href=URL('lti', 'edit_quiz', args=[row.id], user_signature=True)),
+                A('Delete', _class='ui red button mini', _style2='font-size: 10px; color: red;', _href=URL('lti', 'delete_quiz', args=[row.id], user_signature=True)),
             )))
         )
    
@@ -531,21 +727,36 @@ def create_quiz():
         print(f"Student or anon user tried to access admin LTI functions!\n{session}")
         redirect(URL('quiz_list'))
 
-    quiz_create_form = SQLFORM(
-        db_lti.ope_quizzes,
-        fields=['title', 'description', 'quiz_type'],
-        submit_button="Create Quiz", 
-        _name="quiz_create_form",
-        buttons = [BUTTON('Cancel', _class="btn btn-primary", _type="button", _onClick="window.location='%s'" % URL("quiz_list")),
-                   BUTTON('Create Quiz', _class="btn btn-primary", _type="submit")],  #btn btn-primary
-    ).process(formname="quiz_create_form")
+    #print(f"Form: {request.vars}")
+    if request.vars.quiz_title:
+        print(f"{request.vars}")
+        quiz_title = request.vars.get('quiz_title', '')
+        quiz_description = request.vars.get('quiz_description', '')
+        quiz_type = request.vars.get('quiz_type', 'assignment')
+        available_on_offline_laptop = request.vars.get('available_on_offline_laptop', "off")
+        if available_on_offline_laptop == "on":
+            available_on_offline_laptop = True
+        else:
+            available_on_offline_laptop = False
 
-    if quiz_create_form.accepted:
-        # Add the new quiz
-        #print(f"Created Quiz: {quiz_create_form.vars.title}")
-        redirect(URL('quiz_list'))
-        pass
+        lms_parent_course = session.lti.get("custom_canvas_course_id", "-1")
+        
 
-    ret["quiz_create_form"] = quiz_create_form
+        if quiz_type == "" or quiz_type == "" or lms_parent_course == "-1":
+            response.flash="Incomplete, quiz not inserted!"
+            return ret
+
+        r = db_lti.ope_quizzes.insert(
+            title=quiz_title,
+            description=quiz_description,
+            quiz_type=quiz_type,
+            lms_parent_course=lms_parent_course,
+            available_on_offline_laptop = available_on_offline_laptop
+        )
+        db_lti.commit()
+
+        # New quiz created, send back to the quiz list
+        response.flash="Quiz Created."
+        redirect(URL('lti', 'quiz_list'))
 
     return ret

@@ -12,28 +12,9 @@ import traceback
 import pytube, pytube.exceptions
 import datetime
 
-if 1 == 2:
-    # Stop pylance highlighting everything
-    cache = cache
-    db = db
-    db_scheduler = db_scheduler
-    session = session
-    DAL = DAL
-    current = current
-    request = request
-    response = response
-    Canvas = Canvas
-    get_app_folders = get_app_folders
-    load_media_file_json = load_media_file_json
-    get_media_file_path = get_media_file_path
-    load_document_file_json = load_document_file_json
-    find_ffmpeg = find_ffmpeg
-    w2py_folder = w2py_folder
-    save_media_file_json = save_media_file_json
-    save_document_file_json = save_document_file_json
-    get_youtube_proxies = get_youtube_proxies
-    is_media_captions_present = is_media_captions_present
-    is_media_file_present = is_media_file_present
+# Help shut up pylance warnings
+if 1==2: from ..common import *
+
 
 ### Monkeypatch YT Caption class to fix caption issue: https://github.com/pytube/pytube/issues/1085
 ## review after 7/1/22

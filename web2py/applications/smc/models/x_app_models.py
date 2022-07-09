@@ -5,20 +5,7 @@ from ednet.appsettings import AppSettings
 from ednet.util import Util
 
 # Help shut up pylance warnings
-if 1 == 2:
-      Field = Field
-      cache = cache
-      db = db
-      db_laptops = db_laptops
-      db_lti = db_lti
-      IS_IN_SET = IS_IN_SET
-      IS_IN_DB = IS_IN_DB
-      auth = auth
-      IS_NOT_EMPTY = IS_NOT_EMPTY
-      response = response
-      request = request
-      IMG = IMG
-      URL = URL
+if 1==2: from ..common import *
 
 
 # Do we need to do initial init? (e.g. creating indexes.....)
@@ -666,6 +653,7 @@ db_lti.define_table("ope_quizzes",
       Field("available_on_offline_laptop", 'boolean', default=False),
       Field("enc_key", 'string', default=str(uuid.uuid4()).replace("-", "")),  # Used by the laptop to encrypt the quiz information
       Field("quiz_position", 'integer', default=0),
+      Field("points_possible", 'double', default=0),
 
 )
 

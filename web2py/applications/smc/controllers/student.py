@@ -3,6 +3,8 @@
 from ednet.student import Student
 # from ednet.ad import AD
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
 
 def index():
     ret = ""

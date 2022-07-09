@@ -2,23 +2,7 @@
 # this file is released under public domain and you can use without limitations
 
 # Help shut up pylance warnings
-if 1 == 2:
-      Field = Field
-      cache = cache
-      db = db
-      DAL = DAL
-      IS_IN_SET = IS_IN_SET
-      IS_IN_DB = IS_IN_DB
-      auth = auth
-      IS_NOT_EMPTY = IS_NOT_EMPTY
-      response = response
-      request = request
-      session = session
-      IMG = IMG
-      URL = URL
-      HTTP = HTTP
-      SPAN = SPAN
-      T = T
+if 1==2: from ..common import *
 
 #########################################################################
 ## Customize your APP title, subtitle and menus here

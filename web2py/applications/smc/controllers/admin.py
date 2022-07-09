@@ -12,6 +12,9 @@ from ednet.ad import AD
 from ednet.canvas import Canvas
 from ednet.appsettings import AppSettings
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
+
 
 @auth.requires_membership("Administrators")
 def laptop_admin_credentials():

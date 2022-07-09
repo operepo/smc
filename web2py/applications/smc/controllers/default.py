@@ -4,6 +4,9 @@
 # this file is released under public domain and you can use without limitations
 # -------------------------------------------------------------------------
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
+
 # ---- example index page ----
 def index():
     #response.flash = T("Hello World")

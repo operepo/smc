@@ -5,21 +5,7 @@ from gluon.custom_import import track_changes
 track_changes(True)
 
 # Help shut up pylance warnings
-if 1 == 2:
-      Field = Field
-      cache = cache
-      db = db
-      DAL = DAL
-      IS_IN_SET = IS_IN_SET
-      IS_IN_DB = IS_IN_DB
-      auth = auth
-      IS_NOT_EMPTY = IS_NOT_EMPTY
-      response = response
-      request = request
-      session = session
-      IMG = IMG
-      URL = URL
-      HTTP = HTTP
+if 1==2: from ..common import *
 
 
 # Make sure the appconfig.ini file exists
@@ -143,6 +129,26 @@ if not request.env.web2py_runtime_gae:
     db_lti = DAL('sqlite://storage_lti.sqlite', pool_size=0, check_reserved=['all'])
     db_lti.executesql('PRAGMA journal_mode=WAL')
 
+    # Try to use redis for session caching if available, fall back to normal file based.
+    try_redis_sessions = cache.ram("try_redis_sessions", lambda: True, time_expire=36000)
+    if try_redis_sessions and myconf.get('redis.use_for_sessions'):
+        cache.ram("try_redis_sessions", lambda: False, time_expire=0)
+
+        from gluon.contrib.redis_utils import RConn
+        from gluon.contrib.redis_session import RedisSession
+        try:
+            rconn = RConn(
+                host=myconf.get('redis.host'),
+                port=myconf.get('redis.port'),
+                db=myconf.get('redis.db'),
+            )
+            # Make sure we can use this, if not fall back to no redis support.
+            rconn.ping() # will hit exception if it fails and fall back to normal sessions
+            sessiondb = RedisSession(redis_conn=rconn, session_expiry=3600, with_lock=False)  # with_lock=True to force locking of session between concurrent requests
+            session.connect(request, response, db=sessiondb)            
+        except Exception as ex:
+            print(f"Error using Redis for sessions, disabling for now.\n-> {ex}")
+
 else:
     # connect to Google BigTable (optional 'google:datastore://namespace')
     db = DAL('google:datastore')
@@ -153,6 +159,8 @@ else:
     # from google.appengine.api.memcache import Client
     # session.connect(request, response, db = MEMDB(Client()))
 
+# Make sure sessions only work over HTTPS
+session.secure()
 ## by default give a view/generic.extension to all actions from localhost
 ## none otherwise. a pattern can be 'controller/function.extension'
 response.generic_patterns = ['*'] if request.is_local else ['*.json']

@@ -6,6 +6,8 @@ from ednet import Canvas
 from ednet import Faculty
 from ednet import Student
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
 
 @auth.requires_membership('Faculty')
 def changepassword():

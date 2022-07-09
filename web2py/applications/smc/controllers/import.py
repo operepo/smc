@@ -5,6 +5,9 @@ from ednet.ad import AD
 from ednet.student import Student
 from ednet.faculty import Faculty
 
+# Help shut up pylance warnings
+if 1==2: from ..common import *
+
 import os
 import cgi
 
