@@ -568,7 +568,7 @@ def quiz_list():
         class_query = (db_lti.ope_quizzes.lms_parent_course==session.lti.get("custom_canvas_course_id", -1))
     else:
         # Go away - if not a teacher, don't show anything!
-        redirect(URL('lti', 'index'))
+        redirect(URL('lti', 'quizzes'))
         return None
 
     quiz_types = {

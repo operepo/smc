@@ -35,4 +35,4 @@ separator =
 use_for_sessions    = true
 host                = redis
 port                = 6379
-db                  = smc
+db                  = 14

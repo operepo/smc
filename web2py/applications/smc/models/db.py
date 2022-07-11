@@ -18,6 +18,36 @@ if not os.path.isfile(ini_path):
     # Copy the default file over
     shutil.copyfile(default_ini_path, ini_path)
 
+# Make sure there is a Redis section in the appconfig.ini file.
+ensure_redis = cache.ram("ensure_redis", lambda: True, time_expire=36000)
+if ensure_redis is True:
+    # Read in the appconfig.ini file - see if it has the redis section
+    f = open(ini_path, 'r')
+    lines = f.read()
+    f.close()
+
+    if not "[redis]" in lines:
+        print(f"Adding redis to appconfig.ini...")
+        lines = lines + """
+; Redis Configuration
+[redis]
+use_for_sessions    = true
+host                = redis
+port                = 6379
+db                  = 14
+"""
+        f = open(ini_path, "w")
+        f.write(lines)
+        f.close()
+    else:
+        #print("Redis config is good..")
+        pass
+
+    # Reset the value so we don't do this every page view
+    cache.ram("ensure_redis", lambda: False, time_expire=0)
+
+
+
 if request.global_settings.web2py_version < "2.14.1":
     raise HTTP(500, "Requires web2py 2.13.3 or newer")
 
@@ -131,6 +161,7 @@ if not request.env.web2py_runtime_gae:
 
     # Try to use redis for session caching if available, fall back to normal file based.
     try_redis_sessions = cache.ram("try_redis_sessions", lambda: True, time_expire=36000)
+    #print(f"Use For Sessions {myconf.get('redis.use_for_sessions')}")
     if try_redis_sessions and myconf.get('redis.use_for_sessions'):
         cache.ram("try_redis_sessions", lambda: False, time_expire=0)
 
