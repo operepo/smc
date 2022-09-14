@@ -2,13 +2,8 @@
 
 <h1>Create OPE Quiz</h1>
 
-<style>
-    .ui.selection.dropdown {
-        min-height: 2.914286em;
-    }
-</style>
-
 <FORM id="new_quiz" class="ui form" enctype="multipart/form-data" method="post" action="#">
+    <input type="hidden" name="FORM_UUID" value="{{=FORM_UUID}}" />
 <div class="ui segment">
     <div class="required field">
         <label>Title</label>

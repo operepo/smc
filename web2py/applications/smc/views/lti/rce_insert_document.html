@@ -1,0 +1,14 @@
+{{ extend 'lti_minimal_layout.html' }}
+
+<h1>Embed SMC Document</h1>
+<!--div id="embed_smc_video"></div-->
+{{=LOAD('lti', 'rce_insert_document_ajax.load', ajax=True)}}
+
+<!--hr />
+{{=vars}}-->
+<!--script>
+    $(document).ready( function() {
+        ajax("{{=URL('lti', 'rce_insert_video_ajax.load')}}", [], "embed_smc_video")
+    });
+    
+</script-->

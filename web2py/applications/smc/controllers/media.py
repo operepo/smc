@@ -14,6 +14,7 @@ from weasyprint import HTML
 import lxml
 import tempfile
 import shutil
+import traceback
 
 from ednet.canvas import Canvas
 from ednet.appsettings import AppSettings
@@ -593,6 +594,7 @@ def dl_document():
 
         document_file = db(db.document_files.document_guid == document_id).select().first()
         media_type = ""
+        original_file_name = ""
         if document_file is not None:
             title = str(document_file.title)
             description = str(document_file.description)
@@ -882,20 +884,63 @@ def upload_document():
 
         db.commit()
 
-        # Dump meta data to the folder along side the files
-        # This can be used for export/import
-        meta = {'title': document_record.title, 'document_guid': document_record.document_guid.replace('-', ''),
-                'description': document_record.description, 'original_file_name': document_record.original_file_name,
-                'media_type': document_record.media_type, 'category': document_record.category,
-                'tags': dumps(document_record.tags)}
+        #### Figure out the width/height of this document (e.g. if it is an image, or a viewerjs file or dl link.)
+        import mimetypes
+        from PIL import Image
 
-        meta_json = dumps(meta)
-        #f = os.open(target_file + ".json", os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-        #os.write(f, meta_json)
-        #os.close(f)
-        f = open(target_file + ".json", "w")
-        f.write(meta_json)
-        f.close()
+        viewerjs_extensions = ['.pdf', '.odt', '.fodt', '.ott', '.odp', '.fodp', '.otp', '.ods', '.fods', '.ots']
+
+        file_path = target_file
+        width=height=0
+        fname, ext = os.path.splitext(original_file_name)
+        mime_type = mimetypes.guess_type(original_file_name)[0]
+        ext = ext.lower()
+        
+        if mime_type.startswith("image/"):
+            #print(f"\tProcessing Image: {file_path}")
+            try:
+                # Try opening the image to get width/height
+                img = Image.open(file_path)
+                width, height = img.size
+                db(db.document_files.document_guid==file_guid).update(
+                    width=width,
+                    height=height
+                )
+                db.commit()
+            except Exception as ex:
+                print(f"ERROR - upload_document was unable to open the image file and get its width/height: {file_path}\n{ex}")
+                pass
+        elif ext in viewerjs_extensions:
+            #print(f"Processing ViewerJS item {file_guid}")
+            width = "100%"
+            height = "720"
+            db(db.document_files.document_guid==file_guid).update(
+                    width=width,
+                    height=height
+                )
+            db.commit()
+        else:
+            # Skip unknown document types
+            pass
+
+
+        # # Dump meta data to the folder along side the files
+        save_document_file_json(file_guid)
+
+        
+        # # This can be used for export/import
+        # meta = {'title': document_record.title, 'document_guid': document_record.document_guid.replace('-', ''),
+        #         'description': document_record.description, 'original_file_name': document_record.original_file_name,
+        #         'media_type': document_record.media_type, 'category': document_record.category,
+        #         'tags': dumps(document_record.tags)}
+
+        # meta_json = dumps(meta)
+        # #f = os.open(target_file + ".json", os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
+        # #os.write(f, meta_json)
+        # #os.close(f)
+        # f = open(target_file + ".json", "w")
+        # f.write(meta_json)
+        # f.close()
 
         last_doc = A(document_record.title, _href=URL('media', 'view_document', args=[file_guid]))
 
@@ -1887,7 +1932,7 @@ def pull_from_youtube_step_2():
                               ") - reload page and try again.<br /> " +
                               "<span style='font-size: 10px; font-weight: bold;'>" +
                               "Error: " +
-                              str(ex) + "</span>"))
+                              str(ex) + str(traceback.print_exc()) + "</span>"))
 
     if yt is None:
         return dict(form2=XML("<span style='color: red; font-weight:bold;'>" +

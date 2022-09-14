@@ -162,7 +162,7 @@ if not request.env.web2py_runtime_gae:
     # Try to use redis for session caching if available, fall back to normal file based.
     try_redis_sessions = cache.ram("try_redis_sessions", lambda: True, time_expire=36000)
     #print(f"Use For Sessions {myconf.get('redis.use_for_sessions')}")
-    if try_redis_sessions and myconf.get('redis.use_for_sessions'):
+    if request.is_scheduler is not True and try_redis_sessions and myconf.get('redis.use_for_sessions'):
         cache.ram("try_redis_sessions", lambda: False, time_expire=0)
 
         from gluon.contrib.redis_utils import RConn
@@ -284,6 +284,7 @@ from gluon import current
 current.db = db
 current.db_scheduler = db_scheduler
 current.db_laptops = db_laptops
+current.migrate = migrate
 current.db_lti = db_lti
 current.auth = auth
 current.smc_log = ""

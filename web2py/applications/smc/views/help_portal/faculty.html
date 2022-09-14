@@ -1,0 +1,19 @@
+{{extend 'lti_minimal_layout.html'}}
+
+<h1>OPE Help Portal - Faculty Resources</h1>
+
+<p>
+    Example of Image tag
+    <img src="{{=URL('static', 'images/chat.png')}}" />
+</p>
+
+<p>
+    Example of video with hard coded video link (to localhost)
+    <iframe width="650" height="405" src="https://localhost:8000/media/player.load/2d188f9d827748cebf34c85a62964714" frameborder="0" allowfullscreen></iframe>
+    
+</p>
+
+<p>
+    Example of video with python URL to auto adjust to proper server name (e.g. smc.ed or localhost:8000)
+    <iframe width="650" height="405" src="{{=URL('media', 'player.load', args=['2d188f9d827748cebf34c85a62964714']) }}" frameborder="0" allowfullscreen></iframe>   
+</p>

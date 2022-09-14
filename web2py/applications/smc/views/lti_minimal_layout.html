@@ -114,6 +114,7 @@
   {{block head}}{{end}}
 </head>
 <body style="padding: 20px;">
+    <div class="w2p_flash alert alert-dismissable">{{=response.flash or ''}}</div>
 <style>
     /* CUSTOM - turn off extras for minimal style
      */
@@ -126,6 +127,35 @@
     .footer {
         display: none;
     }
+
+
+    .ui.selection.dropdown {
+        min-height: 2.914286em;
+    }
+
+    .field_v_align {
+        height: 100%;
+        top: 50%;
+        position: absolute;
+    }
+
+    /* Bootstrap has modal settings that are bleeding into fomantic modal, clear the attributes. */
+    .ui .modal {
+        top: auto;
+        bottom: auto;
+        left: auto;
+        right: auto;
+    }
+    .quiz_row {
+        overflow: visible;
+        width: 100%;
+
+    }
+    .quiz_row:hover {
+        background-color: #eff7ff;
+        cursor: pointer;
+    }
+
 </style>
 <!-- Navbar ================================================== -->
   <div class="navbar navbar-inverse">

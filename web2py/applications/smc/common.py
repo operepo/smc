@@ -24,6 +24,16 @@ if 1 == 2:
       IS_NOT_EMPTY = IS_NOT_EMPTY
       IS_STRONG = IS_STRONG
       IS_EXPR = IS_EXPR
+      IS_INT_IN_RANGE = IS_INT_IN_RANGE
+      IS_FLOAT_IN_RANGE = IS_FLOAT_IN_RANGE
+      IS_DECIMAL_IN_RANGE = IS_DECIMAL_IN_RANGE
+      IS_DATE = IS_DATE
+      IS_TIME = IS_TIME
+      IS_DATETIME = IS_DATETIME
+      IS_LENGTH = IS_LENGTH
+      IS_EMPTY_OR = IS_EMPTY_OR
+      
+
 
 
       DAL = DAL
@@ -58,6 +68,7 @@ if 1 == 2:
       get_app_folders = get_app_folders
       load_media_file_json = load_media_file_json
       get_media_file_path = get_media_file_path
+      get_document_file_path = get_document_file_path
       load_document_file_json = load_document_file_json
       find_ffmpeg = find_ffmpeg
       w2py_folder = w2py_folder
@@ -81,9 +92,16 @@ if 1 == 2:
       cleanup_youtube_urls = cleanup_youtube_urls
       pull_youtube_caption = pull_youtube_caption
       get_session_value = get_session_value
+      get_session_values = get_session_values
       set_session_value = set_session_value
 
       refresh_all_ad_logins = refresh_all_ad_logins
+      install_lti_tools = install_lti_tools
+      init_lti = init_lti
+      is_lti = is_lti
+      is_lti_student = is_lti_student
+      is_lti_teacher = is_lti_teacher
+      is_lti_admin = is_lti_admin
 
 
       reload = reload

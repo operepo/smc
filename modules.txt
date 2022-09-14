@@ -28,3 +28,5 @@ streamlink
 langcodes
 pylti1p3
 jwcrypto
+PIL
+python-dateutil

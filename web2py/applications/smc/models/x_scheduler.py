@@ -164,8 +164,9 @@ def update_media_database_from_json_files():
     media_files = db((db.media_files.has_captions!=True)|(db.media_files.has_captions==None)).select()
     for media_file in media_files:
         if is_media_captions_present(media_file.media_guid):
-            media_file.has_captions = True
-            media_file.update_record()
+            db(db.media_files.media_guid==media_file.media_guid).update(
+                has_captions = True
+            )
             db.commit()
     
     return True
@@ -369,14 +370,11 @@ def log_to_video(media_item, msg):
     # Add to the download_log on the selected video
 
     if media_item:
-        log = media_item.download_log
-        if log is None:
-            log = ""
-        if len(log) > 0:
-            log += "\n"
-        log += f"{msg}"
-        media_item.download_log = log
-                
+        db(db.media_files.media_guid==media_item.media_guid).update(
+            download_log = db.media_files.download_log + f"\n{msg}"
+        )
+        db.commit()
+    
     return True
 
 def find_best_yt_stream(yt_url, media_file=None):
@@ -406,8 +404,9 @@ def find_best_yt_stream(yt_url, media_file=None):
         # Try each proxy in order trying to get this video.
         proxy_item = db(db.youtube_proxy_list.proxy_url==proxy).select().first()
         if proxy_item:
-            proxy_item.last_request_on = datetime.datetime.utcnow()
-            proxy_item.update_record()
+            db(db.youtube_proxy_list.id==proxy_item.id).update(
+                last_request_on = datetime.datetime.utcnow()
+            )
             db.commit()
         try:
             msg = f"Trying to get {yt_url} from proxy {proxy}"
@@ -457,12 +456,14 @@ def find_best_yt_stream(yt_url, media_file=None):
             pytube.exceptions.MaxRetriesExceeded,
         ) as ex:
             if proxy_item:
-                proxy_item.last_error_on = datetime.datetime.utcnow()
-                proxy_item.update_record()
+                db(db.youtube_proxy_list.id==proxy_item.id).update(
+                    last_error_on = datetime.datetime.utcnow()
+                )
                 db.commit()
             msg = f"Error grabbing YT video - Video not availalble or blocked - check to see if the url is correct, that it isn't private, that it is available in your region, etc... {yt_url} -- {ex}"
             session.yt_urls_error_msg += msg
             print(msg)
+            traceback.print_exc()
             log_to_video(media_file, msg)
             return_code = "Permanent Error"
 
@@ -477,12 +478,14 @@ def find_best_yt_stream(yt_url, media_file=None):
             pytube.exceptions.RegexMatchError,
         ) as ex:
             if proxy_item:
-                proxy_item.last_error_on = datetime.datetime.utcnow()
-                proxy_item.update_record()
+                db(db.youtube_proxy_list.id==proxy_item.id).update(
+                    last_error_on = datetime.datetime.utcnow()
+                )
                 db.commit()
             msg = f"Error grabbing YT video - PyTube error - Youtube might have changed something, update PyTube and try again: {yt_url} -- {ex}"
             session.yt_urls_error_msg += msg
             print(msg)
+            traceback.print_exc()
             log_to_video(media_file, msg)
             return_code = "Termporary Error"
             return yt, stream, res, return_code
@@ -498,11 +501,14 @@ def find_best_yt_stream(yt_url, media_file=None):
                 # if "Retry-After" in ex.headers:
                 #     sleep_time = int(ex.headers["Retry-After"])
                 if proxy_item:
-                    proxy_item.last_error_on = proxy_item.last_429_error_on = datetime.datetime.utcnow()
-                    proxy_item.update_record()
+                    db(db.youtube_proxy_list.id==proxy_item.id).update(
+                        last_error_on = datetime.datetime.utcnow(),
+                        last_429_error_on = datetime.datetime.utcnow()
+                    )
                     db.commit()
                 msg = f"429 error on this proxy: {proxy}"
                 log_to_video(media_file, msg)
+                traceback.print_exc()
                 
                 # Try next proxy in list - don't return yet
         
@@ -511,6 +517,7 @@ def find_best_yt_stream(yt_url, media_file=None):
             msg = f"Error grabbing YT video - Bad YT URL? {yt_url} -- {ex}"
             session.yt_urls_error_msg += msg
             print(msg)
+            traceback.print_exc()
             log_to_video(media_file, msg)
 
             # For unknown errors - call it - quit trying.
@@ -1004,7 +1011,9 @@ def tag_media_in_class(media_id, class_name):
         tags = list()
     if class_name not in tags:
         tags.append(class_name)
-        row.update_record(tags=tags)
+        db(db.media_files.media_guid==media_id).update(
+            tags=tags
+        )
         db.commit()
         save_media_file_json(media_id)
     return True
@@ -1021,7 +1030,9 @@ def tag_document_in_class(document_id, class_name):
         tags = list()
     if class_name not in tags:
         tags.append(class_name)
-        row.update_record(tags=tags)
+        db(db.document_files.document_guid==document_id).update(
+            tags=tags
+        )
         db.commit()
         save_document_file_json(document_id)
     return True
@@ -1185,17 +1196,25 @@ def process_youtube_queue(run_from=""):
             # Grab one, make it current, and start it downloading.
             
             next_row = db(query).select(
-                orderby=[~db.media_files.needs_downloading, db.media_files.download_failures, ~db.media_files.modified_on]
+                orderby=[db.media_files.last_download_attempt]
                 ).first()
             if next_row:
                 try:
                     r = pull_youtube_video(next_row)  #next_row.youtube_url, next_row.media_guid)
+                    # NOTE - pull_youtube_video increments the download_failures count normally
+
+                    db(db.media_files.media_guid==next_row.media_guid).update(
+                        current_download=False
+                    )
+                    db.commit()
                 except Exception as ex:
-                    # Had issues downloading from youtube.
-                    next_row.download_failures = next_row.get("download_failures", 0) + 1
+                    # Had issues downloading from youtube - unexpected error
+                    db(db.media_files.media_guid==next_row.media_guid).update(
+                        download_failures=db.media_files.download_failures + 1,
+                        current_download=False
+                    )
                     # if next_row.download_failures > 5:
                     #     next_row.needs_downloading = False
-                    next_row.update_record()
                     db.commit()
         else:
             print("All caught up, no videos needed downloading.")
@@ -1203,7 +1222,64 @@ def process_youtube_queue(run_from=""):
     except Exception as ex:
         print(f"Unknown Exception trying to pull youtube videos or captions!\n{ex}\n{traceback.format_exc()}")
     
+    time.sleep(5) # Slight pause - let w2py scheduler capture output
     return True
+
+def refresh_document_width_height(run_from=""):
+    # Go through each document and update its width/height
+    print(f"Calculating width/height for document files...")
+    document_files = db(
+            (db.document_files.width==None) | 
+            (db.document_files.height==None) |
+            (db.document_files.width < 1) |
+            (db.document_files.height < 1)
+        ).select()
+    
+    import os, mimetypes
+    from PIL import Image
+
+    viewerjs_extensions = ['.pdf', '.odt', '.fodt', '.ott', '.odp', '.fodp', '.otp', '.ods', '.fods', '.ots']
+    
+    for row in document_files:
+        print(f"Working on {row.document_guid}...")
+        file_path = get_document_file_path(row.document_guid)
+        width=height=0
+        original_filename = row.original_file_name
+        fname, ext = os.path.splitext(original_filename)
+        mime_type = mimetypes.guess_type(original_filename)[0]
+        ext = ext.lower()
+        
+        if mime_type and mime_type.startswith("image/"):
+            print(f"\tProcessing Image: {file_path}")
+            try:
+                # Try opening the image to get width/height
+                img = Image.open(file_path)
+                width, height = img.size
+                db(db.document_files.document_guid==row.document_guid).update(
+                    width=width,
+                    height=height
+                )
+                db.commit()
+            except Exception as ex:
+                print(f"ERROR - refresh_document_width_height was unable to open the image file and get its width/height: {file_path}\n{ex}")
+                pass
+        elif ext in viewerjs_extensions:
+            print(f"Processing ViewerJS item {row.document_guid}")
+            width = "100%"
+            height = "720"
+            db(db.document_files.document_guid==row.document_guid).update(
+                    width=width,
+                    height=height
+                )
+            db.commit()
+        else:
+            # Skip unknown document types
+            pass
+    
+    print(f"Processed {len(document_files)} document files.")
+    time.sleep(3)
+    return True
+
 
 def cleanup_youtube_urls():
     # Many youtube urls end up with crap in them (e.g. html tags) try to clean them up.
@@ -1212,6 +1288,15 @@ def cleanup_youtube_urls():
 
     media_files_count = 0
     yt_urls_fixed_count = 0
+
+    # Make sure we don't have Nulls from old records
+    db(db.media_files.download_failures==None).update(
+        download_failures=0
+    )
+    db(db.media_files.download_log==None).update(
+        download_log=""
+    )
+    db.commit()
 
     media_files = db((db.media_files.youtube_url!='') & ((db.media_files.youtube_url_cleaned==False) | (db.media_files.youtube_url_cleaned==None))).select()
     for media_file in media_files:
@@ -1223,96 +1308,19 @@ def cleanup_youtube_urls():
             yt_urls_fixed_count += 1
             print(f"Fixed YT URL: {yt_url} -> {new_yt_url}")
 
-        media_file.update_record(youtube_url=new_yt_url, youtube_url_cleaned=True)
+        db(db.media_files.media_guid==media_file.media_guid).update(
+            youtube_url=new_yt_url,
+            youtube_url_cleaned=True
+        )
         db.commit()
 
     print(f"Fixed {yt_urls_fixed_count} out of {media_files_count} youtube urls.")
-    return
+    return True
 
 def pull_youtube_caption(yt_url, media_guid):
     # NOTE - Don't use - captions get pulled in pull_youtube_video now
     return False
-    # Download the specified caption file.
-
-    if is_media_captions_present(media_guid):
-        msg = "VTT file present."
-        print(msg)
-        log_to_video(yt_url, msg)
-        time.sleep(5)
-        return True
     
-    # Pull the db info
-    media_file = db(db.media_files.media_guid==media_guid).select().first()
-    if media_file is None:
-        print("ERROR - Unable to find a db record for " + str(media_guid))
-        # Slight pause - let scheduler grab output
-        return False
-
-    (w2py_folder, applications_folder, app_folder) = get_app_folders()
-
-    # Mark this as the currently downloading item.
-    media_file.current_download=True
-    media_file.update_record()
-    db.commit()
-
-    target_file = get_media_file_path(media_guid, "srt")
-    from pytube import YouTube
-    try:
-        #yt = YouTube(yt_url.replace("/embed/", "/watch?v="), proxies=get_youtube_proxies())
-        yt, stream, res = find_best_yt_stream(yt_url)
-    except Exception as ex:
-        msg = "YT Captions - Bad YT URL? " + yt_url + " -- " + str(ex)
-        log_to_video(yt_url, msg)
-        print(msg)
-        return False
-
-    for cap in yt.captions:
-        lang = cap.code
-        output_caption_file = target_file.replace(".srt", "_" + lang + ".srt")
-        log_to_video(yt_url, f"Trying to save {lang} to {output_caption_file}")
-
-        try:
-            msg = f"Saving {lang} to {output_caption_file}"
-            print(msg)
-            log_to_video(yt_url, msg)
-            #caption_url = cap.url
-            #r = requests.get(caption_url)
-            caption_srt = cap.generate_srt_captions()
-            if len(caption_srt) > 1:
-                # Save SRT file
-                f = open(output_caption_file, "wb")
-                f.write(caption_srt.encode('utf-8'))
-                f.close()
-
-                # Convert to webvtt format
-                vtt = webvtt.from_srt(output_caption_file)
-                output_caption_file = output_caption_file.replace("srt", "vtt")
-                vtt.save(output_caption_file)
-                msg = f"Converted to VTT - Saved {lang} to {output_caption_file}"
-                print(msg)
-                log_to_video(yt_url, msg)
-            else:
-                msg = f"Error - generate_srt_captions returned nothing - {lang}"
-                print(msg)
-                log_to_video(yt_url, msg)
-            
-        except Exception as ex:
-            msg = f"Error - unable to grab caption for lang: {yt_url} / {lang}\n{ex}\n{traceback.format_exc()}"
-            print(msg)
-            log_to_video(yt_url, msg)
-            continue
-
-    # Mark this as the currently downloading item.
-    media_file = db(db.media_files.media_guid==media_guid).select().first()
-    media_file.current_download=False
-    media_file.needs_caption_downloading=False
-    media_file.update_record()
-    db.commit()
-    # Slight pause - let scheduler grab output
-    time.sleep(5)
-    return True
-    
-
 def pull_youtube_video(media_file, force_video=False, force_captions=False):
     # Force makes it re-download the video/captions even if they are present
     # Download the specified movie.
@@ -1326,8 +1334,10 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
         return False
 
     # Mark this as the currently downloading item.
-    media_file.current_download=True
-    media_file.update_record()
+    db(db.media_files.media_guid==media_file.media_guid).update(
+        current_download=True,
+        last_download_attempt=datetime.datetime.now()
+    )
     db.commit()
 
     (w2py_folder, applications_folder, app_folder) = get_app_folders()
@@ -1367,23 +1377,25 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
 
     
         try:
-            yt, stream, res, return_code = find_best_yt_stream(yt_url)
+            yt, stream, res, return_code = find_best_yt_stream(yt_url, media_file)
 
             if return_code == "Permanent Error":
                 print(f"Permanent Error - Unable to get video {yt_url}.")
                 log_to_video(media_file, f"Failed to download video from {yt_url}, will stop trying.")
-                media_file.needs_downloading = False
-                media_file.needs_caption_downloading = False
-                media_file.download_failures = media_file.get("download_failures", 0) + 1
-                media_file.update_record()
-                db.commit()                
+                db(db.media_files.media_guid==media_file.media_guid).update(
+                    needs_downloading = False,
+                    needs_caption_downloading = False,
+                    download_failures = db.media_files.download_failures + 1
+                )
+                db.commit()
                 return True
             elif return_code == "Termporary Error":
                 print(f"Temporary Error - Unable to get video {yt_url}.")
                 log_to_video(media_file, f"Failed to download video from {yt_url}, will keep trying.")
-                media_file.needs_downloading = True
-                media_file.download_failures = media_file.get("download_failures", 0) + 1
-                media_file.update_record()
+                db(db.media_files.media_guid==media_file.media_guid).update(
+                    needs_downloading = True,
+                    download_failures = db.media_files.download_failures + 1
+                )
                 db.commit()
                 return True
             elif return_code == "OK":
@@ -1391,9 +1403,10 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
         except Exception as ex:
             print(f"Unknown HTTP error pulling yt video? {yt_url}\n{ex}")
             log_to_video(media_file, f"Unknown Error - Failed to download video from {yt_url}, will keep trying.\n{ex}")
-            media_file.needs_downloading = True
-            media_file.download_failures = media_file.get("download_failures", 0) + 1
-            media_file.update_record()
+            db(db.media_files.media_guid==media_file.media_guid).update(
+                needs_downloading = True,
+                download_failures = db.media_files.download_failures + 1
+            )
             db.commit()
             return False
 
@@ -1473,32 +1486,15 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
         title = yt.title
         description = yt.description
 
-        media_file.needs_downloading = False
-        media_file.title = title
-        media_file.description = description
-        media_file.update_record()
+        db(db.media_files.media_guid==media_file.media_guid).update(
+            needs_downloading = False,
+            title = title,
+            description = description,
+        )
         db.commit()
 
+        save_media_file_json(media_file.media_guid)
         
-        # pull w updated info
-        #media_file = db(db.media_files.media_guid == media_file.media_guid).select().first()
-
-        # Save JSON info
-        meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),
-                'description': media_file.description, 'original_file_name': media_file.original_file_name,
-                'media_type': media_file.media_type, 'category': media_file.category,
-                'tags': dumps(media_file.tags), 'width': media_file.width,
-                'height': media_file.height, 'quality': media_file.quality, 'youtube_url': media_file.youtube_url}
-
-        meta_json = dumps(meta)
-        #f = os_open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-        #os.write(f, meta_json)
-        #os.close(f)
-        f = open(output_meta, "w")
-        f.write(meta_json)
-        f.close()
-
-    
     if not is_media_captions_present(media_file.media_guid) or force_captions == True:
         # Try to download caption files.
         
@@ -1511,17 +1507,19 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                 if return_code == "Permanent Error":
                     print(f"Permanent Error - Unable to get captions {yt_url}.")
                     log_to_video(media_file, f"Failed to download captions from {yt_url}, will stop trying.")
-                    media_file.needs_caption_downloading = False
-                    media_file.download_failures = media_file.get("download_failures", 0) + 1
-                    media_file.update_record()
+                    db(db.media_files.media_guid==media_file.media_guid).update(
+                        needs_caption_downloading = False,
+                        download_failures = db.media_files.download_failures + 1,
+                    )
                     db.commit()                
                     return True
                 elif return_code == "Termporary Error":
                     print(f"Temporary Error - Unable to get captions {yt_url}.")
                     log_to_video(media_file, f"Failed to download captions from {yt_url}, will keep trying.")
-                    media_file.needs_caption_downloading = True
-                    media_file.download_failures = media_file.get("download_failures", 0) + 1
-                    media_file.update_record()
+                    db(db.media_files.media_guid==media_file.media_guid).update(
+                        needs_caption_downloading = True,
+                        download_failures = db.media_files.download_failures + 1,
+                    )
                     db.commit()
                     return True
                 elif return_code == "OK":
@@ -1529,9 +1527,10 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
         except Exception as ex:
             print(f"Unknown HTTP error pulling yt captions? {yt_url}\n{ex}")
             log_to_video(media_file, f"Unknown Error - Failed to download captions from {yt_url}, will keep trying.\n{ex}")
-            media_file.needs_caption_downloading = True
-            media_file.download_failures = media_file.get("download_failures", 0) + 1
-            media_file.update_record()
+            db(db.media_files.media_guid==media_file.media_guid).update(
+                needs_caption_downloading = True,
+                download_failures = db.media_files.download_failures + 1,
+            )
             db.commit()
             return False
 
@@ -1572,21 +1571,29 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                 log_to_video(media_file, msg)
                 continue
         
-        media_file.has_captions = is_media_captions_present(media_file.media_guid)
-        media_file.needs_caption_downloading=False
+        db(db.media_files.media_guid==media_file.media_guid).update(
+            has_captions = is_media_captions_present(media_file.media_guid),
+            needs_caption_downloading = False
+        )
+        db.commit()
     
     # Mark that this is done downloading.
-    media_file.current_download=False
-    media_file.update_record()
+    db(db.media_files.media_guid==media_file.media_guid).update(
+        current_download=False
+    )
     # Have to call commit in tasks if changes made to the db
     db.commit()
     
     return True
 
+def install_lti_tools_in_canvas(run_from=""):
+    return install_lti_tools()
+
 # Enable the scheduler
 from gluon.scheduler import Scheduler
 
-scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=3,
+scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=1,
+                      migrate=current.migrate,
                       group_names=['process_videos', 'create_home_directory', 'wamap_delete',
                                    'wamap_videos', 'misc', "download_videos", 'youtube_queue'],
                       tasks=dict(process_media_file=process_media_file,
@@ -1602,14 +1609,15 @@ scheduler = Scheduler(db_scheduler, max_empty_runs=0, heartbeat=3,
                                  pull_youtube_caption=pull_youtube_caption,
                                  canvas_tag_smc_resources=canvas_tag_smc_resources,
                                  process_youtube_queue=process_youtube_queue,
+                                 refresh_document_width_height=refresh_document_width_height,
+                                 install_lti_tools_in_canvas=install_lti_tools_in_canvas,
                                  ))
 current.scheduler = scheduler
 
 
 # Add indexes to the scheduler database if needed
 # Do we need to do initial init? (e.g. creating indexes.....)
-db_scheduler_init_needed = cache.ram('db_scheduler_init_needed', lambda: True, time_expire=3600)
-if db_scheduler_init_needed:
+if current.migrate == True:
     db_scheduler.executesql('CREATE INDEX IF NOT EXISTS scheduler_task_idx ON scheduler_task (id, task_name, group_name, status, function_name);')
     db_scheduler.executesql('CREATE INDEX IF NOT EXISTS scheduler_task_last_run_time_idx ON scheduler_task (last_run_time);')
     db_scheduler.executesql('CREATE INDEX IF NOT EXISTS scheduler_task_vars_idx ON scheduler_task (vars);')
@@ -1617,85 +1625,119 @@ if db_scheduler_init_needed:
     db_scheduler.executesql('CREATE INDEX IF NOT EXISTS "scheduler_task_status_idx" ON "scheduler_task" ("task_name", "vars", "last_run_time")')
     db_scheduler.executesql('CREATE INDEX IF NOT EXISTS "scheduler_run_progress_idx" ON "scheduler_run" ("task_id", "run_output")')
 
-# Make sure we schedule the YouTube queue to process a video every ?? seconds
-time_to_run_youtube_queue = current.cache.ram('time_to_run_youtube_queue', lambda: True, time_expire=300)
-#print(f"{time_to_run_youtube_queue}")
-if time_to_run_youtube_queue == True:
-    current.cache.ram('time_to_run_youtube_queue', lambda: False, time_expire=-1)
-
-    # Kill old scheduled items so they can just go away...
-    db_scheduler(
-        (db_scheduler.scheduler_task.task_name=='pull_youtube_video') |
-        (db_scheduler.scheduler_task.task_name=='pull_youtube_caption')
-        ).delete()
-    db_scheduler.commit()
-
-    # See if a task is already queued so we don't spam things
-    #ts = scheduler.task_status((db_scheduler.scheduler_task.task_name=='process_youtube_queue'))
-    ts = db_scheduler(
-        (db_scheduler.scheduler_task.task_name=='process_youtube_queue') &
-        ((db_scheduler.scheduler_task.status=='QUEUED') | (db_scheduler.scheduler_task.status=='RUNNING'))
-        ).select(orderby=~db_scheduler.scheduler_task.id).first()
-    #print(f"TS: {ts}")
-    if not ts is None and (ts.status == "QUEUED" or ts.status == "RUNNING"):
-        # We have the task queued, make sure to clean up old ones.
-        db_scheduler(
-            (db_scheduler.scheduler_task.task_name=='process_youtube_queue') &
-            (db_scheduler.scheduler_task.status=='QUEUED') &
-            (db_scheduler.scheduler_task.id!=ts.id)
-            ).update(status='COMPLETED')
-        db_scheduler.commit()
-        pass
-    else:
-        # Add a new task
-        print("Scheduling Youtube Queue...")
-        # print(str(request.is_scheduler))
-        # print(str(request))
-        # Schedule the process
-        result = scheduler.queue_task('process_youtube_queue', timeout=300, 
-            sync_output=5, group_name="youtube_queue", repeats=0, period=120, pvars=dict(run_from='x_scheduler.py'))
-
-
-
-# Make sure to run the ad login refresh every hour or so
-refresh_ad_login = current.cache.ram('refresh_ad_login', lambda: True, time_expire=300)
-if refresh_ad_login == True and request.is_scheduler is not True:
-    # Set the current value to false so we don't need to refresh for a while
-    current.cache.ram('refresh_ad_login', lambda: False, time_expire=-1)
-
-    # See if a task is already queued so we don't spam things
-    ts = scheduler.task_status((db_scheduler.scheduler_task.task_name=='refresh_all_ad_logins'))
-    if not ts is None and ts.status == "QUEUED":
-        #print("refresh_all_ad_logins - already queued, skipping.")
-        #print(f"TS: {ts}")
-        # Clean up old extras
-        db_scheduler(
-            (db_scheduler.scheduler_task.task_name=='refresh_all_ad_logins') &
-            (db_scheduler.scheduler_task.status=='QUEUED') &
-            (db_scheduler.scheduler_task.id!=ts.id)
-            ).update(status='COMPLETED')
-        db_scheduler.commit()
-        pass
-    else:
-        # Add a new task
-        # Update the last login value for all users (students and faculty)
-        print("Queueing up refresh_all_ad_logins...")
-        # print(str(request.is_scheduler))
-        # print(str(request))
+# Prefer to run these tasks from the scheduler process
+def run_maintenance_task(
+    task_name="NO TASK", kill_old_tasks=True, run_delay=300, group_name="misc", kill_if_older_than=None,
+    timeout=300, repeats=1, repeat_delay=60, retry_failed=0,  sync_output=2, immediate=False,
+    run_in_scheduler = False, run_in_web_request = True
+    ):
     
-        # See if we have one already
-        ts = db_scheduler(
-            (db_scheduler.scheduler_task.task_name=='refresh_all_ad_logins') &
-            ((db_scheduler.scheduler_task.status=='QUEUED') | (db_scheduler.scheduler_task.status=='RUNNING'))
-            ).select(orderby=~db_scheduler.scheduler_task.id).first()
-        if ts is None:
-            # Schedule the process
-            result = scheduler.queue_task('refresh_all_ad_logins', timeout=300, 
-                sync_output=5, group_name="misc", repeats=0, period=600, pvars=dict(run_from='x_scheduler.py'))
+    # print(f"run_maintenance_task({task_name}) called...")
+    if run_in_scheduler == False and request.is_scheduler == True:
+        # print(f"In scheduler process, but run_in_scheduler is False - skipping run_maintenance_task - {task_name}")
+        return False
+    if run_in_web_request == False and request.is_scheduler == False:
+        # print(f"In web request, but run_in_web_request is False - skipping run_maintenance_task - {task_name}")
+        return False
+    
+    # Has it been long enough to process this task again?
+    task_needs_to_run = current.cache.ram(task_name, lambda: True, time_expire=run_delay)
+    if task_needs_to_run == True:
+        print(f"Running Maintenance Task: {task_name}")
+        
+        start_new_task = True
+        # Get a copy of the current task
+        current_task = scheduler.task_status(db_scheduler.scheduler_task.task_name==f"{task_name}", output=True)
+        # What do we do about this old task?
+        current_task_id = 0
+        if current_task:
+            current_task_id = current_task.scheduler_task.id
+            current_task_last_run = current_task.scheduler_task.last_run_time
+            if current_task_last_run is None:
+                # Hasn't run, use the the start time
+                current_task_last_run = current_task.scheduler_task.start_time
             
+            # If the current task is running but hasn't timed out, then exit and reset our counter
+            if current_task.scheduler_task.status == 'RUNNING' and kill_if_older_than is not None:
+                if (datetime.datetime.now() - current_task_last_run) > datetime.timedelta(seconds=kill_if_older_than):
+                    # Time to kill this task.
+                    scheduler.stop_task(current_task_id)
+                else: # Don't kill it if it is running.
+                    start_new_task = False
+                    print(f"Task {task_name} is currently running and not timed out - letting it run...")
+            elif current_task.scheduler_task.status == "QUEUED" or current_task.scheduler_task.status == "FAILED":
+                # Go ahead and stop this task as we will restart it below.
+                scheduler.stop_task(current_task_id)
+                print(f"Cleaning up old task - {task_name} {current_task.scheduler_task.id}")
+            
+        
+        # Cleanup old tasks
+        if kill_old_tasks == True:
+            tasks = db_scheduler(
+                (db_scheduler.scheduler_task.task_name==task_name) &
+                ((db_scheduler.scheduler_task.status=='QUEUED') | (db_scheduler.scheduler_task.status=='RUNNING') | (db_scheduler.scheduler_task.status=='FAILED'))
+            ).select()
+            for task in tasks:
+                # Don't kill the current task (refereneced above) but kill all others.
+                if task.id != current_task_id:
+                    print(f"---> Killing Old Task: {task_name} {task.id}")
+                    scheduler.stop_task(task.id)
+                    if task.status=="FAILED":
+                        # Also make sure to set as stopped so it doesn't repeat later
+                        db_scheduler(
+                            (db_scheduler.scheduler_task.id==task.id)
+                        ).update(status='STOPPED')
+                        db_scheduler.commit()
+        
+        if start_new_task == True:
+            # Need to schedule the new task
+            result = scheduler.queue_task(
+                task_name, timeout=timeout, sync_output=sync_output, group_name=group_name,
+                immediate=immediate, period=repeat_delay, repeats=repeats, retry_failed=retry_failed,
+                pvars=dict(run_from='x_scheduler.py')
+            )
+            print(f"-> New task started: {task_name} -> {result}")
 
-    # Make sure to start the scheduler process
-    # cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_misc_scheduler.py') + " > /dev/null 2>&1 &"
-    # p = subprocess.Popen(cmd, shell=True, close_fds=True)
+        # Task ran - reset things so we won't try to run it again for run_delay seconds
+        current.cache.ram(task_name, lambda: False, time_expire=-1)
+        return True
+    else:
+        # print(f"Not time to run task - {task_name}.")
+        pass
+
+    return False
 
 
+# Make sure our LTI integration is installed in canvas
+run_maintenance_task(
+    'install_lti_tools_in_canvas',
+    run_delay=86400 # Re-run every day
+)
+
+
+# Make sure we schedule the YouTube queue to process a video every ?? seconds
+run_maintenance_task(
+    'process_youtube_queue',
+    run_delay=300,
+    repeats=0,
+    repeat_delay=120,
+    kill_if_older_than=3600 # Kill and restart every hour
+)
+
+# Make sure to run the process to refresh AD login every hour or so
+run_maintenance_task(
+    'refresh_all_ad_logins',
+    run_delay=3600
+)
+
+# Make sure to run the process to calculate document width/height every day or so
+run_maintenance_task(
+    'refresh_document_width_height',
+    run_delay=1200,
+
+)
+
+
+# Make sure to start the scheduler process
+# cmd = "/usr/bin/nohup /usr/bin/python " + os.path.join(request.folder, 'static/scheduler/start_misc_scheduler.py') + " > /dev/null 2>&1 &"
+# p = subprocess.Popen(cmd, shell=True, close_fds=True)

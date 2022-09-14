@@ -1,0 +1,116 @@
+{{ extend 'lti_minimal_layout.html' }}
+
+
+<h1>OPE Question Banks</h1>
+<button id="new_question_bank" class="ui button right floated primary" data-content="Create New Question Bank"><i class="icon plus"></i>New Question Bank</button>
+
+<div>
+    {{for bank in question_banks:}}
+        {{=bank.bank_title }}
+    {{pass}}
+</div>
+
+<div class="ui modal" id="new_question_bank_modal">
+    <div class="header">New Question Bank</div>
+    <div class="content">
+        <form id="new_question_bank_form" class="ui form" enctype="multipart/form-data" method="post" action="#">
+            <div class="ui segment">
+                <div class="required field">
+                    <label>Title</label>
+                    <input type="text" name="question_bank_title" placeholder="Question Bank Title" value="" data-content="Question Bank Title">
+                </div>
+                <div class="field">
+                    <label>Description</label>
+                    <textarea rows="4" name="question_bank_description" placeholder="Enter description here" data-content="Add a description for this question bank"></textarea>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="actions">
+        <div id="create_question_bank_button" class="ui primary approve button">Create</div>
+        <div class="ui cancel button">Cancel</div>
+    </div>
+</div>
+
+<script>
+    // Setup the API enpoints
+    $.fn.api.settings.api = {
+        // {??} for required parameters, {/??} for optional parameters
+        'new_question_bank' : "{{=URL('lti', 'api_new_question_bank')}}",
+    };
+
+    // Enable popups
+    //$('.button').popup();
+    $('[data-content], [data-html]').popup();
+
+
+    $('#new_question_bank').click(function() {
+        console.log('create new question bank');
+        $('#new_question_bank_modal').modal('show');
+        // Make sure to enable the popups too
+        $('[data-content], [data-html]').popup();
+        $('#new_question_bank_form').form('reset');
+    });
+
+    $('#new_question_bank_form').form({
+        on: 'blur',
+        inline: true,
+        //preventLeaving: true,
+        autoCheckRequired: true,
+        fields: {
+            title: {
+                identifier: 'question_bank_title',
+                rules: [{
+                        type: 'minLength[4]',
+                        prompt: 'Please enter a valid name for the question bank'
+            
+                }]
+            },
+        },
+        onSuccess: function() {
+            if ($('#new_question_bank_form').form('is valid')) {
+                // Mark form as not dirty so it will submit
+                $('#new_question_bank_form').form('set as clean');
+                console.log("Success!");
+
+                return true;
+            }
+            
+            // Not valid
+            return false;
+        },
+        onFailure: function() {
+            console.log("Failed!");
+            return false;
+        }
+        // onDeny: function() {
+        //     // Don't want the "leave" message to set off when canceled.
+        //     $('#new_question_form').form('set as clean');
+        // }
+    });
+
+    $('#create_question_bank_button').api({
+        action: 'new_question_bank',
+        method: 'post',
+        successTest: function(response) {
+            // API should return ret=true or ret=false
+            if (response && response.ret) {
+                return response.ret;
+            }
+            return false;
+        },
+
+        onSuccess: function(response, element, xhr) {
+            console.log("Success - posted new question bank")
+        },
+        onFailure: function(response, element, xhr) {
+            console.log("ERROR - Unable to post new_question_bank!");
+            //$('.w2p_flash').html('Error - Question bank not created!').slideDown();
+            $.web2py.flash("ERROR - Question bank not created!");
+            return false;
+        }
+
+    });
+
+
+</script>

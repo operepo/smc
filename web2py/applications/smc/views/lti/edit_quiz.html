@@ -1,0 +1,480 @@
+{{ extend 'lti_minimal_layout.html' }}
+
+<h1>Edit OPE Quiz</h1>
+
+<div class="ui top attached tabular menu">
+    <a class="item" data-tab="details">Details</a>
+    <a class="item" data-tab="questions">Questions</a>
+    <a class="item" data-tab="question_groups">Question Groups</a>
+</div>
+
+<!-- QUESTION DETAILS -->
+<div class="ui bottom attached tab segment" data-tab="details">
+<FORM id="edit_quiz" class="ui form" enctype="multipart/form-data" method="post" action="#">
+    <input type="hidden" name="FORM_UUID" value="{{=FORM_UUID}}" />
+    <input type="hidden" name="id" value="{{=id}}" />
+<div class="ui segment">
+    <h3 class="ui dividing header">{{=title}}</h3>
+    <div class="required field">
+        <label>Title</label>
+        <input type="text" name="title" placeholder="Quiz Title" value="{{=title}}" data-content="Quiz Title">
+    </div>
+    <div class="field">
+        <label>Description</label>
+        <textarea rows="4" name="description" placeholder="Enter description here" data-content="Add instructions for the student">{{=description}}</textarea>
+    </div>
+    
+
+    <h3 class="ui dividing header">Quiz Options</h3>
+    
+    <div class="ui stackable  basic segments">
+        <div class="ui segment">
+            <div class="required field">
+                <label>Quiz Type</label>
+                <select name="quiz_type" class="ui selection compact dropdown" data-content="Set the quiz type">
+                    <!--option value="">Pick Type</option-->
+                    <option value="assignment" {{=('selected' if quiz_type=='assignment' else '')}}>Assignment</option>
+                    <option value="practice_quiz" {{=('selected' if quiz_type=='practice_quiz' else '')}}>Practice Quiz</option>
+                    <option value="graded_survey" {{=('selected' if quiz_type=='graded_survey' else '')}}>Graded Survey</option>
+                    <option value="survey" {{=('selected' if quiz_type=='survey' else '')}}>Survey</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ui segment">
+            <div class="field">
+                <div class="ui toggle checked checkbox" data-content="Allow this quiz to be taken on offline laptops">
+                    <input type="checkbox" name="available_on_offline_laptop" {{=('checked' if available_on_offline_laptop==True else '')}} onchange="return toggle_laptop(this);">
+                    <label>
+                        Allow students to take this quiz on laptops
+                        <i class="icons" style="padding-left:8px;">
+                            <i id="laptop_enabled_icon" class="{{='large colored green laptop icon' if available_on_offline_laptop==True else 'large colored green laptop icon grey disabled'}}"></i>
+                            <i id="laptop_enabled_icon_slash" class="horizontally flipped huge disabled icon" style="color: #c2c2c2; display: {{='none' if available_on_offline_laptop==True else 'visible'}};">
+                                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-slash" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M11.354 4.646a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                                </svg>
+                            </i>
+                        </i> 
+                    </label>
+                                       
+                </div>
+            </div>
+        </div>
+
+        <div class="ui segment">
+            <div class="field">
+                <div class="ui field toggle checked checkbox" data-content="Randomize the answers to help reduce cheating">
+                    <input type="checkbox" name="shuffle_answers" {{=('checked' if shuffle_answers==True else '')}}>
+                    <label>Shuffle Answers</label>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="ui dividing header">Time Limit</h5>
+        <div class="ui basic segment" style="padding-top: 0px; padding-bottom: 0px;">
+            <div class="ui basic horizontal segments">
+                <div class="ui fitted compact segment">
+                    <div class="ui field toggle checked checkbox" style="padding-top: 6px; margin-right: 20px;" data-content="Quiz must be completed within the defined number of minutes (only active if a value is set in the minutes box)">
+                        <input type="checkbox" name="time_limit_enabled" {{=('checked' if time_limit_enabled==True else '')}}>
+                        <label>Time Limit Enabled</label>
+                    </div>
+                </div>
+
+                <div class="ui fitted compact basic segment">
+                    <div class="ui field right labeled input middle" >
+                        <input type="text" name="time_limit" maxlength="3" size="3" value="{{=time_limit}}" style="width: 60px" data-content="How many minues does the student have to complete this quiz (1-999)" />
+                        <div class="ui label">Minutes</div>
+                    </div>
+                </div>
+            </div>            
+        </div>
+
+        <h5 class="ui dividing header">Multiple Attempts</h5>
+        <div class="ui basic segment" style="padding-top: 0px; padding-bottom: 0px;">
+            <div class="ui basic horizontal segments">
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field toggle checked checkbox" data-content="Allow the student to take this quiz more than once">
+                        <input type="checkbox" name="allow_multiple_attempts" {{='checked' if allow_multiple_attempts==True else ''}} />
+                        <label>Allow Multiple Attempts</label>
+                    </div>
+                </div>
+        
+                <div class="ui fitted compact basic segment" style="margin-right: 20px;">
+                    <div class="ui field labeled input middle">
+                        <input type="number" name="allowed_attempts" min="1" max="99" maxlength="2" size="2" value="{{=allowed_attempts}}" style="width: 80px;" data-content="How many times the student can take this quiz (between 1 and 99)" />
+                        <div class="ui label">Allowed Attempts</div>
+                    </div>
+                </div>
+
+
+                <div class="ui fitted compact basic segment" >
+                    <div class="ui field labeled input">
+                        <select name="scoring_policy" class="ui selection dropdown" data-content="Which quiz score to keep for a grade">
+                            <option value="keep_highest" {{=('selected' if quiz_type=='keep_highest' else '')}}>Keep Highest</option>
+                            <option value="keep_latest" {{=('selected' if quiz_type=='keep_latest' else '')}}>Keep Latest</option>
+                            <option value="average" {{=('selected' if quiz_type=='average' else '')}}>Average</option>
+                        </select>
+                        <label class="ui label">Quiz Score to Keep</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h5 class="ui dividing header">Answer Options</h5>
+        <div class="ui basic segment" style="padding-top: 0px; padding-bottom: 0px;">
+            <div class="ui basic horizontal segments">
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field toggle checked checkbox" data-content="Let students see quiz response (based on the next two options)">
+                        <input type="checkbox" name="never_hide_results" {{='checked' if never_hide_results==True else ''}} />
+                        <label>Let students see quiz responses</label>
+                    </div>
+                </div>
+
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field toggle checked checkbox" data-content="Students only see response after their last attempt">
+                        <input type="checkbox" name="hide_results_only_after_last" {{='checked' if hide_results_only_after_last==True else ''}} />
+                        <label>Only after their last attempt</label>
+                    </div>
+                </div>
+
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field toggle checked checkbox" data-content="Only let the student see the response once after each attempt">
+                        <input type="checkbox" name="one_time_results" {{='checked' if one_time_results==True else ''}} />
+                        <label>Only once after each attempt</label>
+                    </div>
+                </div>
+            </div>
+            <div class="ui basic horizontal segments">
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field toggle checked checkbox" data-content="Let students see correct answers (based on the next two options)">
+                        <input type="checkbox" name="show_correct_answers" {{='checked' if show_correct_answers==True else ''}} />
+                        <label>Let students see correct answers</label>
+                    </div>
+                </div>
+
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field toggle checked checkbox" data-content="Don't show correct answers until after the last attempt">
+                        <input type="checkbox" name="show_correct_answers_last_attempt" {{='checked' if show_correct_answers_last_attempt==True else ''}} />
+                        <label>Only show after last attempt</label>
+                    </div>
+                </div>
+
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="field">
+                        <label>Show correct answers at</label>
+                        <div class="ui calendar" id="show_correct_answers_at_calendar" data-content="Don't show correct answers before this date">
+                            <div class="ui field input left icon">
+                                <i class="calendar icon"></i>
+                                <input type="text" name="show_correct_answers_at" placeholder="Date/Time" value="{{=show_correct_answers_at}}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Hide correct answers at</label>
+                        <div class="ui calendar" id="hide_correct_answers_at_calendar" data-content="Don't show correct answers after this date">
+                            <div class="ui field input left icon">
+                                <i class="calendar icon"></i>
+                                <input type="text" name="hide_correct_answers_at" placeholder="Date/Time" value="{{=hide_correct_answers_at}}" >
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+            </div>
+        </div>
+
+        <h5 class="ui dividing header">Question Options</h5>
+        <div class="ui basic segment" style="padding-top: 0px; padding-bottom: 0px;">
+            <div class="ui basic horizontal segments">
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field toggle checked checkbox">
+                        <input type="checkbox" name="one_question_at_a_time" {{='checked' if one_question_at_a_time==True else ''}} data-content="Show one question per page" />
+                        <label>Show questions one at a time</label>
+                    </div>
+                </div>
+
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field toggle checked checkbox">
+                        <input type="checkbox" name="cant_go_back" {{='checked' if cant_go_back==True else ''}} data-content="Don't allow going back after answering a question" />
+                        <label>Lock questions after answering</label>
+                    </div>
+                </div>
+            
+            </div>
+
+        </div>
+
+        <h5 class="ui dividing header">Quiz Restrictions</h5>
+        <div class="ui basic segment" style="padding-top: 0px; padding-bottom: 0px;">
+            <div class="ui basic horizontal segments">
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field toggle checked checkbox">
+                        <input type="checkbox" name="enable_quiz_access_code" {{='checked' if enable_quiz_access_code==True else ''}} data-content="Require a code to take this quiz (not on unless a code is set)" />
+                        <label>Require access code</label>
+                    </div>
+                </div>
+
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field input">
+                        <input type="input" name="access_code" value="{{=access_code or ''}}" placeholder="ex: Password972" />
+                    </div>
+                </div>
+            
+            </div>
+
+            <div class="ui basic horizontal segments">
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field toggle checked checkbox">
+                        <input type="checkbox" name="enable_quiz_ip_filter" {{='checked' if enable_quiz_ip_filter==True else ''}} data-content="Only deliver this quiz to the following IP addresses (single IPs or Blocks of IPs, not on unless IP(s) are added)" />
+                        <label>Filter IP Addresses</label>
+                    </div>
+                </div>
+
+                <div class="ui fitted compact basic segment" style="padding-top: 6px; margin-right: 20px;">
+                    <div class="ui field input">
+                        <input type="input" name="ip_filter" value="{{=ip_filter or ''}}" placeholder="ex: 192.168.1.0/24" data-content="Use Single IPs (192.168.0.1, 192.168.0.5) or ranges (192.168.0.0/24, 192.168.1.0/24)" />
+                    </div>
+                </div>
+            
+            </div>
+
+        </div>
+
+    </div>
+
+    
+    
+    
+    
+</div>
+    <button class="ui primary submit button" type="submit" data-content="Save Changes">Save</button>
+    <button class="ui cancel button" type="button" onclick="window.location='{{=URL('lti','quiz_list')}}'" data-content="Close and return to Quiz List">Done</button>
+    
+</FORM>
+</div>
+
+<!-- QUESTIONS -->
+<div class="ui bottom attached tab segment" data-tab="questions">
+    <button id="new_question" class="ui button right floated primary"><i class="icon plus"></i>New Question</button>
+    <div class="ui" id="question_list">
+        Questions
+    </div>
+</div>
+
+<!-- QUESTION GROUPS -->
+<div class="ui bottom attached tab segment active" data-tab="question_groups">
+    <button id="new_question_group" class="ui button right floated primary"><i class="icon plus"></i>New Question Group</button>
+    QUESTION GROUPS
+</div>
+
+
+<div class="ui modal" id="new_question_modal">
+    <div class="header">New Question</div>
+    <div class="content">
+        <form id="new_question_form" class="ui form" enctype="multipart/form-data" method="post" action="#">
+            <input type="hidden" quiz_id="{{=id}}" />
+
+            <div class="ui segment">
+                <div class="required field">
+                    <label>Title</label>
+                    <input type="text" name="question_title" placeholder="Question Title" value="" data-content="Question Title">
+                </div>
+                <div class="required field">
+                    <label>Question Type</label>
+                    <select name="question_type" class="ui selection compact dropdown" data-content="Set the question type">
+                        <!--option value="">Pick Type</option-->
+                        <option value="multiple_choice_question">Multiple Choice</option>
+                        <option value="true_false_question">True/False</option>
+                        <option value="short_answer_question">Fill In the Blank</option>
+                        <option value="fill_in_multiple_blanks_question">Fill In Multiple Blanks</option>
+                        <option value="multiple_answers_question">Multiple Answers</option>
+                        <option value="multiple_dropdowns_question">Multiple Dropdowns</option>
+                        <option value="matching_question">Matching</option>
+                        <option value="numerical_answer_question">Numerical Answer</option>
+                        <option value="calculated_question">Formula Question</option>
+                        <option value="essay_question">Essay Question</option>
+                        <option value="file_upload_question">File Upload Question</option>
+                        <option value="text_only_question">Text (no question)</option>
+                    </select>
+                </div>
+                <div class="ui field right labeled input middle" >
+                    <input type="text" name="question_points" maxlength="3" size="3" value="1" style="width: 60px" data-content="How many points for this question (0-999)" />
+                    <div class="ui label">Points</div>
+                </div>
+                <div class="field">
+                    <label>Description</label>
+                    <textarea rows="4" name="question_description" placeholder="Enter description here" data-content="Add instructions for the student"></textarea>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="actions">
+        <div class="ui primary approve button">Create</div>
+        <!--div class="ui button">Button - Neutral</div-->
+        <div class="ui cancel button">Cancel</div>
+    </div>
+</div>
+
+
+
+<script>
+
+    function toggle_laptop(checkbox) {
+        // Toggle the laptop icon to enabled/disabled
+
+        // Get the checked state
+        var is_checked = $(checkbox).is(':checked');
+
+        var laptop_enabled_icon = $('#laptop_enabled_icon');
+        var laptop_enabled_icon_slash = $('#laptop_enabled_icon_slash');
+
+        if (is_checked === true) {
+            // Show enabled icon
+            laptop_enabled_icon.removeClass('grey disabled');
+            laptop_enabled_icon_slash.hide();
+        } else {
+            // Show disabled icon
+            laptop_enabled_icon.addClass('grey disabled');
+            laptop_enabled_icon_slash.show();
+        }
+        console.log(is_checked);
+        console.log(laptop_enabled_icon);
+
+        return true;
+    }
+
+    // Enable popups
+    //$('.button').popup();
+    $('[data-content], [data-html]').popup();
+
+    $('#new_question').click(function() {
+        //window.location='{{=URL("lti", "create_quiz")}}';
+        console.log('create new question');
+        $('#new_question_modal').modal('show');
+        // Make sure to enable the popups too
+        $('[data-content], [data-html]').popup();
+        $('#new_question_form').form('reset');
+    });
+    $('#new_quiz_group').click(function() {
+        console.log('create new quiz group');
+        //window.location='{{=URL("lti", "create_quiz")}}';
+    });
+
+    $('.menu .item').tab();
+
+    $('#select').dropdown();
+    $('.ui.calendar').calendar();
+    //     {
+    //         monthFirst: true,
+    //         type: 'datetime',
+    //         formatter: {
+    //             date: function(date, settings) {
+    //                 if (!date) return '';
+    //                 var day = date.getDate();
+    //                 var month = date.getMonth() + 1;
+    //                 var year = date.getFullYear();
+    //                 return month + "/" + day + "/" + year;
+    //             }
+    //         }
+    //     }
+    // );
+
+    $('#new_question_form').form({
+        on: 'blur',
+        inline: true,
+        //preventLeaving: true,
+        autoCheckRequired: true,
+        fields: {
+            title: {
+                identifier: 'question_title',
+                rules: [{
+                        type: 'minLength[4]',
+                        prompt: 'Please enter a valid name for the question'
+            
+                }]
+            },
+        },
+        onSuccess: function() {
+            if ($('#new_question_form').form('is valid')) {
+                // Mark form as not dirty so it will submit
+                $('#new_question_form').form('set as clean');
+                console.log("Success!");
+
+                return true;
+            }
+            
+            // Not valid
+            return false;
+        },
+        onFailure: function() {
+            console.log("Failed!");
+            return false;
+        }
+        // onDeny: function() {
+        //     // Don't want the "leave" message to set off when canceled.
+        //     $('#new_question_form').form('set as clean');
+        // }
+    });
+
+    $('#edit_quiz').form({
+        on: 'blur',
+        inline: true,
+        preventLeaving: true,
+        autoCheckRequired: true,
+        fields: {
+            title: {
+                identifier: 'title',
+                rules: [{
+                        type: 'minLength[4]',
+                        prompt: 'Please enter a valid name for the quiz'
+            
+                }]
+            },
+            quiz_type: {
+                identifier: 'quiz_type',
+                rules: [{
+                    type: 'empty',
+                    prompt: 'Quiz type required.'
+                }]
+            },
+            time_lmit: {
+                identifier: 'time_limit',
+                rules: [{
+                    type: 'integer[0...999]',
+                    prompt: 'Please enter number of minutes for test.'
+                }]
+            },
+            allowed_attempts: {
+                identifier: 'allowed_attempts',
+                rules: [{
+                    type: 'integer[1...20]',
+                    prompt: 'Must be between 1 and 20'
+                }]
+            }
+
+            
+
+        },
+        onSuccess: function() {
+            if ($('#edit_quiz').form('is valid')) {
+                // Mark form as not dirty so it will submit
+                $('#edit_quiz').form('set as clean');
+                console.log("Success!");
+
+                return true;
+            }
+            
+            // Not valid
+            return false;
+        },
+        onFailure: function() {
+            console.log("Failed!");
+            return false;
+        }
+    });
+
+    //});
+    
+    
+</script>

@@ -472,6 +472,8 @@ db.define_table('document_files',
                 Field('source_url', 'string', default=''),
                 Field('link_to_pdf', 'string', default=''),
                 Field('item_version', 'bigint', default=0),
+                Field('width', 'string', default='0'),
+                Field('height', 'string', default='0'),
                 )
 
 # Indexes
@@ -628,20 +630,26 @@ db_lti.define_table("ope_quizzes",
       Field("description", 'text', default=""),
       Field("quiz_type", 'string', default="assignment", requires=IS_IN_SET(["assignment", "practice_quiz", "graded_survey", "survey"])),
       Field("assignment_group_id", 'integer', default=0),
+      Field("time_limit_enabled", 'boolean', default=False),
       Field("time_limit", 'integer', default=0),                        # in minutes
       Field("shuffle_answers", 'boolean', default=True),
-      Field("hide_results", 'string', default="always", requires=IS_IN_SET(["always", "until_after_last_attempt", "null"])),
+      Field("never_hide_results", 'boolean', default=True),
+      Field("hide_results_only_after_last", 'boolean', default=False),
+      Field("one_time_results", 'boolean', default=False),
+      Field("hide_results", 'string', default="always", requires=IS_IN_SET(["always", "until_after_last_attempt", "null"])), # How does this equate to an input?
       Field("show_correct_answers", 'boolean', default=False),
       Field("show_correct_answers_last_attempt", 'boolean', default=False),
       Field("show_correct_answers_at", 'datetime'),
       Field("hide_correct_answers_at", 'datetime'),
-      Field("one_time_results", 'boolean', default=True),
-      Field("scoring_policy", 'string', default="keep_highest", requires=IS_IN_SET(["keep_heighest", "keep_latest"])),
-      Field("allowed_attempts", 'integer', default=1),
+      Field("scoring_policy", 'string', default="keep_highest", requires=IS_IN_SET(["keep_highest", "keep_latest", "average"])),
+      Field("allow_multiple_attempts", 'boolean', default=False),
+      Field("allowed_attempts", 'integer', default=1, requires=IS_INT_IN_RANGE(1, 99)),
       Field("one_question_at_a_time", 'boolean', default=True),
       Field("question_count", 'integer', default=0),
       Field("cant_go_back", 'boolean', default=True),
+      Field("enable_quiz_access_code", 'boolean', default=False),
       Field("access_code", 'string', default=""),
+      Field("enable_quiz_ip_filter", 'boolean', default=False),
       Field("ip_filter", 'string', default=""),
       Field("due_at", 'datetime'),
       Field("lock_at", 'datetime'),
@@ -657,8 +665,25 @@ db_lti.define_table("ope_quizzes",
 
 )
 
+db_lti.define_table("ope_question_banks",
+      Field("lms_parent_course", "string", default=""),
+      Field("bank_title", "string", required=True),
+      Field("bank_description", "string", default=""),
+      Field("question_bank_position", "integer", default=0),
+)
+
+db_lti.define_table("ope_question_groups",
+      Field("parent_quiz", "reference ope_quizzes"),
+      Field("group_title", "string", required=True),
+      Field("pick_number_questions", "integer", required=True, default=0),
+      Field("points_per_question", "double", default=0),
+      Field("question_groups_position", "integer", default=0),
+)
+
 db_lti.define_table("ope_quiz_questions",
       Field("parent_quiz", "reference ope_quizzes"),
+      Field("parent_question_group", "integer", default=0),
+      Field("parent_question_bank", "integer", default=0),
       Field("question_position", "integer", default=0),
       Field("question_name", "string", required=True),
       Field("question_type", "string", requires=IS_IN_SET([

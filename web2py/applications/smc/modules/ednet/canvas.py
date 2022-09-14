@@ -50,6 +50,11 @@ class Canvas:
         pass
     
     @staticmethod
+    def isEnabled():
+        Canvas.Init()
+        return Canvas._canvas_enabled
+
+    @staticmethod
     def Init():
         if Canvas._init_run is not True:
             Canvas._canvas_import_enabled = AppSettings.GetValue('canvas_import_enabled', False)

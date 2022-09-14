@@ -1,7 +1,9 @@
 {{ extend 'lti_minimal_layout.html' }}
 
 <h1>OPE Quizzes</h1>
-<button id="new_quiz" class="ui button right floated primary"><i class="icon plus"></i>New Quiz</button>
+<button id="question_banks" class="ui button right floated" data-content="Manage Question Banks">Question Banks</button>
+<button id="new_quiz" class="ui button right floated primary" data-content="Create New Quiz"><i class="icon plus"></i>New Quiz</button>
+<button id="import_quiz" class="ui button right floated primary" data-html="<b style='color:red;'>(Not Implemented Yet)</b> Import Quiz From Canvas"><i class="icon plus"></i>Import Quiz</button>
 
 <br /><br /><br />
 
@@ -10,7 +12,8 @@
         <i class="dropdown icon"></i>
         Assignment Quizzes
     </div>
-    <div class="{{=get_session_value(control='Assignment Quizzes ' +session.canvas_course_id, key='active', default='active')}} content" data-control_id="Assignment Quizzes {{=session.canvas_course_id}}">
+    <div class="{{=get_session_value(control='Assignment Quizzes ' +session.canvas_course_id, key='active', default='active')}} content"
+     data-control_id="Assignment Quizzes {{=session.canvas_course_id}}" style="padding: 0px;">
         {{=assignment}}
     </div>
 
@@ -21,7 +24,8 @@
         <i class="dropdown icon"></i>
         Practice Quizzes
     </div>
-    <div class="{{=get_session_value(control='Practice Quizzes ' +session.canvas_course_id, key='active', default='')}} content" data-control_id="Practice Quizzes {{=session.canvas_course_id}}">
+    <div class="{{=get_session_value(control='Practice Quizzes ' +session.canvas_course_id, key='active', default='')}} content"
+     data-control_id="Practice Quizzes {{=session.canvas_course_id}}" style="padding: 0px;">
         {{=practice_quiz}}
     </div>
 
@@ -33,7 +37,8 @@
         <i class="dropdown icon"></i>
         Graded Surveys
     </div>
-    <div class="{{=get_session_value(control='Graded Surveys ' +session.canvas_course_id, key='active', default='')}} content" data-control_id="Graded Surveys {{=session.canvas_course_id}}">
+    <div class="{{=get_session_value(control='Graded Surveys ' +session.canvas_course_id, key='active', default='')}} content"
+     data-control_id="Graded Surveys {{=session.canvas_course_id}}" style="padding: 0px;">
         {{=graded_survey}}
     </div>
 
@@ -44,7 +49,8 @@
         <i class="dropdown icon"></i>
         Surveys
     </div>
-    <div class="{{=get_session_value(control='Surveys ' +session.canvas_course_id, key='active', default='')}} content" data-control_id="Surveys {{=session.canvas_course_id}}">
+    <div class="{{=get_session_value(control='Surveys ' +session.canvas_course_id, key='active', default='')}} content"
+     data-control_id="Surveys {{=session.canvas_course_id}}" style="padding: 0px;">
         {{=survey}}
     </div>
 
@@ -56,15 +62,7 @@
 {{=vars}}
 
 -->
-<style>
-    /* Bootstrap has modal settings that are bleeding into fomantic modal, clear the attributes. */
-    .ui .modal {
-        top: auto;
-        bottom: auto;
-        left: auto;
-        right: auto;
-    }
-</style>
+
 <script>
     // Setup the API enpoints
     $.fn.api.settings.api = {
@@ -183,6 +181,15 @@
         window.location='{{=URL("lti", "create_quiz")}}';
     });
 
+    $('#question_banks').click(function() {
+        window.location='{{=URL("lti", "question_banks")}}';
+    });
+
+    $('#import_quiz').click(function() {
+        //window.location='{{=URL("lti", "create_quiz")}}';
+        alert('Not implemented yet!');
+    });
+
     $('.ui.accordion').accordion({
         onChange: function(element) {
             // Accordion has been clicked (open or close)
@@ -206,7 +213,8 @@
     $('.dropdown').dropdown();
 
     // Enable popups
-    $('.button').popup();
+    //$('.button').popup();
+    $('[data-content], [data-html]').popup();
 
 
     function edit_quiz(quiz_id) {
