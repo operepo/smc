@@ -1192,7 +1192,7 @@ def process_youtube_queue(run_from=""):
                     r = pull_youtube_video(next_row)  #next_row.youtube_url, next_row.media_guid)
                 except Exception as ex:
                     # Had issues downloading from youtube.
-                    next_row.download_failures = next_row.get("download_failures", 0) + 1
+                    next_row.download_failures = next_row.get("download_failures", 0) or 0 + 1
                     # if next_row.download_failures > 5:
                     #     next_row.needs_downloading = False
                     next_row.update_record()
@@ -1374,7 +1374,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                 log_to_video(media_file, f"Failed to download video from {yt_url}, will stop trying.")
                 media_file.needs_downloading = False
                 media_file.needs_caption_downloading = False
-                media_file.download_failures = media_file.get("download_failures", 0) + 1
+                media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
                 media_file.update_record()
                 db.commit()                
                 return True
@@ -1382,7 +1382,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                 print(f"Temporary Error - Unable to get video {yt_url}.")
                 log_to_video(media_file, f"Failed to download video from {yt_url}, will keep trying.")
                 media_file.needs_downloading = True
-                media_file.download_failures = media_file.get("download_failures", 0) + 1
+                media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
                 media_file.update_record()
                 db.commit()
                 return True
@@ -1392,7 +1392,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
             print(f"Unknown HTTP error pulling yt video? {yt_url}\n{ex}")
             log_to_video(media_file, f"Unknown Error - Failed to download video from {yt_url}, will keep trying.\n{ex}")
             media_file.needs_downloading = True
-            media_file.download_failures = media_file.get("download_failures", 0) + 1
+            media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
             media_file.update_record()
             db.commit()
             return False
@@ -1512,7 +1512,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                     print(f"Permanent Error - Unable to get captions {yt_url}.")
                     log_to_video(media_file, f"Failed to download captions from {yt_url}, will stop trying.")
                     media_file.needs_caption_downloading = False
-                    media_file.download_failures = media_file.get("download_failures", 0) + 1
+                    media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
                     media_file.update_record()
                     db.commit()                
                     return True
@@ -1520,7 +1520,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                     print(f"Temporary Error - Unable to get captions {yt_url}.")
                     log_to_video(media_file, f"Failed to download captions from {yt_url}, will keep trying.")
                     media_file.needs_caption_downloading = True
-                    media_file.download_failures = media_file.get("download_failures", 0) + 1
+                    media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
                     media_file.update_record()
                     db.commit()
                     return True
@@ -1530,7 +1530,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
             print(f"Unknown HTTP error pulling yt captions? {yt_url}\n{ex}")
             log_to_video(media_file, f"Unknown Error - Failed to download captions from {yt_url}, will keep trying.\n{ex}")
             media_file.needs_caption_downloading = True
-            media_file.download_failures = media_file.get("download_failures", 0) + 1
+            media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
             media_file.update_record()
             db.commit()
             return False
