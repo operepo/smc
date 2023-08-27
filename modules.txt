@@ -16,11 +16,13 @@ PyMySQL
 #re
 #shutil
 pycanvas
+pydantic
 webvtt-py
 #langcodes
 language_data
 bs4
 weasyprint  # see additional notes https://weasyprint.readthedocs.io/en/stable/install.html
+# Adjust PATH variable in windows so GTK is at the top of the list (first) - also need to restart after install/changes or at least close command prompts and re-open
 # Need this on windows for weasyprint - https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases
 # apk --update --upgrade add gcc musl-dev jpeg-dev zlib-dev libffi-dev cairo-dev pango-dev gdk-pixbuf-dev
 lxml
@@ -28,5 +30,6 @@ streamlink
 langcodes
 pylti1p3
 jwcrypto
-PIL
+Pillow
 python-dateutil
+redis

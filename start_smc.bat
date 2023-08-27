@@ -43,7 +43,8 @@ for %%g in (
 
 :for_loop_done
 
-SET LISTEN_IP=127.0.0.1
+rem SET LISTEN_IP=127.0.0.1
+SET LISTEN_IP=0.0.0.0
 SET W_SSL=1
 SET SSL_CERT="test.crt"
 SET SSL_KEY="test.key"

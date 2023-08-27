@@ -1,23 +1,238 @@
+import os
+import uuid
 import json
 from gluon import current
+from pylti1p3.message_launch import MessageLaunch
+from pylti1p3.exception import LtiException
+
+import traceback
 
 from ednet.canvas import Canvas
+
+
 
 # Help shut up pylance warnings
 if 1==2: from ..common import *
 
 
-lti_settings = {
-    "https://canvas.corrections.homeip.net": {
-        "client_id": "OPE_LTI",
-        "auth_login_url": "http://canvas.docker/api/lti/authorize_redirect",
-        "auth_token_url": "http://canvas.docker/login/oauth2/token",
-        "key_set_url": "http://canvas.docker/api/lti/security/jwks",
-        "key_set": None,
-        "private_key_file": "private.key",
-        "deployment_ids": ["OPELTI_Deployment_ID"],
-    }
-}
+def oidc_login():
+    # Required for cookies to work in LTI land
+    session.samesite('none')
+
+    # from pylti1p3.oidc_login import OIDCLogin
+    # oidc_login = OIDCLogin(request, tool_conf) 
+    ret = None
+    print(f"OIDC_LTI Login attempted.")
+    print(f"OIDC Vars: {request.vars}")
+    print(f"OIDC Args: {request.args}")
+
+    tool_conf = get_lti_tool_config()
+    print(f"ToolConf: {tool_conf.__dict__}")
+
+    lti_request = W2PyRequest()
+    try:
+        oidc_login = W2PyOIDCLogin(lti_request, tool_conf)
+        oidc_login.enable_check_cookies()
+    except Exception as ex:
+        return "ERROR"
+
+    target_uri = request.vars.target_link_uri
+    if target_uri is None:
+        print("LTI - Redirecting to /index")
+        target_uri = "/index"
+    print(request.vars)
+
+    iss = None
+    for key in tool_conf.__dict__['_config'].keys():
+        iss = key
+        break
+
+    
+    try:
+        # Need to make authorize URL.
+        #auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect?"
+
+        auth_url = request.vars['iss']
+        if 'saltire' in auth_url:
+            auth_url += "/auth?"
+        elif 'canvas' in auth_url:
+            auth_url += "/api/lti/authorize_redirect?"
+
+        auth_url += f"client_id={request.vars['client_id']}"  # "tool_conf['_config'][0]['client_id']}"
+        auth_url += f"&response_type=id_token" # OidcConstants.ResponseTyps.IdToken
+        auth_url += f"&response_mode=form_post"
+        auth_url += f"&redirect_uri={target_uri}"
+        auth_url += f"&scope=openid" # OidcConstants.StandardScopes.OpenId
+        auth_url += f"&state={uuid.uuid4()}"  # Session ID
+        auth_url += f"&login_hint={request.vars['login_hint']}"
+        auth_url += f"&lti_message_hint={request.vars['lti_message_hint']}"
+        auth_url += f"&nonce={uuid.uuid4()}"            # Check nonce at launch to make sure id_token came from this flow
+        auth_url += f"&prompt=none"             # No user interaction
+        #auth_url += f"&extra=lti_message_hint={LtiMessageHint}" # Resource link id or deep link id
+    
+        # Do redirect manually
+        #lti_response = oidc_login.redirect(target_uri)
+        #redirect_obj = oidc_login.get_redirect_object(target_uri)
+        redirect_url = oidc_login.get_redirect(auth_url)
+        
+        #redirect(redirect_url)
+    except Exception as ex:
+        traceback.print_exc()
+        traceback.print_stack()
+        raise HTTP(500, f"Failed to authenticate OAuth2 - {ex}", location=URL('lti_launch'))
+    
+    redirect_url.do_redirect()
+    #print("abc")
+    return ret
+
+
+def lti_tool_config():
+    # Required for cookies to work in LTI land
+    session.samesite('none')
+
+    response.view = 'generic.json'
+    response.headers['Content-Type'] = "application/json"
+    
+    tool_config = get_lti_tool_config_json()
+    print(f"lti_tool_config: {tool_config}")
+    return tool_config
+
+def lti_launch():
+    # Required for cookies to work in LTI land
+    session.samesite('none')
+
+    ret = None
+    tool_conf = get_lti_tool_config()
+    req = W2PyRequest(request)
+
+    print(f"Posted Values: \nArgs: {request.args}\nVars: {request.vars}")
+    print(f"State: request. {request.vars['state']}")
+    try:
+        message_launch = W2PyMessageLaunch(req, tool_conf)
+        #message_launch.set_auto_validation(enable=False)
+        launch_data = message_launch.get_launch_data()
+        if message_launch.is_resource_launch():
+            ret = "Resource Launch"
+        elif message_launch.is_deep_link_launch():
+            ret = "Deep Link Launch"
+        else:
+            ret = "Invalid launch type!"
+        
+    except LtiException as ex:
+        print(f"ERROR - Bad LTI launch\n{ex}")
+        traceback.print_exc()
+        traceback.print_stack()
+        HTTP(500, f"ERROR - Bad LTI Launch: {ex}")
+
+    print(f"LTI Launch - {ret}")
+    return ret
+    print(f"LTI Launch attempted.")
+
+    
+    lti_request = W2PyRequest()
+    try:
+        oidc_login = W2PyOIDCLogin(lti_request, tool_conf)
+        oidc_login.enable_check_cookies()
+    except Exception as ex:
+        return "ERROR"
+
+    target_uri = request.vars.target_link_uri
+    if target_uri is None:
+        print("LTI - Redirecting to /index")
+        target_uri = "/index"
+    print(request.vars)
+    try:
+        # Do redirect manually
+        #lti_response = oidc_login.redirect(target_uri)
+        redirect_obj = oidc_login.get_redirect_object(target_uri)
+        redirect_url = oidc_login.get_redirect_url()
+        redirect(redirect_url)
+    except Exception as ex:
+        traceback.print_exc()
+        traceback.print_stack()
+        raise HTTP(500, f"Failed to authenticate OAuth2 - {ex}", location=URL('lti_launch'))
+    print("abc")
+    return ret
+
+
+def jwks():
+    # Required for cookies to work in LTI land
+    session.samesite('none')
+
+    """
+    Expose JWKS Public key and make it available to the LMS
+    """
+    response.view = 'generic.json'
+    response.headers['Content-Type'] = "application/json"
+
+    ret = dict()
+    ret['keys'] = list()
+
+    try:
+        keys = get_lti_keys()
+        for (jwks_str, public_key, private_key) in keys:
+            ret['keys'].append(json.loads(jwks_str))
+    except Exception as ex:
+        ret['msg'] = f"ERROR - Unable to retrive JWKS keys {ex}"
+        print(f"/lti/jwks - ERROR - Unable to retrieve JWKS keys\n{ex}")
+        traceback.print_exc()
+
+    return ret
+
+"""
+LTI 1.3 
+- Hit launch URL - do openid verfication
+- Redirect to proper location (quiz, staff_quiz, etc..)
+
+DB Tables:
+lti_key_set                         ( id - uuid/string not null pk)
+
+lti_key(
+    id                              uuid/string not null pk
+    key_set_id                      (fk lti_key_set)
+    private_key                     text not null
+    alg                             text not null
+)
+
+lti_registration (
+    id                              uuid/string not null
+    issuer                          text not null
+    client_id                       text not null
+    platform_login_auth_endpoint    text not null
+    platform_service_auth_endpoint  text not null
+    platform_jwks_endpoint          text not null
+    platform_auth_provider          text
+    key_set_id                      uuid/string not null (fk lti_key_set)
+
+    index - unique (issuer, client_id)
+)
+
+lti_deployment (
+
+)
+
+
+"""
+
+
+
+
+
+"""
+Auto Configure Steps:
+- Create the developer key in the canvas database
+This has to be a direct connection to the database, or be set manually.
+
+- Add the external tool via Rest API - use the proper id for the developer key,
+this should cause canvas to go to the SMC link where it can get the JSON to configure itself.
+
+
+"""
+
+def create_developer_key():
+    # https://localhost:8000/lti/lti_tool_config.json
+
+    return
 
 @auth.requires_membership("Administrators")
 def add_lti_tools_to_canvas():
@@ -29,6 +244,9 @@ def add_lti_tools_to_canvas():
 
 
 def rce_render_document_href(return_url, row):
+    # Required for cookies to work in LTI land
+    session.samesite('none')
+
     ret = ""
     # NOTE - using old RCE stuff - should get deep linking to work
     # https://canvas.instructure.com/doc/api/file.editor_button_tools.html
@@ -224,6 +442,8 @@ def rce_insert_media_ajax():
     ret["media_grid"] = media_grid
 
     return ret
+
+
 
 
 # Quizzes jump point - redirect to student or admin from here

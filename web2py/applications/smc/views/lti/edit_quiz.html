@@ -2,7 +2,7 @@
 
 <h1>Edit OPE Quiz</h1>
 
-<div class="ui top attached tabular menu">
+<div id="edit_quiz_tab_menu" class="ui top attached tabular menu">
     <a class="item" data-tab="details">Details</a>
     <a class="item" data-tab="questions">Questions</a>
     <a class="item" data-tab="question_groups">Question Groups</a>
@@ -274,46 +274,101 @@
     <div class="content">
         <form id="new_question_form" class="ui form" enctype="multipart/form-data" method="post" action="#">
             <input type="hidden" quiz_id="{{=id}}" />
-
+        
             <div class="ui segment">
                 <div class="required field">
                     <label>Title</label>
                     <input type="text" name="question_title" placeholder="Question Title" value="" data-content="Question Title">
                 </div>
-                <div class="required field">
-                    <label>Question Type</label>
-                    <select name="question_type" class="ui selection compact dropdown" data-content="Set the question type">
-                        <!--option value="">Pick Type</option-->
-                        <option value="multiple_choice_question">Multiple Choice</option>
-                        <option value="true_false_question">True/False</option>
-                        <option value="short_answer_question">Fill In the Blank</option>
-                        <option value="fill_in_multiple_blanks_question">Fill In Multiple Blanks</option>
-                        <option value="multiple_answers_question">Multiple Answers</option>
-                        <option value="multiple_dropdowns_question">Multiple Dropdowns</option>
-                        <option value="matching_question">Matching</option>
-                        <option value="numerical_answer_question">Numerical Answer</option>
-                        <option value="calculated_question">Formula Question</option>
-                        <option value="essay_question">Essay Question</option>
-                        <option value="file_upload_question">File Upload Question</option>
-                        <option value="text_only_question">Text (no question)</option>
-                    </select>
-                </div>
-                <div class="ui field right labeled input middle" >
-                    <input type="text" name="question_points" maxlength="3" size="3" value="1" style="width: 60px" data-content="How many points for this question (0-999)" />
+                
+                <div class="ui field labeled input" >
+                    <input type="text" name="question_points" maxlength="4" size="4" value="1" style="width: 60px" data-content="How many points for this question (0-999)" />
                     <div class="ui label">Points</div>
                 </div>
                 <div class="field">
                     <label>Description</label>
                     <textarea rows="4" name="question_description" placeholder="Enter description here" data-content="Add instructions for the student"></textarea>
                 </div>
+                <div class="required field">
+                    <label>Question Type</label>
+                    <div class="ui fluid selection dropdown" data-content="Set the question type">
+                        <input type="hidden" name="question_type" />
+                        <div class="default text">Pick Question Type</div>
+                        <i class="dropdown icon"></i>
+                        <div class="menu">
+                            <div class="item" data-value="multiple_choice_question">Multiple Choice</div>
+                            <div class="item" data-value="true_false_question">True/False</div>
+                            <div class="item" data-value="short_answer_question">Fill In the Blank</div>
+                            <div class="item" data-value="fill_in_multiple_blanks_question">Fill In Multiple Blanks</div>
+                            <div class="item" data-value="multiple_answers_question">Multiple Answers</div>
+                            <div class="item" data-value="multiple_dropdowns_question">Multiple Dropdowns</div>
+                            <div class="item" data-value="matching_question">Matching</div>
+                            <div class="item" data-value="numerical_answer_question">Numerical Answer</div>
+                            <div class="item" data-value="calculated_question">Formula Question</div>
+                            <div class="item" data-value="essay_question">Essay Question</div>
+                            <div class="item" data-value="file_upload_question">File Upload Question</div>
+                            <div class="item" data-value="text_only_question">Text (no question)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="ui dividing header">Answers</h5>
+                <div id="new_question_tabs" class="ui basic segment" style="padding-top: 0px; padding-bottom: 0px;">
+                    <div class="ui tab" data-tab="new_question_type_empty_tab" >
+                        Please select a question type above <i class="red big angle double up icon"></i>
+                    </div>
+                    <div class="ui tab" data-tab="multiple_choice_question_tab">
+                        Multiple Choice
+                    </div>
+                    <div class="ui tab" data-tab="true_false_question_tab">
+                        T/F Question
+                    </div>
+                    <div class="ui tab" data-tab="short_answer_question_tab">
+                        Fill In the Blank
+                    </div>
+                    <div class="ui tab" data-tab="fill_in_multiple_blanks_question_tab">
+                        Fill In Multiple Blanks
+                    </div>
+                    <div class="ui tab" data-tab="multiple_answers_question_tab">
+                        Multiple Answers
+                    </div>
+                    <div class="ui tab" data-tab="multiple_dropdowns_question_tab">
+                        Multiple Dropdowns
+                    </div>
+                    <div class="ui tab" data-tab="matching_question_tab">
+                        Matching
+                    </div>
+                    <div class="ui tab" data-tab="numerical_answer_question_tab">
+                        Numerical Answer
+                    </div>
+                    <div class="ui tab" data-tab="calculated_question_tab">
+                        Formula Question
+                    </div>
+                    <div class="ui tab" data-tab="essay_question_tab">
+                        Essay Question
+                    </div>
+                    <div class="ui tab" data-tab="file_upload_question_tab">
+                        File Upload Question
+                    </div>
+                    <div class="ui tab" data-tab="text_only_question_tab">
+                        Text (no question)
+                    </div>
+
+                </div>
+            </div>
+
+            
+
+            <div class="actions">
+                <div class="ui primary approve button">Create</div>
+                <!--div class="ui button">Button - Neutral</div-->
+                <div class="ui cancel button">Cancel</div>
+                
             </div>
         </form>
+        
     </div>
-    <div class="actions">
-        <div class="ui primary approve button">Create</div>
-        <!--div class="ui button">Button - Neutral</div-->
-        <div class="ui cancel button">Cancel</div>
-    </div>
+    
 </div>
 
 
@@ -355,16 +410,37 @@
         // Make sure to enable the popups too
         $('[data-content], [data-html]').popup();
         $('#new_question_form').form('reset');
+        // Hide the error message block - web2py/sematiccss conflicts
+        //$('#new_question_form > div.message.error').hide();
+
+        $('#new_question_tabs .tab').tab('change tab', "new_question_type_empty_tab");
+
+        $('#new_question_form [name=question_type]').on( 'change',
+            function() {
+                // Get current value from dropdown
+                var curr_value = $('#new_question_form [name=question_type]').val();
+                
+                // Activate the tab when dropdown changes
+                if (curr_value != "") {
+                    $('#new_question_tabs .tab').tab('change tab', curr_value + "_tab");
+                } else {
+                    // Activate the empty tab (no question selected)
+                    $('#new_question_tabs .tab').tab('change tab', "new_question_type_empty_tab");
+                }                
+
+        });
     });
     $('#new_quiz_group').click(function() {
         console.log('create new quiz group');
         //window.location='{{=URL("lti", "create_quiz")}}';
     });
 
-    $('.menu .item').tab();
+    $('#edit_quiz_tab_menu .item').tab();
 
     $('#select').dropdown();
+    $('.ui.dropdown').dropdown();
     $('.ui.calendar').calendar();
+
     //     {
     //         monthFirst: true,
     //         type: 'datetime',
@@ -383,17 +459,37 @@
     $('#new_question_form').form({
         on: 'blur',
         inline: true,
-        //preventLeaving: true,
+        preventLeaving: true,
         autoCheckRequired: true,
         fields: {
             title: {
                 identifier: 'question_title',
-                rules: [{
+                rules: [
+                    {
                         type: 'minLength[4]',
                         prompt: 'Please enter a valid name for the question'
             
-                }]
+                    }
+                ]
             },
+            question_points: {
+                identifier: 'question_points',
+                rules: [
+                    {
+                        type: 'number[0.0...999.99]',
+                        prompt: 'Please enter a number between 0.0 and 99.9'
+                    }
+                ]
+            },
+            question_type: {
+                identifier: 'question_type',
+                rules: [
+                    {
+                        type: 'empty',
+                        prompt: 'Please select a question type'
+                    }
+                ]
+            }
         },
         onSuccess: function() {
             if ($('#new_question_form').form('is valid')) {
@@ -407,9 +503,14 @@
             // Not valid
             return false;
         },
-        onFailure: function() {
+        onFailure: function( formErrors, fields ) {
             console.log("Failed!");
+            //$('#new_question_form > div.message.error').show();
             return false;
+        },
+        onInvalid: function() {
+            console.log("Validation Failed!");
+            //$('#new_question_form > div.message.error').show();
         }
         // onDeny: function() {
         //     // Don't want the "leave" message to set off when canceled.

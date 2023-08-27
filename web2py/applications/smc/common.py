@@ -102,6 +102,13 @@ if 1 == 2:
       is_lti_student = is_lti_student
       is_lti_teacher = is_lti_teacher
       is_lti_admin = is_lti_admin
+      get_lti_keys = get_lti_keys
+
+      get_lti_tool_config = get_lti_tool_config
+      get_lti_tool_config_json = get_lti_tool_config_json
+      W2PyOIDCLogin = W2PyOIDCLogin
+      W2PyRequest = W2PyRequest
+      W2PyMessageLaunch = W2PyMessageLaunch
 
 
       reload = reload

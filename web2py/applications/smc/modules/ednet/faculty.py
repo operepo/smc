@@ -555,7 +555,7 @@ class Faculty:
             # Update user with current info
             if AD.UpdateUserInfo(faculty_dn, email_address=faculty_email, first_name=faculty_first_name,
                                  last_name=faculty_last_name, display_name=faculty_display_name,
-                                 description="Faculty Account", id_number=faculty_user_name,
+                                 description="Faculty Account", id_number=faculty_user_id,
                                  home_drive_letter=faculty_home_drive, home_directory=faculty_home_directory,
                                  login_script=faculty_login_script_path, profile_path=faculty_profile_path,
                                  ts_allow_login='TRUE') is not True:

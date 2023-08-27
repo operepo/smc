@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import uuid
+import random
 from ednet.appsettings import AppSettings
 from ednet.util import Util
 
@@ -623,6 +624,25 @@ db.define_table("youtube_proxy_list",
 )
 
 
+# LTI Tables
+
+# A list of LTI connections registered here (e.g. 1 for each canvas integration instance)
+db_lti.define_table("lti_registrations",
+      Field("name", 'string', required=True, default="SMC LTI Integration"),
+      Field("description", 'string', default='SMC LTI Integration for Learning Management Systems.'),
+      Field("issuer", 'string', default='https://canvas.ed', required=True),
+      Field("client_id", 'string', default='SMCIntegration_' + str(random.randint(0,200))),
+      Field("deployment_ids", 'list:string', default=[int(time.time())]),
+      Field("key_set_url", 'string', default=URL(a='smc', c='lti', f='jwks', host=True, scheme=True)),
+      Field("key_set", 'string', default=''),
+      Field("auth_token_url", 'string'),
+      Field("auth_login_url", 'string', default=URL(a='smc', c='lti', f='oidc_login', host=True, scheme=True)),
+      Field("public_key", 'text'),
+      Field("private_key", 'text'),
+      Field("jwks_str", 'text'),
+      Field("is_default", 'boolean', default=False)
+)
+
 db_lti.define_table("ope_quizzes",
       Field("imported_canvas_quiz_id", 'integer', default=0, required=True),
       Field("lms_parent_course", "string", default=""),
@@ -693,7 +713,7 @@ db_lti.define_table("ope_quiz_questions",
             "short_answer_question", "text_only_question",
             ])),
       Field("question_text", "string", default=""),
-      Field("points_possible", "integer", default=1),
+      Field("points_possible", "decimal(4,2)", default=1),
       Field("correct_comments", "string", default=""),
       Field("incorrect_comments", "string", default=""),
       Field("neutral_comments", "string", default=""),

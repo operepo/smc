@@ -577,7 +577,7 @@ class Student:
             # Update user with current info
             if AD.UpdateUserInfo(student_dn, email_address=student_email, first_name=student_first_name,
                                  last_name=student_last_name, display_name=student_display_name,
-                                 description="Student Account", id_number=student_user_name,
+                                 description="Student Account", id_number=student_user_id,
                                  home_drive_letter=student_home_drive, home_directory=student_home_directory,
                                  login_script=student_login_script_path, profile_path=student_profile_path,
                                  ts_allow_login='FALSE') is not True:

@@ -34,6 +34,20 @@ import module_reload
 ret = module_reload.ReloadModules()
 
 @auth.requires_membership("Administrators")
+def test_access_tokens():
+    response.view = 'generic.json'
+
+    dk = None
+    at = None
+    st = None
+
+    dk = Canvas.EnsureDevKey()
+    at = Canvas.EnsureAdminAccessToken()
+    st = Canvas.EnsureStudentAccessToken('s777777')
+    return dict(dk=dk, at=at, st=st)
+
+
+@auth.requires_membership("Administrators")
 def test_parse_names():
     response.view = 'generic.json'
     ret = dict()

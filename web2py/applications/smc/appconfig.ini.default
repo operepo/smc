@@ -17,6 +17,16 @@ migrate   = true
 ; ignored for sqlite
 pool_size = 0  
 
+; Postgreql Server
+[pg_db]
+pg_server       = postgresql
+pg_port         = 5432
+pg_database     = smc
+pg_user         = postgres
+pg_pass         = <IT_PW>
+pg_migrate      = true
+
+
 ; smtp address and credentials
 [smtp]
 server = smtp.gmail.com:587

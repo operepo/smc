@@ -7,8 +7,458 @@ import json
 from ednet.appsettings import AppSettings
 from ednet.canvas import Canvas
 
+from pylti1p3.tool_config import ToolConfDict
+from pylti1p3.oidc_login import OIDCLogin
+from pylti1p3.cookie import CookieService
+from pylti1p3.session import SessionService
+from pylti1p3.redirect import Redirect
+from pylti1p3.launch_data_storage.cache import CacheDataStorage
+from pylti1p3.message_launch import MessageLaunch
+from pylti1p3.request import Request
+
 # Help shut up pylance warnings
 if 1==2: from ..common import *
+
+def get_smc_host_info():
+    # Figure out the current host to return
+    scheme = "https"
+    default_host = "localhost:8000"
+    if not request.env.http_host is None:
+        default_host = request.env.http_host
+    # if request.is_scheuler:
+    #     default_host = request.env.http_host
+    
+    smc_host = os.environ.get('SMC_DEFAULT_DOMAIN', default_host )
+
+    return scheme, smc_host
+
+def get_lti_keys_file_path():
+    (w2py_folder, applications_folder, app_folder) = get_app_folders()
+    lti_keys_folder = os.path.join(app_folder, "private/lti_keys")
+
+    # Make sure the lti_keys folder exists
+    if os.path.exists(lti_keys_folder) is not True:
+        try:
+            os.makedirs(lti_keys_folder, exist_ok=True)
+        except OSError as message:
+            pass
+
+    return lti_keys_folder
+
+def get_lti_keys():
+    keys = []
+
+    lti_keys_path = get_lti_keys_file_path()
+    # Get all the .public files and use their base name to grab each key.
+    from pathlib import Path
+    p = Path(lti_keys_path)
+    key_names = []
+    for e in p.glob('*.public'):
+        key_names.append(e.stem)
+    
+    # Make sure there is a default key listed
+    if not 'default' in key_names:
+        key_names.append('default')
+    
+    for name in key_names:
+        jwks_str, public_key, private_key = get_lti_key(name)
+        keys.append((jwks_str, public_key, private_key))
+
+    return keys
+
+def get_lti_key(lti_key_name="default"):
+    jwks_str = None
+    public_key = None
+    private_key = None
+
+    lti_keys_path = get_lti_keys_file_path()
+    public_path = os.path.join(lti_keys_path, f"{lti_key_name}.public")
+    private_path = os.path.join(lti_keys_path, f"{lti_key_name}.private")
+    jwks_path = os.path.join(lti_keys_path, f"{lti_key_name}.jwks")
+    # If key doesn't exist, generate one
+    if not os.path.exists(public_path):
+        # Generate new keys
+        jwks_str, public_key, private_key = generate_lti_keys()
+        # Save them
+        with open(public_path, 'wb') as f:
+            f.write(public_key)
+        with open(private_path, 'wb') as f:
+            f.write(private_key)
+        with open(jwks_path, 'w') as f:
+            f.write(jwks_str)
+    
+    # Load the values from the file
+    if public_key is None:
+        with open(public_path, 'rb') as f:
+            public_key = f.read()
+    if private_key is None:
+        with open(private_path, 'rb') as f:
+            private_key = f.read()
+    if jwks_str is None:
+        with open(jwks_path, 'r') as f:
+            jwks_str = f.read()
+    
+    return (jwks_str, public_key, private_key)
+
+def generate_lti_keys():
+    # https://github.com/dmitry-viskov/pylti1.3/wiki/How-to-generate-JWT-RS256-key-and-JWKS
+    from Crypto.PublicKey import RSA
+    key = RSA.generate(4096)
+    private_key = key.exportKey()
+    public_key = key.publickey().exportKey()
+
+    from jwcrypto.jwk import JWK
+    
+    jwk_obj = JWK.from_pem(public_key)
+    public_jwk = json.loads(jwk_obj.export_public())
+    public_jwk['alg'] = 'RS256'
+    public_jwk['use'] = 'sig'
+    public_jwk_str = json.dumps(public_jwk)
+
+    return public_jwk_str, public_key, private_key
+
+class W2PyCacheDataStorage(CacheDataStorage):
+    _cache = None
+
+    def __init__(self, cache, **kwargs):
+        self._cache = cache
+        super(W2PyCacheDataStorage, self).__init__(cache, **kwargs)
+
+class W2PySessionService(SessionService):
+    pass
+class W2PyCookieService(CookieService):
+    _request = None
+    _cookie_data_to_set = None
+
+    def __init__(self, request):
+        self._request = request
+        self._cookie_data_to_set = {}
+
+    def _get_key(self, key):
+        return self._cookie_prefix + '-' + key
+
+    def get_cookie(self, name):
+        return self._request.get_cookie(self._get_key(name))
+
+    def set_cookie(self, name, value, exp=3600):
+        self._cookie_data_to_set[self._get_key(name)] = {
+            'value': value,
+            'exp': exp
+        }
+
+    def update_response(self, response):
+        for key, cookie_data in self._cookie_data_to_set.items():
+            response.cookies[key] = cookie_data['value']
+            response.cookies[key]['exp'] = cookie_data['exp']
+            response.cookies[key]['secure'] = request.is_https # self._request.is_secure()
+            response.cookies[key]['path'] = "/"
+            response.cookies[key]['httponly'] = True
+            response.cookies[key]['samesite'] = None
+
+class W2PyRequest(Request):
+    session = None  # type: SessionLike
+    _cookies = None
+    _request_data = None
+    _request_is_secure = None
+
+    def __init__(self, cookies=None, session=None, request_data=None, request_is_secure=None):
+        super(W2PyRequest, self).__init__()
+        self._cookies = request.cookies if cookies is None else cookies
+        self.session = current.session if session is None else session
+        self._request_is_secure = request.is_secure if request_is_secure is None else request_is_secure
+
+        if request_data:
+            self._request_data = request_data
+
+    def get_param(self, key):
+        if self._request_data:
+            return self._request_data.get(key)
+        else:
+            if request.method == 'GET':
+                return request.get_vars.get(key, None)
+            else:
+                return request.post_vars.get(key, None)
+
+    def get_cookie(self, key):
+        return self._cookies.get(key)
+
+    def is_secure(self):
+        return self._request_is_secure
+
+class W2PyMessageLaunch(MessageLaunch):
+
+    def __init__(self, request, tool_config, session_service=None, cookie_service=None, launch_data_storage=None,
+                ):
+        cookie_service = cookie_service if cookie_service else W2PyCookieService(request)
+        session_service = session_service if session_service else W2PySessionService(request)
+        super(W2PyMessageLaunch, self).__init__(request, tool_config, session_service, cookie_service,
+                                                 launch_data_storage) #, requests_session)
+
+    def _get_request_param(self, key):
+        return self._request.get_param(key)
+class W2PyRedirect(Redirect):
+    _location = None
+    _cookie_service = None
+
+    def __init__(self, location, cookie_service=None):
+        super(W2PyRedirect, self).__init__()
+        self._location = location
+        self._cookie_service = cookie_service
+
+    def do_redirect(self):
+        r = self._process_response(response)
+        #response.status = 302
+        #response.headers['Location'] = self._location
+        print(f"Redirecting to {self._location}")
+        return redirect(self._location)
+        
+    def do_js_redirect(self):
+        # return self._process_response(
+        #     make_response('<script type="text/javascript">window.location="{}";'
+        #                   '</script>'.format(self._location))
+        # )
+        response.write('<script type="text/javascript">window.location="{}";'
+                          '</script>'.format(self._location))
+        return self._process_response(
+            response
+        )
+
+    def set_redirect_url(self, location):
+        self._location = location
+
+    def get_redirect_url(self):
+        return self._location
+
+    def _process_response(self, response):
+        if self._cookie_service:
+            self._cookie_service.update_response(response)
+        return response
+
+class W2PyOIDCLogin(OIDCLogin):
+    def __init__(self, request, tool_config, session_service=None, cookie_service=None, launch_data_storage=None):
+        cookie_service = cookie_service if cookie_service else W2PyCookieService(request)
+        session_service = session_service if session_service else W2PySessionService(request)
+        super(W2PyOIDCLogin, self).__init__(request, tool_config, session_service, cookie_service, launch_data_storage)
+
+    def get_redirect(self, url):
+        return W2PyRedirect(url, self._cookie_service)
+
+    def get_response(self, html):
+        response.write(html)
+        return response
+
+
+def get_lti_tool_config_json():
+    """
+    Generatate the tool config so that Canvas can come get it.
+    """
+    
+    scheme, smc_host = get_smc_host_info()
+
+    tool = get_lti_tool_config()
+
+    ret = dict()
+    ret['title'] = "OPE LTI 1.3 - SMC Integration"
+    ret['description'] = "OPE LTI 1.3 Integration between SMC and Canvas. Used for the purpose of the new quiz engine."
+    ret['oidc_initiation_url'] = URL('lti', 'oidc_login', host=smc_host, scheme=scheme)
+    ret['target_link_uri'] = URL('lti', 'lti_launch', host=smc_host, scheme=scheme)
+    ret['scopes'] = [
+        # "https://purl.imsglobal.org/spec/lti-ags/scope/score",
+        # "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
+        # "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly",
+        # "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly"
+    ]
+    ret["extensions"] = [
+        {
+            "domain": f"{smc_host}",
+            "tool_id": "ope-lti-1_3-smc",
+            "platform": "canvas.instructure.com",
+            "settings": {
+                "text": "OPE LTI 1.3 SMC Integration",
+                "icon_url": URL('static', 'images/favicon.png', host=smc_host, scheme=scheme),
+                "privacy_level": "public",
+                "placements": [
+                    {
+                        "text": "OPE Quizzes",
+                        "enabled": True,
+                        "placement": "course_navigation",
+                        "icon_url": URL('static', 'images/favicon.png', host=smc_host, scheme=scheme),
+                        "default": "enabled",
+                        "message_type": "LtiResourceLinkRequest",
+                        "target_link_uri": URL('lti', 'lti_launch', host=smc_host, scheme=scheme),
+                        "canvas_icon_class": "icon-lti",
+                        "visibility": "public",  # public, members, admins
+                        "display_type": "in_nav_context",
+                        "selection_height": 1000,
+                        "selection_width": 800,
+                        #"windowTarget": "_blank",  # use this to launch in new tab
+                        "custom_fields":{  
+                            "user_id":"$Canvas.user.id"
+                        }
+                    },
+                    # {
+                    #     "text": "OPE Link Selection",
+                    #     "enabled": True,
+                    #     "placement": "link_selection",
+                    #     "message_type": "LtiDeepLinkingRequest",
+                    #     "target_link_uri": URL('lti', 'lti_launch', host=smc_host, scheme=scheme),
+                    #     "canvas_icon_class": "icon-lti",
+                    #     "selection_height": 1000,
+                    #     "selection_width": 800,
+                    # },
+                    {
+                        "text": "Insert SMC Resources",
+                        "enabled": True,
+                        "icon_url": URL('static', 'images/rce_insert_media.png', host=smc_host, scheme=scheme),
+                        "placement": "editor_button",
+                        "message_type": "LtiDeepLinkingRequest",
+                        "target_link_uri": URL('lti', 'lti_launch', host=smc_host, scheme=scheme),
+                    },
+                    # {
+                    #     "text": "Insert SMC Document",
+                    #     "enabled": True,
+                    #     "icon_url": URL('static', 'images/document_file.png', host=smc_host, scheme=scheme),
+                    #     "placement": "editor_button",
+                    #     "message_type": "LtiDeepLinkingRequest",
+                    #     "target_link_uri": URL('lti', 'rce_insert_document', host=smc_host, scheme=scheme),
+                    # },
+                    # {
+                    #     "text": "OPE LTI Quiz Assignment",
+                    #     "enabled": True,
+                    #     "icon_url": URL('static', 'images/favicon.png', host=smc_host, scheme=scheme),
+                    #     "placement": "assignment_selection",
+                    #     "message_type": "LtiDeepLinkingRequest",
+                    #     "target_link_uri": URL('lti', "quizzes", host=smc_host, scheme=scheme)
+                    # }
+
+                    {
+                        "text": "OPE LTI - OPE Help Portal",
+                        "enabled": True,
+                        "privacy_level": "public",
+                        "icon_url": URL('static', 'images/lti_global_help_icon.svg', host=smc_host, scheme=scheme),
+                        "placement": "global_navigation",
+                        "target_link_uri": URL('help_portal', "index", host=smc_host, scheme=scheme),
+                        "message_type": "LtiResourceLinkRequest",
+                        #"consumer_key": "OPE_LTI_OPE_help_portal",
+                        #"shared_secret": "OPE_LTI_OPE_Help_Portal_SECRETkgjhfdsfS",
+                        #"description": "OPE Help Portal - Help resources for Students, Faculty, and Administrators.",
+                        #"url": URL('help_portal', "index", host=smc_host, scheme=scheme),                        
+                        # "text": "OPE - Help Portal",
+                        # "course_navigation[enabled]": False,
+                        # "global_navigation[enabled]": True,
+                        # "global_navigation[text]": "OPE Help Portal",
+                        # "global_navigation[visibility]": "members",
+                        # "global_navigation[windotTarget]": "_self",
+                        # "global_navigation[default]": "enabled",
+                        # "global_navigation[display_type]": "default",
+                        # "oauth_compliant": True,
+                        # "custom_fields[section_ids]" : '$Canvas.course.sectionIds', #'$Canvas.course.sectionSisSourceIds',  # comma list of database IDs enrolled in
+                        # "custom_fields[section_sourced_id]" : '$CourseSection.sourcedId',
+                        # "custom_fields[term_name]": '$Canvas.term.name',
+                        # #"custom_fields[term_id]": '$Canvas.term.id',
+                        # "custom_fields[sis_section_ids]": '$Canvas.course.sectionSisSourceIds',
+                        # "custom_fields[membership_roles]": '$Canvas.membership.roles',
+                        # "custom_fields[section_name]": '$com.instructure.User.sectionNames',
+                    },
+                ]
+            }
+        }
+    ]
+
+    ret['public_jwk_url'] = URL('lti', 'jwks', host=smc_host, scheme=scheme)
+    ret['custom_fields'] = {
+        "masq_userid": "$Canvas.masqueradingUser.id",
+        "canvas_user_id": "$Canvas.user.id",
+        "voc_section_name": "$com.instructure.User.sectionNames",
+        "section_ids": "$Canvas.course.sectionIds", #'$Canvas.course.sectionSisSourceIds',  # comma list of database IDs enrolled in
+        "section_sourced_id" : "$CourseSection.sourcedId",
+        # Canvas doesn't support many of these
+        #"custom_fields[section_label]": '$CourseSection.label',
+        #"custom_fields[section_title]": '$CourseSection.title',
+        #"custom_fields[section_short_description]": '$CourseSection.shortDescription',
+        #"custom_fields[section_course_number]": '$CourseSection.courseNumber',
+        #"custom_fields[section_data_source]": '$CourseSection.dataSource',
+        #"custom_fields[section_section_id]": '$CourseSection.sourceSectionId',
+        "term_name": "$Canvas.term.name",
+        #"custom_fields[term_id]": '$Canvas.term.id',
+        "sis_section_ids": "$Canvas.course.sectionSisSourceIds",
+        "membership_roles": "$Canvas.membership.roles",
+        "section_name": "$com.instructure.User.sectionNames",
+    }
+
+    return ret
+
+def get_lti_tool_config():
+    
+    name = "OPE LTI - SMC Integration"
+    key_name = "OPE_LTI_SMC_Integration"
+    owner_email = "admin@ed"
+    redirect_uris = ""
+    notes = "Developer key to support OPE LTI Integration with the SMC resource portal."
+    scheme, smc_host = get_smc_host_info()
+    json_config_url = URL('lti', 'lti_tool_config', host=smc_host, scheme=scheme)
+
+    canvas_lti_iss = AppSettings.GetValue('canvas_server_url', 'https://canvas.correctionsed.com')
+
+    # Get lti registrations from database
+    registrations = db_lti(db_lti.lti_registrations).select()
+
+    lti_settings = {}
+
+    (jwks_str, public_key, private_key) = get_lti_key()
+
+    for reg in registrations:
+        iss = reg["issuer"]
+        deployment_ids = reg["deployment_ids"]
+        if deployment_ids is None:
+            deployment_ids = []
+        key_set = jwks_str
+        lti_settings[iss] = {
+            "client_id": reg["client_id"],
+            "auth_login_url": reg["auth_login_url"],
+            "auth_token_url": reg["auth_token_url"],
+            "auth_audience": None,
+            "key_set_url": reg["key_set_url"],
+            "key_set": jwks_str,
+            #"public_key_file": reg["public_key"],
+            #"private_key_file": reg["private_key"],
+            "deployment_ids": deployment_ids
+
+        }
+
+
+    # lti_settings = {
+    #     f"{canvas_lti_iss}": [
+    #         {
+    #             "default": True,
+    #             "client_id": "1345810000004607",
+    #             #"auth_login_url": "http://canvas.docker/api/lti/authorize_redirect",
+    #             "auth_login_url": URL('lti', 'oidc_login', host=smc_host, scheme=scheme), # f"{scheme}://{smc_host}/lti/authorize_redirect",
+    #             #"auth_token_url": "http://canvas.docker/login/oauth2/token",
+    #             "auth_token_url": URL('lti', 'oauth2_token', host=smc_host, scheme=scheme), #f"{scheme}://{smc_host}/lti/login/oauth2/token",
+    #             #"auth_audience": None,
+    #             "key_set_url": URL('lti', 'jwks', host=smc_host, scheme=scheme), # f"{scheme}://{smc_host}/lti/jwks",
+    #             #"key_set": None,  # The jwks key in case the url isn't available
+    #             #"public_key_file": "public.key",
+    #             #"private_key_file": "private.key",
+    #             "deployment_ids": ["ope-lti-1_3-smc"],
+    #         },
+    #     ]
+    # }
+
+    tool_conf = ToolConfDict(lti_settings)
+
+
+    #public_jwk_str, public_key, private_key = generate_lti_keys()
+    
+    #tool_conf.set_private_key("iss1", private_key, client_id="OPE_LTI1_3")
+    #tool_conf.set_public_key("iss1", public_key, client_id="OPE_LTI1_3")
+    #tool_conf.set_private_key("iss1", dev_private_key, client_id="OPE_LTI1_3")
+    #tool_conf.set_public_key("iss1", dev_public_key, client_id="OPE_LTI1_3")
+
+    ret = tool_conf
+    return ret
+
 
 def init_lti(force=False):
     # Required for cookies to work in LTI land
@@ -189,25 +639,6 @@ def is_lti_admin():
     return False
 
 
-def generate_lti_keys():
-    # https://github.com/dmitry-viskov/pylti1.3/wiki/How-to-generate-JWT-RS256-key-and-JWKS
-    from Crypto.PublicKey import RSA
-    key = RSA.generate(4096)
-    private_key = key.exportKey()
-    public_key = key.publickey().exportKey()
-
-
-    from jwcrypto.jwk import JWK
-    
-    jwk_obj = JWK.from_pem(public_key.encode('utf-8'))
-    public_jwk = json.lads(jwk_obj.export_public())
-    public_jwk['alg'] = 'RS256'
-    public_jwk['use'] = 'sig'
-    public_jwk_str = json.dumps(public_jwk)
-
-
-    return
-
 def install_lti_tools():
     ret = {
         "lti_response": "",
@@ -225,9 +656,14 @@ def install_lti_tools():
 
     Canvas.Connect()
 
-    # Running in scheduler - have to pull the "hostname" from the environment.
-    scheme = "https"
-    smc_host = os.environ.get('SMC_DEFAULT_DOMAIN', 'localhost:8000')
+    scheme, smc_host = get_smc_host_info()
+
+    lti_dev_key_id = None
+    lti_dev_key_id = Canvas.EnsureLTIDevKey(scheme, smc_host)
+    if lti_dev_key_id is None:
+        print(f"Canvas Error - Not able to create/get LTI Developer key.")
+        ret['lti_msg'] = "Canvas Integration Not Enabled! Unable to create/get LTI developer key."
+        return ret
 
     had_errors = False
 
@@ -235,11 +671,24 @@ def install_lti_tools():
     # Just need the "consumer_key" of the tools.
     lti_remove_tools = [
         #"OPE_LTI_Deprecated_Tool"
+        # Remove LTI 1.0 tools
+        "OPE_LTI_Insert_SMC_Media",
+        "OPE_LTI_Insert_SMC_Document",
+        "OPE_LTI_OPE_Quizzes",
+        "OPE_LTI_OPE_help_portal",
     ]
 
-    
-    # List of tools.
+    # LTI 1.3 Tools
     lti_tools = {
+        "ope_smc_canvas_lti_1_3_integration": {
+            "name": "OPE LTI 1.3 - SMC Integration",
+            "client_id": lti_dev_key_id,
+            "consumer_key": "fake"
+        }
+    }
+    
+    # List of tools. (LTI 1 tools - use LTI 1.3)
+    lti_tools2 = {
         "rce_insert_media": {
             "name": "OPE LTI - Insert SMC Media",
             "privacy_level": "public",
@@ -311,6 +760,38 @@ def install_lti_tools():
             "custom_fields[section_name]": '$com.instructure.User.sectionNames',
         },
 
+        # "ope_launch": {
+        #     "name": "OPE LTI - OPE Launch",
+        #     "privacy_level": "public",
+        #     "consumer_key": "OPE_LTI_OPE_Launch",
+        #     "shared_secret": "OPE_LTI_OPE_Launch_SECRETjfusfUJHDF",
+        #     "description": "OPE LTI Launch Point",
+        #     "url": URL('lti', "lti_launch", host=smc_host, scheme=scheme),
+        #     "icon_url": URL('static', 'images/favicon.png', host=smc_host, scheme=scheme),
+        #     "text": "OPE - LTI Launch",
+        #     "course_navigation[enabled]": True,
+        #     "course_navigation[text]": "OPE - LTI Launch",
+        #     "course_navigation[visibility]": "members",
+        #     "course_navigation[windotTarget]": "_self",
+        #     "course_navigation[default]": "enabled",
+        #     "course_navigation[display_type]": "default",
+        #     "oauth_compliant": True,
+        #     "custom_fields[section_ids]" : '$Canvas.course.sectionIds', #'$Canvas.course.sectionSisSourceIds',  # comma list of database IDs enrolled in
+        #     "custom_fields[section_sourced_id]" : '$CourseSection.sourcedId',
+        #     # Canvas doesn't support many of these
+        #     #"custom_fields[section_label]": '$CourseSection.label',
+        #     #"custom_fields[section_title]": '$CourseSection.title',
+        #     #"custom_fields[section_short_description]": '$CourseSection.shortDescription',
+        #     #"custom_fields[section_course_number]": '$CourseSection.courseNumber',
+        #     #"custom_fields[section_data_source]": '$CourseSection.dataSource',
+        #     #"custom_fields[section_section_id]": '$CourseSection.sourceSectionId',
+        #     "custom_fields[term_name]": '$Canvas.term.name',
+        #     #"custom_fields[term_id]": '$Canvas.term.id',
+        #     "custom_fields[sis_section_ids]": '$Canvas.course.sectionSisSourceIds',
+        #     "custom_fields[membership_roles]": '$Canvas.membership.roles',
+        #     "custom_fields[section_name]": '$com.instructure.User.sectionNames',
+        # },
+
         "ope_help_portal": {
             "name": "OPE LTI - OPE Help Portal",
             "privacy_level": "public",
@@ -318,7 +799,7 @@ def install_lti_tools():
             "shared_secret": "OPE_LTI_OPE_Help_Portal_SECRETkgjhfdsfS",
             "description": "OPE Help Portal - Help resources for Students, Faculty, and Administrators.",
             "url": URL('help_portal', "index", host=smc_host, scheme=scheme),
-            "icon_url": URL('static', 'images/lti_global_help_icon.png', host=smc_host, scheme=scheme),
+            "icon_url": URL('static', 'images/lti_global_help_icon.svg', host=smc_host, scheme=scheme),
             "text": "OPE - Help Portal",
             "course_navigation[enabled]": False,
             "global_navigation[enabled]": True,
@@ -413,61 +894,6 @@ def install_lti_tools():
         #     "custom_fields[section_name]": '$com.instructure.User.sectionNames',
         # },
 
-# Example of deep linking?
-        # "ope_rce": {
-        #     "title": "OPE LTI - SMC Integration",
-        #     "scopes": [],
-        #     "extensions": [
-        #         {
-        #             "domain": URL('', host=smc_host, scheme=scheme),
-        #             "tool_id": "ope-lti-smc",
-        #             "platform": "canvas.instructure.com",
-        #             "settings": {
-        #                 "text": "OPE LTI Integration",
-        #                 "icon_url": URL('static', 'images/favicon.png', host=smc_host, scheme=scheme),
-        #                 "placements": [
-        #                     {
-        #                         "text": "Insert SMC Media",
-        #                         "enabled": True,
-        #                         "icon_url": URL('static', 'images/rce_insert_media.png', host=smc_host, scheme=scheme),
-        #                         "placement": "editor_button",
-        #                         "message_type": "LtiDeepLinkingRequest",
-        #                         "target_link_uri": URL('lti', 'rce_insert_media', host=smc_host, scheme=scheme),
-
-        #                     },
-        #                     {
-        #                         "text": "Insert SMC Document",
-        #                         "enabled": True,
-        #                         "icon_url": URL('static', 'images/document_file.png', host=smc_host, scheme=scheme),
-        #                         "placement": "editor_button",
-        #                         "message_type": "LtiDeepLinkingRequest",
-        #                         "target_link_uri": URL('lti', 'rce_insert_document', host=smc_host, scheme=scheme),
-        #                     },
-        #                     {
-        #                         "text": "OPE LTI Quiz Assignment",
-        #                         "enabled": True,
-        #                         "icon_url": URL('static', 'images/favicon.png', host=smc_host, scheme=scheme),
-        #                         "placement": "assignment_selection",
-        #                         "message_type": "LtiDeepLinkingRequest",
-        #                         "target_link_uri": URL('lti', "quizzes", host=smc_host, scheme=scheme)
-        #                     }
-        #                 ]
-        #             }
-        #         },
-        #     ],
-        #     "public_jwk": {
-        #         "kty": "RSA",
-        #         "alg": "RS256",
-        #         "e": "AQAB",
-        #         "kid": "?????",
-        #         "n": ".....",
-        #         "use": "sig"
-        #     },
-        #     "description": "OPE LTI Tool - Integrating SMC tools into canvas.",
-        #     "target_link_uri": URL('lti', host=True),
-        #     "oidc_initiation_url": URL('lti', "oidc_initiation", host=True)
-        # }
-
     }
 
     # Get the list of external tools so we can update them if found.
@@ -500,7 +926,8 @@ def install_lti_tools():
         is_installed = False
         tool_id = None
         for t in current_tools:
-            if not "consumer_key" in t:
+            if not "consumer_key" in t or not "consumer_key" in item:
+                print(f"Missing consumer key in tool definition: \n\n{t}\n\n{item}")
                 continue
             if t["consumer_key"] == item["consumer_key"]:
                 # Found it.
@@ -511,7 +938,7 @@ def install_lti_tools():
         if is_installed == True:
             # Need to update existing tool
             l = f"Updating OPE LTI Tool: {item['name']}..."
-            print(l)
+            print(f"{l} - {item}")
             lti_logs.append(l)
             r = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token, f"/api/v1/accounts/self/external_tools/{tool_id}",
                                 method="PUT", params=item)

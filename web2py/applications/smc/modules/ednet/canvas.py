@@ -3,6 +3,7 @@
 ###### CanvasAPIClass
 from gluon import *
 from gluon import current
+cache = current.cache
 
 import requests
 from requests.exceptions import ConnectionError
@@ -160,6 +161,13 @@ class Canvas:
         return canvas_secret
 
     @staticmethod
+    def EnsureLTIDevKey(scheme, smc_host):
+        dev_key_id = 0
+        root_account_id = 0
+        msg = "<NOT IMPLEMENTED YET>"
+        return dev_key_id #, msg, root_account_id
+
+    @staticmethod
     def EnsureDevKey():
         # Make sure that a dev key exists for OPE-Integration
         dev_key_id = 0
@@ -170,9 +178,40 @@ class Canvas:
         if db_canvas is None:
             # Unable to connect, move on
             msg += " unable to connect to canvas db"
-            return 0, msg
+            return 0, msg, 0
+        
+        
+        canvas_url = AppSettings.GetValue('canvas_server_url', 'https://canvas.ed')
+        # Strip off http and canvas
+        canvas_domain = canvas_url.replace("https://canvas.", "")
 
-        sql = "SELECT id FROM developer_keys WHERE name='OPE-Integration'"
+        dev_key_name = os.environ.get('LMS_DEV_KEY_NAME', 'OPE-Integration')
+
+        # Find the admin user - NOTE change to pull using a join and 'Site Admin' instead
+        # of trying to calculate the email
+        #admin_user = "admin@" + canvas_domain
+        admin_user = os.environ.get('ADMIN_EMAIL', f"admin@{canvas_domain}").strip().replace("'", "").replace('"', '')
+        #admin_user = os.environ.get('LMS_ROOT_ACCOUNT', 'Site Admin').strip().replace("'", "").replace('"', '')  # "Site Admin"
+        # sql = "SELECT id FROM users WHERE name='admin@ed'"
+        sql = F"SELECT user_id, account_id FROM pseudonyms WHERE unique_id='{admin_user}'"
+        #sql = f"SELECT pseudonyms.user_id, pseudonyms.account_id, accounts.root_account_id FROM pseudonyms, accounts " + \
+        #    "WHERE pseudonyms.account_id=accounts.id and accounts.name='{admin_user}'"
+        rows = db_canvas.executesql(sql)
+        user_id = 0
+        account_id = 0
+        for row in rows:
+            user_id = row[0]
+            root_account_id = account_id = row[1]
+            #root_account_id = row[2]
+        if root_account_id is None:
+            # Make sure we have a good root account id
+            root_account_id = 2
+        
+        if user_id < 1:
+            msg += f"  Unable to find admin user in canvas - ensure that an admin user exists with the {admin_user} name"
+            return "", msg, 0
+
+        sql = f"SELECT id FROM developer_keys WHERE name='{dev_key_name}'"
         rows = db_canvas.executesql(sql)
         for row in rows:
             dev_key_id = row[0]
@@ -181,14 +220,25 @@ class Canvas:
 
         # If dev_key_id is 0, then we need to add a dev key to the database
         if dev_key_id == 0 or dev_key_id is None:
+            print(f"Making new dev key: {dev_key_id}")
             dev_key = hashlib.sha224(str(uuid.uuid4()).replace('-', '').encode('utf-8')).hexdigest()
-            sql = "INSERT INTO developer_keys (api_key, name) VALUES ('" + dev_key + "', 'OPE-Integration'); "
+            sql = f"""INSERT INTO developer_keys (
+                    api_key, name, created_at, updated_at, workflow_state,
+                    auto_expire_tokens, redirect_uris, access_token_count, visible,
+                    require_scopes, test_cluster_only, internal_service, is_lti_key,
+                    allow_includes, root_account_id
+                ) VALUES (
+                    '{dev_key}', '{dev_key_name}', CURRENT_TIMESTAMP(0), CURRENT_TIMESTAMP(0), 'active',
+                    FALSE, '{{}}', 0, TRUE,
+                    FALSE, FALSE, FALSE, FALSE,
+                    FALSE, {root_account_id}
+                ); """
             db_canvas.executesql(sql)
             db_canvas.commit()  # Make sure to commit the changes
             # msg += "  inserting new dev key..."
 
             # Now grab the new id
-            sql = "SELECT id FROM developer_keys WHERE name='OPE-Integration'"
+            sql = f"SELECT id FROM developer_keys WHERE name='{dev_key_name}'"
             rows = db_canvas.executesql(sql)
             for row in rows:
                 dev_key_id = row[0]
@@ -196,58 +246,40 @@ class Canvas:
             # msg += "  dev key is: " + str(dev_key_id)
         if dev_key_id == 0:
             # We still have a problem!
-            return 0, msg
+            msg = "Dev key not created!"
+            return 0, msg, 0
 
         if dev_key_id is None:
             dev_key_id = 0
 
+        #print(f"DevKeyID: {dev_key_id}")
         # Make sure the workflow state is active
-        sql = "UPDATE developer_keys SET workflow_state='active', visible='TRUE' WHERE name='OPE-Integration'"
+        sql = f"UPDATE developer_keys SET workflow_state='active', visible='TRUE' WHERE name='{dev_key_name}'"
         db_canvas.executesql(sql)
         db_canvas.commit()
 
-        canvas_url = AppSettings.GetValue('canvas_server_url', 'https://canvas.ed')
-        # Strip off http and canvas
-        canvas_domain = canvas_url.replace("https://canvas.", "")
-
-        # Find the admin user - NOTE change to pull using a join and 'Site Admin' instead
-        # of trying to calculate the email
-        #admin_user = "admin@" + canvas_domain
-        admin_user = "Site Admin"
-        # sql = "SELECT id FROM users WHERE name='admin@ed'"
-        #sql = "SELECT user_id, account_id FROM pseudonyms WHERE unique_id='" + admin_user + "'"
-        sql = "SELECT pseudonyms.user_id, pseudonyms.account_id, accounts.root_account_id FROM pseudonyms, accounts " + \
-            "WHERE pseudonyms.account_id=accounts.id and accounts.name='" + admin_user + "'"
-        rows = db_canvas.executesql(sql)
-        user_id = 0
-        account_id = 0
-        for row in rows:
-            user_id = row[0]
-            account_id = row[1]
-            root_account_id = row[2]
-        if root_account_id is None:
-            # Make sure we have a good root account id
-            root_account_id = 2
-        
-        if user_id < 1:
-            msg += "  Unable to find admin user in canvas - ensure that an admin user exists with the " + admin_user + " name"
-            return "", msg
-
         # NOTE: Need to make sure developer_key_account_bindings has a record and that it
         # is listed as "on" or we won't be able to use the key
-        sql = "DELETE FROM developer_key_account_bindings WHERE account_id=" + str(account_id) + \
-              " and developer_key_id=" + str(dev_key_id)
+        sql = f"DELETE FROM developer_key_account_bindings WHERE account_id={account_id} " + \
+              f" and developer_key_id={dev_key_id}"
         db_canvas.executesql(sql)
-        sql = "INSERT INTO developer_key_account_bindings (account_id, developer_key_id, " + \
-              "workflow_state, created_at, updated_at, root_account_id) VALUES (" + str(account_id) + \
-              ", " + str(dev_key_id) + ", 'on', now(), now(), " + str(root_account_id) + ")"
+        sql = f"INSERT INTO developer_key_account_bindings (account_id, developer_key_id, " + \
+              f"workflow_state, created_at, updated_at, root_account_id) VALUES ({account_id} " + \
+              f", {dev_key_id}, 'on', now(), now(), {root_account_id})"
         db_canvas.executesql(sql)
+        db_canvas.commit()
 
         # At this point we should have a dev key setup, return its id
         return dev_key_id, msg, root_account_id
 
     @staticmethod
     def FlushRedisKeys(pattern):
+        # 
+        try_redis_sessions = cache.ram("try_redis_sessions", lambda: True, time_expire=36000)
+        if not try_redis_sessions:
+            print(f"Redis not enabled - skipping flush keys: {pattern}")
+            return
+
         # TODO - TODO - pull only patterns?
         # Try and connect to canvas redis server and flush the
         # redis keys that match the pattern
@@ -280,15 +312,19 @@ class Canvas:
 
     @staticmethod
     def EnsureAdminAccessToken():
-        # Connect to the canvas database
-        db_canvas = Canvas.ConnectDB()
-        if db_canvas is None:
-            return "", "Error - Can't connect to Canvas Postgresql Database!"
-
         # Make sure there is a dev key
         dev_key_id, msg, root_account_id = Canvas.EnsureDevKey()
         if dev_key_id == 0:
             return "", "Error setting up dev key! " + msg
+        #print(f"Got dev_key_id {dev_key_id}")
+
+        # Connect to the canvas database
+        #print(f"Trying to connect to postgresql...")
+        db_canvas = Canvas.ConnectDB()
+        if db_canvas is None:
+            return "", "Error - Can't connect to Canvas Postgresql Database!"
+
+        #print(f"Connected.")
 
         canvas_url = AppSettings.GetValue('canvas_server_url', 'https://canvas.ed')
         # Strip off http and canvas
@@ -299,11 +335,15 @@ class Canvas:
         if canvas_secret == "":
             msg += "   No canvas secret found!"
             return "", msg
+        
+        token_name = os.environ.get('LMS_ADMIN_TOKEN_NAME', 'OPEAdminIntegration')
 
         # Find the admin user
-        admin_user = "admin@" + canvas_domain
+        #admin_user = "admin@" + canvas_domain
+        admin_user = os.environ.get('ADMIN_EMAIL', f"admin@{canvas_domain}").strip().replace("'", "").replace('"', '')
         # sql = "SELECT id FROM users WHERE name='admin@ed'"
-        sql = "SELECT user_id, account_id FROM pseudonyms WHERE unique_id='" + admin_user + "'"
+        #print(f"Admin User: {admin_user}")
+        sql = f"SELECT user_id, account_id FROM pseudonyms WHERE unique_id='{admin_user}'"
         rows = db_canvas.executesql(sql)
         user_id = 0
         account_id = 0
@@ -312,23 +352,29 @@ class Canvas:
             account_id = row[1]
 
         if user_id < 1:
-            msg += "  Unable to find admin user in canvas - ensure that a user exists with the " + admin_user + " user name"
+            msg += f"  Unable to find admin user in canvas - ensure that a user exists with the {admin_user} user name"
             return "", msg
 
         # We should have a user id and a dev key id, add an access token
         access_token = AppSettings.GetValue('canvas_access_token', "")
         if access_token == "" or access_token == "<ENV>":
+            print(f"Generating new access token for {admin_user}")
             access_token = hashlib.sha224(str(uuid.uuid4()).replace('-', '').encode('utf-8')).hexdigest()
             AppSettings.SetValue('canvas_access_token', access_token)
             # msg += " Generated new access token..."
 
         # Make sure canvas access token matches what we have
-        sql = "DELETE FROM access_tokens WHERE purpose='OPEAdminIntegration'"
+        #print(f"Re-adding access token for {admin_user} - {token_name}")
+        sql = f"DELETE FROM access_tokens WHERE purpose='{token_name}'"
         db_canvas.executesql(sql)
         hm_token = HMAC.new(canvas_secret.encode('utf-8'), access_token.encode('utf-8'), digestmod=SHA).hexdigest()
-        sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint," + \
-              " created_at, updated_at ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + \
-              "', 'OPEAdminIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now());"
+        sql = f"""INSERT INTO access_tokens (
+                    developer_key_id, user_id, purpose, crypted_token,
+                    token_hint, created_at, updated_at, workflow_state, root_account_id
+                ) VALUES (
+                    '{dev_key_id}', '{user_id}', '{token_name}', '{hm_token}',
+                    '{access_token[0:5]}', now(), now(), 'active', {root_account_id}
+                );"""
         db_canvas.executesql(sql)
         db_canvas.commit()
         # msg += "   RAN SQL: " + sql
@@ -358,9 +404,11 @@ class Canvas:
         if db_canvas is None:
             msg += " - Canvas DB Connection is None"
             return "", msg, "", ""
+        
+        token_name = os.environ.get("LMS_STUDENT_TOKEN_NAME", "OPEStudentIntegration")
 
         # Find the admin user
-        sql = "SELECT user_id, account_id FROM pseudonyms WHERE unique_id='" + user_name + "'"
+        sql = f"SELECT user_id, account_id FROM pseudonyms WHERE unique_id='{user_name}'"
         rows = db_canvas.executesql(sql)
         user_id = 0
         account_id = 0
@@ -369,7 +417,7 @@ class Canvas:
             account_id = row[1]
 
         if user_id < 1:
-            msg += "  Unable to find user in canvas: " + user_name
+            msg += f"  Unable to find user in canvas: {user_name}"
             return "", msg, "", ""
 
         # We should have a user id and a dev key id, get the access token for this user
@@ -411,12 +459,12 @@ class Canvas:
             # msg += " Generated new access token..."
 
         # Make sure canvas access token matches what we have
-        sql = "DELETE FROM access_tokens WHERE purpose='OPEStudentIntegration' and user_id='" + str(user_id) + "'"
+        sql = f"DELETE FROM access_tokens WHERE purpose='OPEStudentIntegration' and user_id='{user_id}'"
         db_canvas.executesql(sql)
         hm_token = HMAC.new(canvas_secret.encode('utf-8'), access_token.encode('utf-8'), digestmod=SHA).hexdigest()
-        sql = "INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint," + \
-              " created_at, updated_at, root_account_id ) VALUES ('" + str(dev_key_id) + "', '" + str(user_id) + \
-              "', 'OPEStudentIntegration', '" + str(hm_token) + "', '" + str(access_token[0:5]) + "', now(), now(), " + str(root_account_id) + " );"
+        sql = f"INSERT INTO access_tokens (developer_key_id, user_id, purpose, crypted_token, token_hint," + \
+              f" created_at, updated_at, root_account_id, workflow_state) VALUES ('{dev_key_id}', '{user_id}' " + \
+              f", '{token_name}', '{hm_token}', '{access_token[0:5]}', now(), now(), {root_account_id}, 'active' );"
         db_canvas.executesql(sql)
         db_canvas.commit()
         # msg += "   RAN SQL: " + sql
