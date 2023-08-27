@@ -1208,11 +1208,8 @@ def process_youtube_queue(run_from=""):
                     )
                     db.commit()
                 except Exception as ex:
-                    # Had issues downloading from youtube - unexpected error
-                    db(db.media_files.media_guid==next_row.media_guid).update(
-                        download_failures=db.media_files.download_failures + 1,
-                        current_download=False
-                    )
+                    # Had issues downloading from youtube.
+                    next_row.download_failures = next_row.get("download_failures", 0) or 0 + 1
                     # if next_row.download_failures > 5:
                     #     next_row.needs_downloading = False
                     db.commit()
@@ -1382,20 +1379,18 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
             if return_code == "Permanent Error":
                 print(f"Permanent Error - Unable to get video {yt_url}.")
                 log_to_video(media_file, f"Failed to download video from {yt_url}, will stop trying.")
-                db(db.media_files.media_guid==media_file.media_guid).update(
-                    needs_downloading = False,
-                    needs_caption_downloading = False,
-                    download_failures = db.media_files.download_failures + 1
-                )
-                db.commit()
+                media_file.needs_downloading = False
+                media_file.needs_caption_downloading = False
+                media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+                media_file.update_record()
+                db.commit()                
                 return True
             elif return_code == "Termporary Error":
                 print(f"Temporary Error - Unable to get video {yt_url}.")
                 log_to_video(media_file, f"Failed to download video from {yt_url}, will keep trying.")
-                db(db.media_files.media_guid==media_file.media_guid).update(
-                    needs_downloading = True,
-                    download_failures = db.media_files.download_failures + 1
-                )
+                media_file.needs_downloading = True
+                media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+                media_file.update_record()
                 db.commit()
                 return True
             elif return_code == "OK":
@@ -1403,10 +1398,9 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
         except Exception as ex:
             print(f"Unknown HTTP error pulling yt video? {yt_url}\n{ex}")
             log_to_video(media_file, f"Unknown Error - Failed to download video from {yt_url}, will keep trying.\n{ex}")
-            db(db.media_files.media_guid==media_file.media_guid).update(
-                needs_downloading = True,
-                download_failures = db.media_files.download_failures + 1
-            )
+            media_file.needs_downloading = True
+            media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+            media_file.update_record()
             db.commit()
             return False
 
@@ -1507,19 +1501,17 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                 if return_code == "Permanent Error":
                     print(f"Permanent Error - Unable to get captions {yt_url}.")
                     log_to_video(media_file, f"Failed to download captions from {yt_url}, will stop trying.")
-                    db(db.media_files.media_guid==media_file.media_guid).update(
-                        needs_caption_downloading = False,
-                        download_failures = db.media_files.download_failures + 1,
-                    )
+                    media_file.needs_caption_downloading = False
+                    media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+                    media_file.update_record()
                     db.commit()                
                     return True
                 elif return_code == "Termporary Error":
                     print(f"Temporary Error - Unable to get captions {yt_url}.")
                     log_to_video(media_file, f"Failed to download captions from {yt_url}, will keep trying.")
-                    db(db.media_files.media_guid==media_file.media_guid).update(
-                        needs_caption_downloading = True,
-                        download_failures = db.media_files.download_failures + 1,
-                    )
+                    media_file.needs_caption_downloading = True
+                    media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+                    media_file.update_record()
                     db.commit()
                     return True
                 elif return_code == "OK":
@@ -1527,10 +1519,9 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
         except Exception as ex:
             print(f"Unknown HTTP error pulling yt captions? {yt_url}\n{ex}")
             log_to_video(media_file, f"Unknown Error - Failed to download captions from {yt_url}, will keep trying.\n{ex}")
-            db(db.media_files.media_guid==media_file.media_guid).update(
-                needs_caption_downloading = True,
-                download_failures = db.media_files.download_failures + 1,
-            )
+            media_file.needs_caption_downloading = True
+            media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+            media_file.update_record()
             db.commit()
             return False
 
