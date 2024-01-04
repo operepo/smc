@@ -15,7 +15,13 @@ from gluon.main import save_password
 param_file = os.path.join(curr_dir, "parameters_8000.py")
 
 print(param_file)
-if os.path.exists(param_file) is True:
+
+force = False
+if len(sys.argv) > 1 and str(sys.argv[1]).lower() == '-f':
+	#print(f"Argv[1]: {sys.argv[1]}")
+	force = True
+
+if force == False and os.path.exists(param_file) is True:
 	print("PW already set")
 	sys.exit()
 
