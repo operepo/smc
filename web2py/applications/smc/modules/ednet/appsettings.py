@@ -5,7 +5,8 @@ from gluon import current
 import json
 
 from datetime import datetime
-from typing import Optional
+# NOTE - For older python < 3.9 use typing List instead of list
+from typing import Optional, List
 from pydantic import BaseModel, Field
 from enum import Enum, IntEnum
 
@@ -48,7 +49,7 @@ class ADConfig(BaseModel):
     file_server_service_user: str = "administrator"
     file_server_service_password: str = ""
     file_server_address: str = "files.<base_domain>"
-    file_server_quota_drives: list[str] = []
+    file_server_quota_drives: List[str] = []
 class LaptopConfig(BaseModel):
     laptop_name_pattern: str = "OPELT_<user_id>"
     laptop_description: str = "<user_id> (<full_name>) - <laptop_serial_number> <credential_date>"
@@ -96,7 +97,7 @@ class SchoolConfig(BaseModel):
     
     ad_config: ADConfig
     laptop_config: LaptopConfig
-    lti_configs: list[LTIConfig]
+    lti_configs: List[LTIConfig]
 
 
 

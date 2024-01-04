@@ -168,59 +168,60 @@ if not request.env.web2py_runtime_gae:
     db_laptops = DAL('sqlite://storage_laptops.sqlite', pool_size=0, check_reserved=['all'])
     db_laptops.executesql('PRAGMA journal_mode=WAL')
 
-    #db_lti = DAL('sqlite://storage_lti.sqlite', pool_size=0, check_reserved=['all'])
-    #db_lti.executesql('PRAGMA journal_mode=WAL')
-    import psycopg2
-    import psycopg2.extensions
-    from urllib.parse import quote_plus
-    pg_server = quote_plus(myconf.get('pg_db.pg_server'))
-    pg_port = myconf.get('pg_db.pg_port')
-    pg_database = quote_plus(myconf.get('pg_db.pg_database'))
-    pg_user = quote_plus(myconf.get('pg_db.pg_user'))
-    pg_pass = myconf.get('pg_db.pg_pass')
-    if pg_pass == "<IT_PW>":
-        # Grab from the environment
-        pg_pass = quote_plus(os.environ.get('IT_PW', 'INVALID_PASSWORD'))
-    pg_pass = quote_plus(pg_pass)
-    pg_migrate = myconf.get('pg_db.pg_migrate')
-    pg_uri = f"postgres://{pg_user}:{pg_pass}@{pg_server}:{pg_port}/{pg_database}"
-    if pg_server is None:
-        print("ERROR - No Postgres server specified!!!")
-    #print(f"PG URI: {pg_uri}")
-    db_lti_try_again = False
-    try:
-        db_lti = DAL(pg_uri, pool_size=10, check_reserved=['all'], migrate=pg_migrate, decode_credentials=True)
+    db_lti = DAL('sqlite://storage_lti.sqlite', pool_size=0, check_reserved=['all'])
+    db_lti.executesql('PRAGMA journal_mode=WAL')
+    # === PAUSE POSTGRESQL CONVERSION ===
+    # import psycopg2
+    # import psycopg2.extensions
+    # from urllib.parse import quote_plus
+    # pg_server = quote_plus(myconf.get('pg_db.pg_server'))
+    # pg_port = myconf.get('pg_db.pg_port')
+    # pg_database = quote_plus(myconf.get('pg_db.pg_database'))
+    # pg_user = quote_plus(myconf.get('pg_db.pg_user'))
+    # pg_pass = myconf.get('pg_db.pg_pass')
+    # if pg_pass == "<IT_PW>":
+    #     # Grab from the environment
+    #     pg_pass = quote_plus(os.environ.get('IT_PW', 'INVALID_PASSWORD'))
+    # pg_pass = quote_plus(pg_pass)
+    # pg_migrate = myconf.get('pg_db.pg_migrate')
+    # pg_uri = f"postgres://{pg_user}:{pg_pass}@{pg_server}:{pg_port}/{pg_database}"
+    # if pg_server is None:
+    #     print("ERROR - No Postgres server specified!!!")
+    # #print(f"PG URI: {pg_uri}")
+    # db_lti_try_again = False
+    # try:
+    #     db_lti = DAL(pg_uri, pool_size=10, check_reserved=['all'], migrate=pg_migrate, decode_credentials=True)
 
-    except Exception as ex:
-        # If database does not exist, create it.
-        if f"database \"{pg_database}\" does not exist" in str(ex):
-            print(f"Database {pg_database} does not exist, trying to create it...")
-            tmp_uri = f"postgres://{pg_user}:{pg_pass}@{pg_server}:{pg_port}/postgres"
-            tmp_db = psycopg2.connect(tmp_uri) #DAL(tmp_uri, pool_size=1, check_reserved=['all'], migrate=False, decode_credentials=True)
-            # Need this to run DDL statements
-            tmp_db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-            # See if the database exists
-            cursor = tmp_db.cursor()
-            rs = cursor.execute(f"SELECT * FROM pg_database WHERE datname='{pg_database}'")
-            if rs is None:
-                # No records - try to create the database
-                cursor.execute(f"CREATE DATABASE {pg_database} WITH OWNER = {pg_user} ENCODING = 'UTF8' CONNECTION LIMIT = -1 IS_TEMPLATE = False;")
-            else:
-                # Records exist - database exists
-                print(f"DB Exists! {pg_database}")
+    # except Exception as ex:
+    #     # If database does not exist, create it.
+    #     if f"database \"{pg_database}\" does not exist" in str(ex):
+    #         print(f"Database {pg_database} does not exist, trying to create it...")
+    #         tmp_uri = f"postgres://{pg_user}:{pg_pass}@{pg_server}:{pg_port}/postgres"
+    #         tmp_db = psycopg2.connect(tmp_uri) #DAL(tmp_uri, pool_size=1, check_reserved=['all'], migrate=False, decode_credentials=True)
+    #         # Need this to run DDL statements
+    #         tmp_db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+    #         # See if the database exists
+    #         cursor = tmp_db.cursor()
+    #         rs = cursor.execute(f"SELECT * FROM pg_database WHERE datname='{pg_database}'")
+    #         if rs is None:
+    #             # No records - try to create the database
+    #             cursor.execute(f"CREATE DATABASE {pg_database} WITH OWNER = {pg_user} ENCODING = 'UTF8' CONNECTION LIMIT = -1 IS_TEMPLATE = False;")
+    #         else:
+    #             # Records exist - database exists
+    #             print(f"DB Exists! {pg_database}")
                 
-            cursor.close()
-            tmp_db.close()
+    #         cursor.close()
+    #         tmp_db.close()
 
-            db_lti_try_again = True
+    #         db_lti_try_again = True
             
-    if db_lti_try_again:
-        # Try again to connect to the database
-        try:
-            db_lti = DAL(pg_uri, pool_size=10, check_reserved=['all'], migrate=pg_migrate, decode_credentials=True)
-        except Exception as ex:
-            print("ERROR - Unable to connect to postgresql database!")
-            raise HTTP(500, "ERROR - Unable to connect to postgreql database!")
+    # if db_lti_try_again:
+    #     # Try again to connect to the database
+    #     try:
+    #         db_lti = DAL(pg_uri, pool_size=10, check_reserved=['all'], migrate=pg_migrate, decode_credentials=True)
+    #     except Exception as ex:
+    #         print("ERROR - Unable to connect to postgresql database!")
+    #         raise HTTP(500, "ERROR - Unable to connect to postgreql database!")
         
     # Try to use redis for session caching if available, fall back to normal file based.
     try_redis_sessions = cache.ram("try_redis_sessions", lambda: True, time_expire=36000)
