@@ -34,6 +34,29 @@ def laptop_admin_credentials():
 
 
 @auth.requires_membership("Administrators")
+def laptop_firewall():
+    return dict(message="Welcome")
+
+
+@auth.requires_membership("Administrators")
+def laptop_settings():
+    ensure_settings()
+
+    rows = db().select(db.my_app_settings.ALL)
+    form = SQLFORM(db.my_app_settings, rows[0], showid=False,
+                   fields=["laptop_admin_user", "laptop_admin_password", "laptop_network_type"]).process()
+
+    if form.accepted:
+        # Saved
+        response.flash = "Settings Saved!"
+        pass
+    elif form.errors:
+        response.flash = "Error! " + str(form.errors)
+    
+    return dict(form=form)
+
+
+@auth.requires_membership("Administrators")
 def index():
     ensure_settings()
 
@@ -509,6 +532,3 @@ def ope():
     return dict(message="Welcome")
 
 
-@auth.requires_membership("Administrators")
-def laptop_firewall():
-    return dict(message="Welcome")

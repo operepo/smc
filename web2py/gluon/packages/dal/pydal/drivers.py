@@ -34,6 +34,14 @@ except ImportError:
     pass
 
 try:
+    import snowflake.connector as snowflakeconnector
+
+    DRIVERS["snowflakeconnector"] = snowflakeconnector
+
+except ImportError:
+    pass
+
+try:
     import MySQLdb
 
     DRIVERS["MySQLdb"] = MySQLdb
@@ -137,9 +145,8 @@ except ImportError:
     pass
 
 try:
-    from com.ziclix.python.sql import zxJDBC
     import java.sql
-
+    from com.ziclix.python.sql import zxJDBC
     # Try sqlite jdbc driver from http://www.zentus.com/sqlitejdbc/
     from org.sqlite import JDBC  # required by java.sql; ensure we have it
 

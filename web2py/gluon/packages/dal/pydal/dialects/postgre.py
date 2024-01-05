@@ -1,9 +1,9 @@
-from ..adapters.postgres import Postgre, PostgreNew, PostgreBoolean
-from .._compat import integer_types, basestring
+from .._compat import basestring, integer_types
+from ..adapters.postgres import Postgre, PostgreBoolean, PostgreNew
 from ..helpers.methods import varquote_aux
 from ..objects import Expression
+from . import dialects, register_expression, sqltype_for
 from .base import SQLDialect
-from . import dialects, sqltype_for, register_expression
 
 
 @dialects.register_for(Postgre)
@@ -35,7 +35,7 @@ class PostgreDialect(SQLDialect):
     def type_big_reference(self):
         return (
             "BIGINT REFERENCES %(foreign_key)s "
-            + "ON DELETE %(on_delete_action)s %(null)s %(unique)s"
+            + "ON DELETE %(on_delete_action)s ON UPDATE %(on_update_action)s %(null)s %(unique)s"
         )
 
     @sqltype_for("reference TFK")
@@ -43,7 +43,7 @@ class PostgreDialect(SQLDialect):
         return (
             ' CONSTRAINT "FK_%(constraint_name)s_PK" FOREIGN KEY '
             + "(%(field_name)s) REFERENCES %(foreign_table)s"
-            + "(%(foreign_key)s) ON DELETE %(on_delete_action)s"
+            + "(%(foreign_key)s) ON DELETE %(on_delete_action)s ON UPDATE %(on_update_action)s"
         )
 
     @sqltype_for("geometry")

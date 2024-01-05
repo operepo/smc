@@ -16,7 +16,7 @@ response.subtitle = 'OPE Support tools for secure Canvas installations'
 
 ## read more at http://dev.w3.org/html5/markup/meta.name.html
 response.meta.author = 'Ray Pulsipher <ray@cmagic.biz>'
-response.meta.keywords = 'smc, lti, admin, student, sms, import, canvas, active directory, peninsula college, sbctc, wa state, web2py, python, framework'
+response.meta.keywords = 'smc, lti, admin, student, sms, import, canvas, corrections, active directory, sbctc, wa state, web2py, python, framework'
 response.meta.generator = 'Web2py Web Framework'
 
 ## your http://google.com/analytics id
@@ -75,6 +75,7 @@ response.menu = [
                 (T(u'Configure App \u2bc8 Verify Settings (auto create)'), False, URL('admin', 'config_verify_auto')),
                 (T(u'Configure App \u2bc8 Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
                 (T(u'Configure App \u2bc8 Add LTI Tools to Canvas'), False, URL('lti', 'add_lti_tools_to_canvas')),
+                (T(u'Configure App \u2bc8 Laptop Settings'), False, URL('admin', 'laptop_settings')),
             # ]),
             # (T('Manage Users'), False, URL('admin', 'users')),
             # (T('Switch Mode'), False, URL('admin', 'switchmode')),

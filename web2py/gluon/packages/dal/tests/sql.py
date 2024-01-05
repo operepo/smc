@@ -9,8 +9,9 @@ import glob
 import datetime
 import json
 import pickle
+from unittest import skipIf
 
-from pydal._compat import basestring, StringIO, integer_types, xrange, BytesIO, to_bytes
+from pydal._compat import basestring, StringIO, integer_types, xrange, BytesIO, to_bytes, PY2
 from pydal import DAL, Field
 from pydal.helpers.classes import SQLALL, OpRow
 from pydal.objects import Table, Expression, Row
@@ -778,6 +779,7 @@ class TestSubselect(DALtest):
         self.assertEqual(sub.sql_shortref, db._adapter.dialect.quote("foo"))
         self.assertIsInstance(sub.on(sub.aa != None), Expression)
 
+    @skipIf(PY2, "sqlite3 on py2 does not allow circular references")
     def testCTE(self):
         db = self.connect()
         db.define_table('org', Field('name'), Field('boss', 'reference org'))
@@ -1468,7 +1470,6 @@ class TestExpressions(DALtest):
         op1 = (sum / count).with_alias("tot")
         self.assertEqual(db(t0).select(op).first()[op], 2)
         self.assertEqual(db(t0).select(op1).first()[op1], 2)
-        print("DICT", db(t0).select(op1).as_dict())
         self.assertEqual(db(t0).select(op1).first()["tot"], 2)
         op2 = avg * count
         self.assertEqual(db(t0).select(op2).first()[op2], 6)

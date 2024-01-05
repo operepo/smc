@@ -1,4 +1,5 @@
 import re
+
 from .._gae import gae
 from ..helpers._internals import Dispatcher
 
@@ -71,19 +72,19 @@ def with_connection_or_raise(f):
     return wrap
 
 
-from .base import SQLAdapter, NoSQLAdapter
-from .sqlite import SQLite
-from .postgres import Postgre, PostgrePsyco
-from .mysql import MySQL
-from .mssql import MSSQL
-from .mongo import Mongo
+from .base import NoSQLAdapter, SQLAdapter
+from .couchdb import CouchDB
 from .db2 import DB2
 from .firebird import FireBird
+from .google import GoogleSQL
 from .informix import Informix
 from .ingres import Ingres
+from .mongo import Mongo
+from .mssql import MSSQL
+from .mysql import MySQL
 from .oracle import Oracle
+from .postgres import Postgre, PostgrePsyco
 from .sap import SAPDB
+from .snowflake import Snowflake
+from .sqlite import SQLite
 from .teradata import Teradata
-from .couchdb import CouchDB
-
-from .google import GoogleSQL

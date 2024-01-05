@@ -114,6 +114,7 @@ tmp = request.vars.fix
 if tmp:
     if tmp.lower() == "true" or tmp.lower() == "all":
         cache.ram("initial_run", lambda: True, time_expire=600)
+        cache.ram('db_init_needed', None) # Clear it
         # lazy_tables = False
         # fake_migrate = True
         migrate = True

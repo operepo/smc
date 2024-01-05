@@ -11,40 +11,27 @@
 Validators
 -----------
 """
-import os
-import re
-import math
-import datetime
-import time
+import binascii
 import cgi
-import uuid
+import datetime
+import decimal
+import encodings.idna
 import hashlib
 import hmac
 import json
+import math
+import os
+import re
 import struct
-import decimal
-import binascii
+import time
 import unicodedata
-import encodings.idna
+import uuid
 from functools import reduce
 
-from ._compat import (
-    StringIO,
-    integer_types,
-    basestring,
-    unicodeT,
-    urllib_unquote,
-    unichr,
-    to_bytes,
-    PY2,
-    to_unicode,
-    to_native,
-    string_types,
-    urlparse,
-    ipaddress,
-)
-from .objects import Field, FieldVirtual, FieldMethod, Table
-
+from ._compat import (PY2, StringIO, basestring, integer_types, ipaddress,
+                      string_types, to_bytes, to_native, to_unicode, unichr,
+                      unicodeT, urllib_unquote, urlparse)
+from .objects import Field, FieldMethod, FieldVirtual, Table
 
 JSONErrors = (NameError, TypeError, ValueError, AttributeError, KeyError)
 
@@ -705,7 +692,7 @@ class IS_IN_DB(Validator):
             ):
                 raise ValidationError(self.translator(self.error_message))
             if self.theset:
-                if not [v for v in values if v not in self.theset]:
+                if not [v for v in values if str(v) not in self.theset]:
                     return values
             else:
 
@@ -1501,11 +1488,11 @@ def unicode_to_ascii_authority(authority):
             e.g. u'www.Alliancefran\\xe7aise.nu'
 
     Returns:
-        string: the US-ASCII character equivalent to the inputed authority,
+        string: the US-ASCII character equivalent to the inputted authority,
              e.g. 'www.xn--alliancefranaise-npb.nu'
 
     Raises:
-        Exception: if the function is not able to convert the inputed
+        Exception: if the function is not able to convert the inputted
             authority
 
     @author: Jonathan Benn
@@ -1537,7 +1524,7 @@ def unicode_to_ascii_authority(authority):
 
 def unicode_to_ascii_url(url, prepend_scheme):
     """
-    Converts the inputed unicode url into a US-ASCII equivalent. This function
+    Converts the inputted unicode url into a US-ASCII equivalent. This function
     goes a little beyond RFC 3490, which is limited in scope to the domain name
     (authority) only. Here, the functionality is expanded to what was observed
     on Wikipedia on 2009-Jan-22:
@@ -1563,7 +1550,7 @@ def unicode_to_ascii_url(url, prepend_scheme):
             e.g. "http". Input None to disable this functionality
 
     Returns:
-        string: a US-ASCII equivalent of the inputed url
+        string: a US-ASCII equivalent of the inputted url
 
     @author: Jonathan Benn
     """
@@ -1646,7 +1633,7 @@ class IS_GENERIC_URL(Validator):
         error_message: a string, the error message to give the end user
             if the URL does not validate
         allowed_schemes: a list containing strings or None. Each element
-            is a scheme the inputed URL is allowed to use
+            is a scheme the inputted URL is allowed to use
         prepend_scheme: a string, this scheme is prepended if it's
             necessary to make the URL valid
 
@@ -1681,7 +1668,7 @@ class IS_GENERIC_URL(Validator):
             value: a string, the URL to validate
 
         Returns:
-            a tuple, where tuple[0] is the inputed value (possible
+            a tuple, where tuple[0] is the inputted value (possible
             prepended with prepend_scheme), and tuple[1] is either
             None (success!) or the string error_message
         """
@@ -3352,7 +3339,7 @@ class IS_HTTP_URL(Validator):
         error_message: a string, the error message to give the end user
             if the URL does not validate
         allowed_schemes: a list containing strings or None. Each element
-            is a scheme the inputed URL is allowed to use
+            is a scheme the inputted URL is allowed to use
         prepend_scheme: a string, this scheme is prepended if it's
             necessary to make the URL valid
     """
@@ -3397,7 +3384,7 @@ class IS_HTTP_URL(Validator):
             value: a string, the URL to validate
 
         Returns:
-            a tuple, where tuple[0] is the inputed value
+            a tuple, where tuple[0] is the inputted value
             (possible prepended with prepend_scheme), and tuple[1] is either
             None (success!) or the string error_message
         """
@@ -3496,7 +3483,7 @@ class IS_URL(Validator):
         error_message: a string, the error message to give the end user
             if the URL does not validate
         allowed_schemes: a list containing strings or None. Each element
-            is a scheme the inputed URL is allowed to use
+            is a scheme the inputted URL is allowed to use
         prepend_scheme: a string, this scheme is prepended if it's
             necessary to make the URL valid
 

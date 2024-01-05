@@ -1,10 +1,11 @@
 import base64
 import datetime
-from ..adapters.oracle import Oracle
-from .._compat import to_native, to_bytes
 from base64 import b64encode
-from .base import SQLRepresenter, JSONRepresenter
+
+from .._compat import to_bytes, to_native
+from ..adapters.oracle import Oracle
 from . import representers
+from .base import JSONRepresenter, SQLRepresenter
 
 
 @representers.register_for(Oracle)
@@ -15,7 +16,8 @@ class OracleRepresenter(SQLRepresenter, JSONRepresenter):
             if type(obj) != bytes:
                 obj = to_bytes(obj)
             obj = to_native(b64encode(obj))
-            return "utl_raw.cast_to_raw('%s')" % obj
+            # return "utl_raw.cast_to_raw('%s')" % obj
+            return ":CLOB('%s')" % obj
         elif field_type == "date":
             if isinstance(obj, (datetime.date, datetime.datetime)):
                 obj = obj.isoformat()[:10]

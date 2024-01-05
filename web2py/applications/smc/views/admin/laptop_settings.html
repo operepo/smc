@@ -1,0 +1,31 @@
+{{extend 'layout.html'}}
+
+<div>
+	<a style="font-size: 10px;" href="{{=URL('admin','config')}}">&lt;-- Back</a>
+</div>
+
+<h1>Change OPE Laptop Admin Settings</h1>
+
+<div>
+    <div style="float: left; width: 600px; overflow: initial;">
+        {{=form}}
+    </div>
+    <div class="well" style="float: left; width: 400px; ">
+        <h3>
+            Help
+        </h3>
+		<p>
+			Configure admin settings for OPE Laptop - this will make sure that an admin account exists on the
+            laptop with the specified name and password when you credential the laptop. Make sure you use a different
+            admin password than you use on your main network.
+		</p>
+		<div>
+			<b>Laptop Admin user: </b> The admin user account to setup on the OPE laptop
+		</div>
+		<div>
+			<b>Laptop Admin Password: </b> The password to use for the admin account<br />
+            <strong style="color: #ff0000">(DO NOT USE YOUR DOMAIN ADMIN PASSWORD!!! CHOOSE AN ALTERNATE PASSWORD!!!)</strong>
+		</div>
+	</div>
+</div>
+

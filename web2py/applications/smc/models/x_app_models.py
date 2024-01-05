@@ -212,7 +212,11 @@ db.define_table("my_app_settings",
                 Field("disable_student_self_change_password", "boolean", default="False"),
                 Field("disable_faculty_self_change_password", "boolean", default="False"),
                 Field("disable_media_auto_play", "boolean", default="True"),
+                Field("laptop_network_type", "string", default="standalone", requires=IS_IN_SET(["standalone", "domain"])),
+
                 )
+# force defaults for new fields to prevent nulls
+
 
 # Enable encryption
 db.my_app_settings.ad_service_password.filter_in = lambda value: Util.encrypt(value)

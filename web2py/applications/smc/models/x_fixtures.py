@@ -28,6 +28,11 @@ if db_init_needed:
     # Make sure permissions are setup for each group
     auth.add_permission(name='credential', group_id=auth.id_group(role='Administrators'))
     auth.add_permission(name='credential', group_id=auth.id_group(role='Faculty'))
+
+    # Make sure we set some defaults for new settings fields so we don't end up with nulls    
+    db(db.my_app_settings.laptop_network_type == None).update(laptop_network_type="standalone")
+    
+
     db.commit()
 
     # Make sure versions are all 0 (no nulls)

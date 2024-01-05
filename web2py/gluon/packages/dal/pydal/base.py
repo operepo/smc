@@ -124,6 +124,7 @@ For more info::
 
 """
 
+import contextlib
 import glob
 import logging
 import socket
@@ -131,43 +132,21 @@ import threading
 import time
 import traceback
 import urllib
-import contextlib
 
-from ._compat import (
-    PY2,
-    pickle,
-    hashlib_md5,
-    pjoin,
-    copyreg,
-    integer_types,
-    with_metaclass,
-    long,
-    unquote,
-    iteritems,
-)
-from ._globals import GLOBAL_LOCKER, THREAD_LOCAL, DEFAULT
+from ._compat import (PY2, copyreg, hashlib_md5, integer_types, iteritems,
+                      long, pickle, pjoin, unquote, with_metaclass)
+from ._globals import DEFAULT, GLOBAL_LOCKER, THREAD_LOCAL
 from ._load import OrderedDict
-from .helpers.classes import (
-    Serializable,
-    SQLCallableList,
-    BasicStorage,
-    RecordUpdater,
-    RecordDeleter,
-    TimingHandler,
-)
-from .helpers.methods import (
-    hide_password,
-    smart_query,
-    auto_validators,
-    auto_represent,
-    uuidstr,
-)
-from .helpers.regex import REGEX_PYTHON_KEYWORDS, REGEX_DBNAME
-from .helpers.rest import RestParser
-from .helpers.serializers import serializers
-from .objects import Table, Field, Rows, Row, Set
 from .adapters.base import BaseAdapter, NullAdapter
 from .default_validators import default_validators
+from .helpers.classes import (BasicStorage, RecordDeleter, RecordUpdater,
+                              Serializable, SQLCallableList, TimingHandler)
+from .helpers.methods import (auto_represent, auto_validators, hide_password,
+                              smart_query, uuidstr)
+from .helpers.regex import REGEX_DBNAME, REGEX_PYTHON_KEYWORDS
+from .helpers.rest import RestParser
+from .helpers.serializers import serializers
+from .objects import Field, Row, Rows, Set, Table
 
 TABLE_ARGS = set(
     (
@@ -295,7 +274,7 @@ class DAL(with_metaclass(MetaDAL, Serializable, BasicStorage)):
     validators = None
     representers = {}
     validators_method = default_validators
-    uuid = uuidstr
+    uuid = staticmethod(uuidstr)
     logger = logging.getLogger("pyDAL")
 
     Field = Field
@@ -833,6 +812,12 @@ class DAL(with_metaclass(MetaDAL, Serializable, BasicStorage)):
             if not db_group:
                 del THREAD_LOCAL._pydal_db_instances_[self._db_uid]
         self._adapter._clean_tlocals()
+
+    def get_connection_from_pool_or_new(self):
+        self._adapter.reconnect()
+
+    def recycle_connection_in_pool_or_close(self, action="commit"):
+        self._adapter.close(action, really=True)
 
     def executesql(
         self,

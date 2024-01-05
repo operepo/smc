@@ -12,10 +12,10 @@ import re
 from gluon.admin import *
 from gluon.fileutils import abspath, read_file, write_file
 from gluon.utils import web2py_uuid
-from gluon.tools import Config
+from gluon.tools import Config, prevent_open_redirect
 from gluon.compileapp import find_exposed_functions
 from glob import glob
-from gluon._compat import iteritems, PY2, pickle, xrange, urlopen, to_bytes, StringIO, to_native
+from gluon._compat import iteritems, PY2, pickle, xrange, urlopen, to_bytes, StringIO, to_native, reload
 import gluon.rewrite
 import shutil
 import platform
@@ -83,6 +83,16 @@ def safe_open(a, b):
             def close(self):
                 pass
         return tmp()
+
+    a_for_check = os.path.abspath(os.path.normpath(a))
+
+    web2py_apps_root = os.path.abspath(up(request.folder))
+    web2py_deposit_root = os.path.join(up(web2py_apps_root), 'deposit')
+
+    if not (a_for_check.startswith(web2py_apps_root) or
+        a_for_check.startswith(web2py_deposit_root)):
+        raise HTTP(403)
+
     if PY2 or 'b' in b:
         return open(a, b)
     else:
@@ -118,7 +128,7 @@ def get_app(name=None):
 def index():
     """ Index handler """
 
-    send = request.vars.send
+    send = prevent_open_redirect(request.vars.send)
     if DEMO_MODE:
         session.authorized = True
         session.last_time = t0
@@ -220,7 +230,7 @@ def site():
     class IS_VALID_APPNAME(object):
 
         def __call__(self, value):
-            if not re.compile('^\w+$').match(value):
+            if not re.compile(r'^\w+$').match(value):
                 return (value, T('Invalid application name'))
             if not request.vars.overwrite and \
                     os.path.exists(os.path.join(apath(r=request), value)):
@@ -311,7 +321,7 @@ def site():
             session.flash = T(msg, dict(appname=form_update.vars.name))
         redirect(URL(r=request))
 
-    regex = re.compile('^\w+$')
+    regex = re.compile(r'^\w+$')
 
     if is_manager():
         apps = [a for a in os.listdir(apath(r=request)) if regex.match(a) and
@@ -331,7 +341,7 @@ def site():
 def report_progress(app):
     import datetime
     progress_file = os.path.join(apath(app, r=request), 'progress.log')
-    regex = re.compile('\[(.*?)\][^\:]+\:\s+(\-?\d+)')
+    regex = re.compile(r'\[(.*?)\][^\:]+\:\s+(\-?\d+)')
     if not os.path.exists(progress_file):
         return []
     matches = regex.findall(open(progress_file, 'r').read())
@@ -599,7 +609,7 @@ def test():
     if len(request.args) > 1:
         file = request.args[1]
     else:
-        file = '.*\.py'
+        file = r'.*\.py'
 
     controllers = listdir(
         apath('%s/controllers/' % app, r=request), file + '$')
@@ -859,12 +869,12 @@ def todolist():
     app_path = apath('%(app)s' % {'app': app}, r=request)
     dirs = ['models', 'controllers', 'modules', 'private']
 
-    def listfiles(app, dir, regexp='.*\.py$'):
+    def listfiles(app, dir, regexp=r'.*\.py$'):
         files = sorted(listdir(apath('%(app)s/%(dir)s/' % {'app': app, 'dir': dir}, r=request), regexp))
         files = [x.replace(os.path.sep, '/') for x in files if not x.endswith('.bak')]
         return files
 
-    pattern = '#\s*(todo)+\s+(.*)'
+    pattern = r'#\s*(todo)+\s+(.*)'
     regex = re.compile(pattern, re.IGNORECASE)
 
     output = []
@@ -1116,7 +1126,7 @@ def design():
         redirect(URL('site'))
 
     # Get all models
-    models = listdir(apath('%s/models/' % app, r=request), '.*\.py$')
+    models = listdir(apath('%s/models/' % app, r=request), r'.*\.py$')
     models = [x.replace('\\', '/') for x in models]
     defines = {}
     for m in models:
@@ -1126,7 +1136,7 @@ def design():
 
     # Get all controllers
     controllers = sorted(
-        listdir(apath('%s/controllers/' % app, r=request), '.*\.py$'))
+        listdir(apath('%s/controllers/' % app, r=request), r'.*\.py$'))
     controllers = [x.replace('\\', '/') for x in controllers]
     functions = {}
     for c in controllers:
@@ -1139,7 +1149,7 @@ def design():
 
     # Get all views
     views = sorted(
-        listdir(apath('%s/views/' % app, r=request), '[\w/\-]+(\.\w+)+$'))
+        listdir(apath('%s/views/' % app, r=request), r'[\w/\-]+(\.\w+)+$'))
     views = [x.replace('\\', '/') for x in views if not x.endswith('.bak')]
     extend = {}
     include = {}
@@ -1154,17 +1164,17 @@ def design():
         include[c] = [i[1] for i in items]
 
     # Get all modules
-    modules = listdir(apath('%s/modules/' % app, r=request), '.*\.py$')
+    modules = listdir(apath('%s/modules/' % app, r=request), r'.*\.py$')
     modules = modules = [x.replace('\\', '/') for x in modules]
     modules.sort()
 
     # Get all private files
-    privates = listdir(apath('%s/private/' % app, r=request), '[^\.#].*')
+    privates = listdir(apath('%s/private/' % app, r=request), r'[^\.#].*')
     privates = [x.replace('\\', '/') for x in privates]
     privates.sort()
 
     # Get all static files
-    statics = listdir(apath('%s/static/' % app, r=request), '[^\.#].*',
+    statics = listdir(apath('%s/static/' % app, r=request), r'[^\.#].*',
                       maxnum=MAXNFILES)
     statics = [x.replace(os.path.sep, '/') for x in statics]
     statics.sort()
@@ -1257,7 +1267,7 @@ def plugin():
         redirect(URL('site'))
 
     # Get all models
-    models = listdir(apath('%s/models/' % app, r=request), '.*\.py$')
+    models = listdir(apath('%s/models/' % app, r=request), r'.*\.py$')
     models = [x.replace('\\', '/') for x in models]
     defines = {}
     for m in models:
@@ -1267,7 +1277,7 @@ def plugin():
 
     # Get all controllers
     controllers = sorted(
-        listdir(apath('%s/controllers/' % app, r=request), '.*\.py$'))
+        listdir(apath('%s/controllers/' % app, r=request), r'.*\.py$'))
     controllers = [x.replace('\\', '/') for x in controllers]
     functions = {}
     for c in controllers:
@@ -1280,7 +1290,7 @@ def plugin():
 
     # Get all views
     views = sorted(
-        listdir(apath('%s/views/' % app, r=request), '[\w/\-]+\.\w+$'))
+        listdir(apath('%s/views/' % app, r=request), r'[\w/\-]+\.\w+$'))
     views = [x.replace('\\', '/') for x in views]
     extend = {}
     include = {}
@@ -1294,17 +1304,17 @@ def plugin():
         include[c] = [i[1] for i in items]
 
     # Get all modules
-    modules = listdir(apath('%s/modules/' % app, r=request), '.*\.py$')
+    modules = listdir(apath('%s/modules/' % app, r=request), r'.*\.py$')
     modules = modules = [x.replace('\\', '/') for x in modules]
     modules.sort()
 
     # Get all private files
-    privates = listdir(apath('%s/private/' % app, r=request), '[^\.#].*')
+    privates = listdir(apath('%s/private/' % app, r=request), r'[^\.#].*')
     privates = [x.replace('\\', '/') for x in privates]
     privates.sort()
 
     # Get all static files
-    statics = listdir(apath('%s/static/' % app, r=request), '[^\.#].*',
+    statics = listdir(apath('%s/static/' % app, r=request), r'[^\.#].*',
                       maxnum=MAXNFILES)
     statics = [x.replace(os.path.sep, '/') for x in statics]
     statics.sort()
@@ -1321,7 +1331,7 @@ def plugin():
         safe_write(crontab, '#crontab')
 
     def filter_plugins(items):
-        regex = re.compile('^plugin_' + plugin + '(/.*|\..*)?$')
+        regex = re.compile(r'^plugin_' + plugin + r'(/.*|\..*)?$')
         return [item for item in items if item and regex.match(item)]
 
     return dict(app=app,
@@ -1353,14 +1363,14 @@ def create_file():
                 request.vars.location += request.vars.dir + '/'
             app = get_app(name=request.vars.location.split('/')[0])
             path = apath(request.vars.location, r=request)
-        filename = re.sub('[^\w./-]+', '_', request.vars.filename)
+        filename = re.sub(r'[^\w./-]+', '_', request.vars.filename)
         if path[-7:] == '/rules/':
             # Handle plural rules files
             if len(filename) == 0:
                 raise SyntaxError
             if not filename[-3:] == '.py':
                 filename += '.py'
-            lang = re.match('^plural_rules-(.*)\.py$', filename).group(1)
+            lang = re.match(r'^plural_rules-(.*)\.py$', filename).group(1)
             langinfo = read_possible_languages(apath(app, r=request))[lang]
             text = dedent("""
                    #!/usr/bin/env python
@@ -1508,7 +1518,7 @@ def create_file():
         redirect(request.vars.sender + anchor)
 
 
-def listfiles(app, dir, regexp='.*\.py$'):
+def listfiles(app, dir, regexp=r'.*\.py$'):
     files = sorted(
         listdir(apath('%(app)s/%(dir)s/' % {'app': app, 'dir': dir}, r=request), regexp))
     files = [x.replace('\\', '/') for x in files if not x.endswith('.bak')]
@@ -1523,12 +1533,12 @@ def editfile(path, file, vars={}, app=None):
 
 def files_menu():
     app = request.vars.app or 'welcome'
-    dirs = [{'name': 'models', 'reg': '.*\.py$'},
-            {'name': 'controllers', 'reg': '.*\.py$'},
-            {'name': 'views', 'reg': '[\w/\-]+(\.\w+)+$'},
-            {'name': 'modules', 'reg': '.*\.py$'},
-            {'name': 'static', 'reg': '[^\.#].*'},
-            {'name': 'private', 'reg': '.*\.py$'}]
+    dirs = [{'name': 'models', 'reg': r'.*\.py$'},
+            {'name': 'controllers', 'reg': r'.*\.py$'},
+            {'name': 'views', 'reg': r'[\w/\-]+(\.\w+)+$'},
+            {'name': 'modules', 'reg': r'.*\.py$'},
+            {'name': 'static', 'reg': r'[^\.#].*'},
+            {'name': 'private', 'reg': r'.*\.py$'}]
     result_files = []
     for dir in dirs:
         result_files.append(TAG[''](LI(dir['name'], _class="nav-header component", _onclick="collapse('" + dir['name'] + "_files');"),
@@ -1549,7 +1559,7 @@ def upload_file():
         path = apath(request.vars.location, r=request)
 
         if request.vars.filename:
-            filename = re.sub('[^\w\./]+', '_', request.vars.filename)
+            filename = re.sub(r'[^\w\./]+', '_', request.vars.filename)
         else:
             filename = os.path.split(request.vars.file.filename)[-1]
 
@@ -1618,7 +1628,7 @@ def errors():
 
         hash2error = dict()
 
-        for fn in listdir(errors_path, '^[a-fA-F0-9.\-]+$'):
+        for fn in listdir(errors_path, r'^[a-fA-F0-9.\-]+$'):
             fullpath = os.path.join(errors_path, fn)
             if not os.path.isfile(fullpath):
                 continue
@@ -1717,7 +1727,7 @@ def errors():
         func = lambda p: os.stat(apath('%s/errors/%s' %
                                        (app, p), r=request)).st_mtime
         tickets = sorted(
-            listdir(apath('%s/errors/' % app, r=request), '^\w.*'),
+            listdir(apath('%s/errors/' % app, r=request), r'^\w.*'),
             key=func,
             reverse=True)
 

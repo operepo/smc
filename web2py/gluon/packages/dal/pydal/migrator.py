@@ -4,9 +4,10 @@ import locale
 import os
 import pickle
 import sys
-from ._compat import PY2, string_types, pjoin, iteritems, to_bytes, exists
+
+from ._compat import PY2, exists, iteritems, pjoin, string_types, to_bytes
 from ._load import portalocker
-from .helpers.classes import SQLCustomType, DatabaseStoredFile
+from .helpers.classes import DatabaseStoredFile, SQLCustomType
 
 
 class Migrator(object):
@@ -29,6 +30,7 @@ class Migrator(object):
         db = table._db
         table._migrate = migrate
         fields = []
+        reffs = str()
         # PostGIS geo fields are added after the table has been created
         postcreation_fields = []
         sql_fields = {}
@@ -112,13 +114,14 @@ class Migrator(object):
                                 + rfield_rname
                                 + ")"
                             )
-                        ftype = ftype + types["reference FK"] % dict(
+                        reffs = reffs + types["reference FK"] % dict(
                             # should be quoted
                             constraint_name=constraint_name,
                             foreign_key=fk,
                             table_name=table._rname,
                             field_name=field._rname,
                             on_delete_action=field.ondelete,
+                            on_update_action=field.onupdate,
                         )
                 else:
                     # make a guess here for circular references
@@ -149,6 +152,7 @@ class Migrator(object):
                         constraint_name=self.dialect.quote(constraint_name),
                         foreign_key="%s (%s)" % (real_referenced, rfield_rname),
                         on_delete_action=field.ondelete,
+                        on_update_action=field.onupdate,
                     )
                     ftype_info["null"] = (
                         " NOT NULL" if field.notnull else self.dialect.allow_null
@@ -247,7 +251,7 @@ class Migrator(object):
             engine = self.adapter.adapter_args.get("engine", "InnoDB")
             other = " ENGINE=%s CHARACTER SET utf8;" % engine
 
-        fields = ",\n    ".join(fields)
+        fields = ",\n    ".join(fields) + reffs
         for rtablename in TFK:
             rtable = db[rtablename]
             rfields = TFK[rtablename]
@@ -258,9 +262,15 @@ class Migrator(object):
                 table._raw_rname, "_".join(f._raw_rname for f in fk_fields)
             )
             on_delete = list(set(f.ondelete for f in fk_fields))
+            on_update = list(set(f.onupdate for f in fk_fields))
             if len(on_delete) > 1:
                 raise SyntaxError(
                     "Table %s has incompatible ON DELETE actions in multi-field foreign key."
+                    % table._dalname
+                )
+            if len(on_update) > 1:
+                raise SyntaxError(
+                    "Table %s has incompatible ON UPDATE actions in multi-field foreign key."
                     % table._dalname
                 )
             tfk_field_name = ", ".join(fkeys)
@@ -283,6 +293,7 @@ class Migrator(object):
                     foreign_table=tfk_foreign_table,
                     foreign_key=tfk_foreign_key,
                     on_delete_action=on_delete[0],
+                    on_update_action=on_update[0],
                 )
             )
 
@@ -304,7 +315,11 @@ class Migrator(object):
             query = "CREATE TABLE %s(\n    %s\n)%s" % (table_rname, fields, other)
 
         uri = self.adapter.uri
-        if uri.startswith("sqlite:///") or uri.startswith("spatialite:///"):
+        if isinstance(self, InDBMigrator):
+            # No filesystem path should be used when storing table details in database.
+            dbpath = ''
+            self.adapter.folder = ''
+        elif uri.startswith("sqlite:///") or uri.startswith("spatialite:///"):
             if PY2:
                 path_encoding = (
                     sys.getfilesystemencoding()
@@ -571,7 +586,7 @@ class Migrator(object):
         writelog = bool(logfilename)
         if writelog:
             isabs = os.path.isabs(logfilename)
-        if table and table._dbt and writelog and self.adapter.folder:
+        if table and table._dbt and writelog and (self.adapter.folder or isinstance(self, InDBMigrator)):
             if isabs:
                 table._loggername = logfilename
             else:
