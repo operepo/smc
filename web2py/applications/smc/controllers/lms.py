@@ -75,6 +75,10 @@ def verify_ope_account_in_smc():
     user_name = None
     laptop_admin_user = ""
     laptop_admin_password = ""
+    laptop_network_type = ""
+    laptop_domain_name = ""
+    laptop_domain_ou = ""
+
 
     # Get the student user in question
     if len(request.args) > 0:
@@ -101,14 +105,19 @@ def verify_ope_account_in_smc():
     if msg == "Found":
         # Pull the laptop admin info
         laptop_admin_user = AppSettings.GetValue("laptop_admin_user", "")
+        laptop_network_type = AppSettings.GetValue("laptop_network_type", "Standalone")
+        laptop_domain_name = AppSettings.GetValue("laptop_domain_name", "SBCTC.local")
+        laptop_domain_ou = AppSettings.GetValue("laptop_domain_ou", "laptopOU.SBCTC.local")
         # Moved pw to credential area
         laptop_admin_password = "********" # AppSettings.GetValue("laptop_admin_password", "")
+
     
     smc_version = get_app_version()
     return dict(msg=msg, student_full_name=student_full_name,
                 laptop_admin_user=laptop_admin_user,
                 laptop_admin_password=laptop_admin_password,
-                smc_version=smc_version)
+                smc_version=smc_version, laptop_network_type=laptop_network_type,
+                laptop_domain_name=laptop_domain_name, laptop_domain_ou=laptop_domain_ou)
 
 
 # TODO - Setup permission and add facult/admins to credential permission

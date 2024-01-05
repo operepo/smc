@@ -73,7 +73,7 @@ response.menu = [
                 # (T(u'Configure App \u2bc8 ZFS Settings'), False, URL('admin', 'config_zfs_settings')),
                 (T(u'Configure App \u2bc8 Verify Settings'), False, URL('admin', 'config_verify')),
                 (T(u'Configure App \u2bc8 Verify Settings (auto create)'), False, URL('admin', 'config_verify_auto')),
-                (T(u'Configure App \u2bc8 Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
+                #(T(u'Configure App \u2bc8 Laptop Admin Credentials'), False, URL('admin', 'laptop_admin_credentials')),
                 (T(u'Configure App \u2bc8 Add LTI Tools to Canvas'), False, URL('lti', 'add_lti_tools_to_canvas')),
                 (T(u'Configure App \u2bc8 Laptop Settings'), False, URL('admin', 'laptop_settings')),
             # ]),

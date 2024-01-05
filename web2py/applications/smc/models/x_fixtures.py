@@ -30,8 +30,10 @@ if db_init_needed:
     auth.add_permission(name='credential', group_id=auth.id_group(role='Faculty'))
 
     # Make sure we set some defaults for new settings fields so we don't end up with nulls    
-    db(db.my_app_settings.laptop_network_type == None).update(laptop_network_type="standalone")
-    
+    db(db.my_app_settings.laptop_network_type == None).update(laptop_network_type="Standalone")
+    db(db.my_app_settings.laptop_domain_name == None).update(laptop_domain_name="SBCTC.local")
+    db(db.my_app_settings.laptop_domain_ou == None).update(laptop_domain_ou="laptopOU.SBCTC.local")
+
 
     db.commit()
 

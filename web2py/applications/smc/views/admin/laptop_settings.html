@@ -26,6 +26,17 @@
 			<b>Laptop Admin Password: </b> The password to use for the admin account<br />
             <strong style="color: #ff0000">(DO NOT USE YOUR DOMAIN ADMIN PASSWORD!!! CHOOSE AN ALTERNATE PASSWORD!!!)</strong>
 		</div>
+		<div>
+			<b>Laptop Network Type:</b> Choose standalone if using the laptops in a standalone very secure environment with no domain controller. 
+			Use Domain Member if domain group policy should address most of the security settings.
+		</div>
+		<div>
+			<b>Laptop Domain Name:</b> The full domain name that the laptop should be joined to (ignored if using Standalone mode)- <strong style="color:#ff0000">laptop should be a member already before credentialing.</strong>
+		</div>
+		<div>
+			<b>Laptop Domain OU:</b> The path to the Organizational Unit this laptop should be in when joined to the domain (ignored if using Standalone mode).
+		</div>
+
 	</div>
 </div>
 

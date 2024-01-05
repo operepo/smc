@@ -212,7 +212,10 @@ db.define_table("my_app_settings",
                 Field("disable_student_self_change_password", "boolean", default="False"),
                 Field("disable_faculty_self_change_password", "boolean", default="False"),
                 Field("disable_media_auto_play", "boolean", default="True"),
-                Field("laptop_network_type", "string", default="standalone", requires=IS_IN_SET(["standalone", "domain"])),
+                Field("laptop_network_type", "string", default="Standalone", requires=IS_IN_SET(["Standalone", "Domain Member"])),
+                Field("laptop_domain_name", "string", default="SBCTC.local", required=True),
+                Field("laptop_domain_ou", "string", default="laptopOU.SBCTC.local", required=True),
+
 
                 )
 # force defaults for new fields to prevent nulls
