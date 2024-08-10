@@ -713,6 +713,7 @@ class Student:
             class_str = ""
             if student_enabled is True:
                 for enroll_class in enroll_classes:
+                    enroll_class = enroll_class.strip()
                     # ret += " <span style='color: red; font-weight: bolder;'>Enroll " + enroll_class + "</span>"
                     if class_str != "":
                         class_str += ", "

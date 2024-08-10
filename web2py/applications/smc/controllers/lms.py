@@ -119,6 +119,26 @@ def verify_ope_account_in_smc():
                 smc_version=smc_version, laptop_network_type=laptop_network_type,
                 laptop_domain_name=laptop_domain_name, laptop_domain_ou=laptop_domain_ou)
 
+# Public readable
+def get_laptop_config():
+    response.view = 'generic.json'
+    db = current.db
+
+    smc_version = get_app_version()
+
+    #laptop_admin_user = AppSettings.GetValue("laptop_admin_user", "")
+    laptop_network_type = AppSettings.GetValue("laptop_network_type", "Standalone")
+    laptop_domain_name = AppSettings.GetValue("laptop_domain_name", "SBCTC.local")
+    laptop_domain_ou = AppSettings.GetValue("laptop_domain_ou", "laptopOU.SBCTC.local")
+    laptop_time_servers = AppSettings.GetValue("laptop_time_servers", ["time.windows.com"])
+    laptop_approved_nics = AppSettings.GetValue("laptop_approved_nics", [])
+
+    
+    return dict(smc_version=smc_version, laptop_network_type=laptop_network_type,
+                laptop_domain_name=laptop_domain_name, laptop_domain_ou=laptop_domain_ou,
+                laptop_time_servers=laptop_time_servers, laptop_approved_nics=laptop_approved_nics)
+
+
 
 # TODO - Setup permission and add facult/admins to credential permission
 #@auth.requires_membership("Administrators")

@@ -65,15 +65,17 @@ rm -f kill_smc.bat
 # If running standalone - set enc key by setting env variable
 #export "CANVAS_SECRET=ALFKJOIUXETRKH@&YF(*&Y#$9a78sd:O"
 
+# DEV PORT
+DEV_PORT=7999
 
 if [ "$W_SSL" == "1" ]; then
     # test
     echo ${ESC_GREEN}Starting Web2Py w SSL...${ESC_RESET}
-    $PYEXE -B web2py/web2py.py -p 8000 -i "$LISTEN_IP" -e  -s "SMC Server" --minthreads=4 --maxthreads=8 --timeout=60 $W_SCHEDULER -a "<recycle>" --no_gui --ssl_certificate=${SSL_CERT} --ssl_private_key=${SSL_KEY}
+    $PYEXE -B web2py/web2py.py -p $DEV_PORT -i "$LISTEN_IP" -e  -s "SMC Server" --minthreads=4 --maxthreads=8 --timeout=60 $W_SCHEDULER -a "<recycle>" --no_gui --ssl_certificate=${SSL_CERT} --ssl_private_key=${SSL_KEY}
     # --ca-cert="ca.crt"
 else
     echo ${ESC_GREEN}Starting Web2Py...${ESC_RESET}
-    $PYEXE -B web2py/web2py.py -p 8000 -i "${LISTEN_IP}" -e  -s "SMC Server" --minthreads=4 --maxthreads=8 --timeout=60 $W_SCHEDULER -a "<recycle>" --no_gui
+    $PYEXE -B web2py/web2py.py -p $DEV_PORT -i "${LISTEN_IP}" -e  -s "SMC Server" --minthreads=4 --maxthreads=8 --timeout=60 $W_SCHEDULER -a "<recycle>" --no_gui
 fi
 
 

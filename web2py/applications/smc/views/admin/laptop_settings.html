@@ -19,13 +19,13 @@
             laptop with the specified name and password when you credential the laptop. Make sure you use a different
             admin password than you use on your main network.
 		</p>
-		<div>
+		<!--div>
 			<b>Laptop Admin user: </b> The admin user account to setup on the OPE laptop
 		</div>
 		<div>
 			<b>Laptop Admin Password: </b> The password to use for the admin account<br />
             <strong style="color: #ff0000">(DO NOT USE YOUR DOMAIN ADMIN PASSWORD!!! CHOOSE AN ALTERNATE PASSWORD!!!)</strong>
-		</div>
+		</div-->
 		<div>
 			<b>Laptop Network Type:</b> Choose standalone if using the laptops in a standalone very secure environment with no domain controller. 
 			Use Domain Member if domain group policy should address most of the security settings.
@@ -36,6 +36,19 @@
 		<div>
 			<b>Laptop Domain OU:</b> The path to the Organizational Unit this laptop should be in when joined to the domain (ignored if using Standalone mode).
 		</div>
+
+		<div>
+			<b>Laptop Admin Account:</b> The account to add to the OPEAdmins group - this can be a local account or a domain account (use domain\account format for domain accounts).
+		</div>
+
+		<div>
+			<b>Laptop Time Servers:</b> IPs or host names of the time servers to use - use domain server if in domain mode.
+		</div>
+
+		<div>
+			<b>Laptop Approved Nics:</b> List of NIC==IP pairs (separate Nic and IP  with 2x =) to add to the approved list - Use the DRIVER name (in device manager) NOT the nic name in the list of network connections (e.g. Intel AIX Network Adapter==192.168.222. and NOT Ethernet 1==192.168.222.). DO NOT include #1, #2, or other numbers after the nic driver name (e.g. Intel AIX Nic #2 should just be Intel AIX Nic).
+		</div>
+
 
 	</div>
 </div>

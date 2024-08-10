@@ -45,8 +45,10 @@ def laptop_settings():
     rows = db().select(db.my_app_settings.ALL)
     form = SQLFORM(db.my_app_settings, rows[0], showid=False,
                    fields=[
-                       "laptop_admin_user", "laptop_admin_password", "laptop_network_type",
-                       "laptop_domain_name", "laptop_domain_ou"]).process()
+                       #"laptop_admin_user", "laptop_admin_password", # Don't create admin accounts anymore
+                       "laptop_network_type",
+                       "laptop_domain_name", "laptop_domain_ou", "laptop_admin_account", "laptop_time_servers",
+                       "laptop_approved_nics"]).process()
 
     if form.accepted:
         # Saved

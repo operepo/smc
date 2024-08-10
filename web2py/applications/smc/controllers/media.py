@@ -208,6 +208,9 @@ def media_list():
         (db.media_files.category.contains(search_term)) | 
         (db.media_files.tags.contains(search_term))
         )
+
+    if search_term.lower() == "all":
+        query = (db.media_files)
     
     rows = db(query).select()
     for row in rows:
@@ -254,6 +257,9 @@ def media_list():
         (db.document_files.category.contains(search_term)) | 
         (db.document_files.tags.contains(search_term))
         )
+
+    if search_term.lower() == "all":
+        query = (db.document_files)
     
     rows = db(query).select()
     for row in rows:

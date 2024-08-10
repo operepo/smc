@@ -215,6 +215,10 @@ db.define_table("my_app_settings",
                 Field("laptop_network_type", "string", default="Standalone", requires=IS_IN_SET(["Standalone", "Domain Member"])),
                 Field("laptop_domain_name", "string", default="SBCTC.local", required=True),
                 Field("laptop_domain_ou", "string", default="laptopOU.SBCTC.local", required=True),
+                Field("laptop_admin_account", "string", default="huskers", required=True),
+                Field("laptop_time_servers", "list:string", default=["time.windows.com"], required=True),
+                Field("laptop_approved_nics", "list:string", default=[], required=True),
+
 
 
                 )

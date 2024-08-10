@@ -692,6 +692,7 @@ class Faculty:
             class_str = ""            
             if faculty_enabled is True:
                 for enroll_class in enroll_classes:
+                    enroll_class = enroll_class.strip()
                     if class_str != "":
                         class_str += ", "
                     class_str += enroll_class
