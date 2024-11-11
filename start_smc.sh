@@ -21,20 +21,25 @@ fi
 
 
 # === FIND PYTHON! ===
-export PYEXE=/usr/bin/python3
+#export PYEXE=/usr/bin/python3
+# Do this to grab the current python - so it works properly in venv
+export PYEXE=`which python3`
 
-echo ${ESC_GREEN}Searching for python...${ESC_RESET}
-PythonPaths=(
-    "/usr/bin/python3"
-)
-for g in "${PythonPaths[@]}"; 
-do
-        if [ -f $g ]; then
-            export PYEXE=$g
-            echo ${ESC_YELLOW}Found python at: $PYEXE... ${ESC_RESET}
-            break
-        fi
-done
+INVENV=$(python -c 'import sys; print ("1" if hasattr(sys, "real_prefix") else "0")')
+
+# Running in venv these days, no need to search it out
+# echo ${ESC_GREEN}Searching for python...${ESC_RESET}
+# PythonPaths=(
+#     "/usr/bin/python3"
+# )
+# for g in "${PythonPaths[@]}"; 
+# do
+#         if [ -f $g ]; then
+#             export PYEXE=$g
+#             echo ${ESC_YELLOW}Found python at: $PYEXE... ${ESC_RESET}
+#             break
+#         fi
+# done
 
 
 # export LISTEN_IP=127.0.0.1

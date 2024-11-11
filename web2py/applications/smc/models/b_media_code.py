@@ -12,6 +12,8 @@ import re
 import glob
 import mimetypes
 from gluon.contrib.simplejson import loads, dumps
+# Import this prior to requests so it doesn't fail
+#import importlib_resources
 import requests
 from langcodes import *
 import webvtt
@@ -24,8 +26,10 @@ from ednet.canvas import Canvas
 # Help shut up pylance warnings
 if 1==2: from ..common import *
 
-from pytube import YouTube
+#from pytube import YouTube
+from pytubefix import YouTube
 #import pytube
+#from yt_dlp import YoutubeDL
 
 
 def get_session_values(namespace="ui", control=None):
@@ -113,7 +117,7 @@ def set_session_value(namespace="ui", control=None, key=None, value=None):
 
 def get_youtube_proxies(randomize=False):
     # Skip proxies if they have had a 429 error less than this
-    not_before = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
+    not_before = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=10)
 
     query = (db.youtube_proxy_list.enabled==True)
     # Random order so you get a possible different item from the list each time
@@ -578,7 +582,7 @@ def getURLS(txt):
     # (?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)
     # |[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
     pat = re.compile(
-                     'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+                     r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
                     )
     res = pat.findall(txt)
     for r in res:
@@ -596,7 +600,7 @@ def getPDFURLS(txt):
     # (?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|
     # [^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
     pat = re.compile(
-                     'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+                     r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
                     )
     res = pat.findall(txt)
     # pdf, swf, png, doc, ?

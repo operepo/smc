@@ -3,13 +3,17 @@ ldap3 # python-ldap
 paramiko
 ecdsa
 isodate
-pytube
+#pytube
+pytubefix
 pywinrm
 #xlrd - replaced by openpyxl
 openpyxl
 psutil
 pycryptodome
 urllib3
+urllib3_secure_extra
+pyOpenSSL
+chardet
 psycopg2
 PyMySQL
 #tempfile
@@ -32,3 +36,5 @@ jwcrypto
 Pillow
 python-dateutil
 redis
+yt_dlp
+

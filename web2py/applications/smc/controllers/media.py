@@ -22,7 +22,8 @@ from ednet.appsettings import AppSettings
 # Help shut up pylance warnings
 if 1==2: from ..common import *
 
-from pytube import YouTube
+#from pytube import YouTube
+from pytubefix import YouTube
 from bs4 import BeautifulSoup as bs
 
 

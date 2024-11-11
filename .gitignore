@@ -28,4 +28,5 @@ smc.code-workspace
 env
 /*.code-workspace
 venv/
+.venv/
 web2py/parameters_7999.py

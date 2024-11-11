@@ -45,7 +45,7 @@ if import_path not in sys.path:
     sys.path.append(import_path)
     sys_path_imported = True
 
-
+#print("sys.path: " + str(sys.path))
 # If windows, write a kill bat file to end the web2py process
 # This is nice so we don't have to track the current PID when it starts and use taskkill
 if os.name == 'nt' and request.is_scheduler is False:

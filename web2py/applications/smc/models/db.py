@@ -228,23 +228,28 @@ if not request.env.web2py_runtime_gae:
     try_redis_sessions = cache.ram("try_redis_sessions", lambda: True, time_expire=36000)
     #print(f"Use For Sessions {myconf.get('redis.use_for_sessions')}")
     if request.is_scheduler is not True and try_redis_sessions and myconf.get('redis.use_for_sessions'):
-        cache.ram("try_redis_sessions", lambda: False, time_expire=0)
+        pass
+        # Disable redis caching - seems like it just makes you login every time you end up on a different smc process.
+        # cache.ram("try_redis_sessions", lambda: False, time_expire=0)
 
-        from gluon.contrib.redis_utils import RConn
-        from gluon.contrib.redis_session import RedisSession
-        try:
-            rconn = RConn(
-                host=myconf.get('redis.host'),
-                port=myconf.get('redis.port'),
-                db=myconf.get('redis.db'),
-                socket_connect_timeout=2,
-            )
-            # Make sure we can use this, if not fall back to no redis support.
-            rconn.ping() # will hit exception if it fails and fall back to normal sessions
-            sessiondb = RedisSession(redis_conn=rconn, session_expiry=3600, with_lock=False)  # with_lock=True to force locking of session between concurrent requests
-            session.connect(request, response, db=sessiondb)            
-        except Exception as ex:
-            print(f"Error using Redis for sessions, disabling for now.\n-> {ex}")
+        # from gluon.contrib.redis_utils import RConn
+        # from gluon.contrib.redis_session import RedisSession
+        # try:
+        #     rconn = RConn(
+        #         host=myconf.get('redis.host'),
+        #         port=myconf.get('redis.port'),
+        #         db=myconf.get('redis.db'),
+        #         socket_connect_timeout=2,
+        #     )
+        #     # Make sure we can use this, if not fall back to no redis support.
+        #     rconn.ping() # will hit exception if it fails and fall back to normal sessions
+        #     sessiondb = RedisSession(redis_conn=rconn, session_expiry=3600, with_lock=False)  # with_lock=True to force locking of session between concurrent requests
+        #     session.connect(request, response, db=sessiondb)
+        #     from gluon.settings import global_settings
+        #     global_settings.db_sessions = True
+        # except Exception as ex:
+        #     print(f"Error using Redis for sessions, disabling for now.\n-> {ex}")
+        
 
 else:
     # connect to Google BigTable (optional 'google:datastore://namespace')

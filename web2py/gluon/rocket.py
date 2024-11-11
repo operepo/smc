@@ -537,7 +537,7 @@ class Listener(Thread):
                 cert_reqs = ssl.CERT_OPTIONAL
                 sock = ssl.wrap_socket(
                     sock,
-#                    do_handshake_on_connect=False,
+                    do_handshake_on_connect=False,
                     keyfile=self.interface[2],
                     certfile=self.interface[3],
                     server_side=True,
@@ -546,14 +546,17 @@ class Listener(Thread):
                     ssl_version=ssl.PROTOCOL_SSLv23,
                 )
             else:
-                sock = ssl.wrap_socket(
-                    sock,
-#                    do_handshake_on_connect=False,
-                    keyfile=self.interface[2],
-                    certfile=self.interface[3],
-                    server_side=True,
-                    ssl_version=ssl.PROTOCOL_SSLv23,
-                )
+                # sock = ssl.wrap_socket(
+                #     sock,
+                #     do_handshake_on_connect=False,
+                #     keyfile=self.interface[2],
+                #     certfile=self.interface[3],
+                #     server_side=True,
+                #     ssl_version=ssl.PROTOCOL_SSLv23,
+                # )
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                context.load_cert_chain(certfile=self.interface[3], keyfile=self.interface[2])
+                sock = context.wrap_socket(sock, server_side=True)
         except SSLError:
             # Generally this happens when an HTTP request is received on a
             # secure socket. We don't do anything because it will be detected
@@ -1385,7 +1388,7 @@ class Worker(Thread):
         except socket.error:
             self.closeConnection = True
             msg = 'Tried to send "%s" to client but received socket error'
-            #self.err_log.error(msg % status)
+            self.err_log.error(msg % status)
 
     def read_request_line(self, sock_file):
         self.request_line = ""
@@ -1410,9 +1413,6 @@ class Worker(Thread):
                 "SSL bug caused closure of socket.  See "
                 '"https://groups.google.com/d/topic/web2py/P_Gw0JxWzCs".'
             )
-        except ssl.SSLError:
-            d = ''
-            pass # Ignore error if client rejects self signed cert
 
         d = d.strip()
 

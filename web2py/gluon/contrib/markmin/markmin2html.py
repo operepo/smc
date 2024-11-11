@@ -37,7 +37,7 @@ MathJax.Hub.Config({
 
 __all__ = ['render', 'markmin2html', 'markmin_escape']
 
-__doc__ = """
+__doc__ = r"""
 # Markmin markup language
 
 ## About
@@ -554,9 +554,9 @@ regex_strong = re.compile(r'\*\*(?P<t>[^\s*]+( +[^\s*]+)*)\*\*')
 regex_del = re.compile(r'~~(?P<t>[^\s~]+( +[^\s~]+)*)~~')
 regex_em = re.compile(r"''(?P<t>([^\s']| |'(?!'))+)''")
 regex_num = re.compile(r"^\s*[+-]?((\d+(\.\d*)?)|\.\d+)([eE][+-]?[0-9]+)?\s*$")
-regex_list = re.compile('^(?:(?:(#{1,6})|(?:(\.+|\++|\-+)(\.)?))\s*)?(.*)$')
-regex_bq_headline = re.compile('^(?:(\.+|\++|\-+)(\.)?\s+)?(-{3}-*)$')
-regex_tq = re.compile('^(-{3}-*)(?::(?P<c>[a-zA-Z][_a-zA-Z\-\d]*)(?:\[(?P<p>[a-zA-Z][_a-zA-Z\-\d]*)\])?)?$')
+regex_list = re.compile(r'^(?:(?:(#{1,6})|(?:(\.+|\++|\-+)(\.)?))\s*)?(.*)$')
+regex_bq_headline = re.compile(r'^(?:(\.+|\++|\-+)(\.)?\s+)?(-{3}-*)$')
+regex_tq = re.compile(r'^(-{3}-*)(?::(?P<c>[a-zA-Z][_a-zA-Z\-\d]*)(?:\[(?P<p>[a-zA-Z][_a-zA-Z\-\d]*)\])?)?$')
 regex_proto = re.compile(r'(?<!["\w>/=])(?P<p>\w+):(?P<k>\w+://[\w\d\-+=?%&/:.]+)', re.M)
 regex_auto = re.compile(r'(?<!["\w>/=])(?P<k>\w+://[\w\d\-+_=?%&/:.,;#]+\w|[\w\-.]+@[\w\-.]+)', re.M)
 regex_link = re.compile(r'(' + LINK + r')|\[\[(?P<s>.+?)\]\]', re.S)
@@ -567,9 +567,9 @@ regex_media_level2 = re.compile(
 
 regex_markmin_escape = re.compile(r"(\\*)(['`:*~\\[\]{}@\$+\-.#\n])")
 regex_backslash = re.compile(r"\\(['`:*~\\[\]{}@\$+\-.#\n])")
-ttab_in = maketrans("'`:*~\\[]{}@$+-.#\n", '\x0b\x0c\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x05')
-ttab_out = maketrans('\x0b\x0c\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x05', "'`:*~\\[]{}@$+-.#\n")
-regex_quote = re.compile('(?P<name>\w+?)\s*\=\s*')
+ttab_in = maketrans("'`:*~\\[]{}@$+-.#\n", "\x0b\x0c\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x05")
+ttab_out = maketrans("\x0b\x0c\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x05", "'`:*~\\[]{}@$+-.#\n")
+regex_quote = re.compile(r'(?P<name>\w+?)\s*\=\s*')
 
 def local_html_escape(data, quote=False):
     """
@@ -596,7 +596,7 @@ def local_html_escape(data, quote=False):
         return data
 
 def make_dict(b):
-    return '{%s}' % regex_quote.sub("'\g<name>':", b)
+    return '{%s}' % regex_quote.sub(r"'\g<name>':", b)
 
 
 def safe_eval(node_or_string, env):
@@ -736,7 +736,7 @@ def render(text,
            class_prefix='',
            id_prefix='markmin_',
            pretty_print=False):
-    """
+    r"""
     Arguments:
     - text is the text to be processed
     - extra is a dict like extra=dict(custom=lambda value: value) that process custom code
@@ -986,7 +986,7 @@ def render(text,
         text = replace_at_urls(text, URL)
 
     if latex == 'google':
-        text = regex_dd.sub('``\g<latex>``:latex ', text)
+        text = regex_dd.sub(r'``\g<latex>``:latex ', text)
 
     #############################################################
     # replace all blocks marked with ``...``:class[id] with META
@@ -1342,9 +1342,9 @@ def render(text,
     #############################################################
     # do strong,em,del
     #############################################################
-    text = regex_strong.sub('<strong>\g<t></strong>', text)
-    text = regex_del.sub('<del>\g<t></del>', text)
-    text = regex_em.sub('<em>\g<t></em>', text)
+    text = regex_strong.sub(r'<strong>\g<t></strong>', text)
+    text = regex_del.sub(r'<del>\g<t></del>', text)
+    text = regex_em.sub(r'<em>\g<t></em>', text)
 
     #############################################################
     # deal with images, videos, audios and links

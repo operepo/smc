@@ -9,7 +9,9 @@ import shutil
 import requests
 import webvtt
 import traceback
-import pytube, pytube.exceptions
+#import pytube, pytube.exceptions
+import pytubefix, pytubefix.exceptions
+pytube = pytubefix
 import datetime
 
 # Help shut up pylance warnings
@@ -127,7 +129,8 @@ elif PY3:
 # For finding number of CPUs
 import multiprocessing
 
-from pytube import YouTube
+#from pytube import YouTube
+from pytubefix import YouTube
 #from applications.smc.modules.pytube import YouTube
 
 from ednet.ad import AD
@@ -1322,7 +1325,8 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
     # Force makes it re-download the video/captions even if they are present
     # Download the specified movie.
 
-    from pytube import YouTube
+    #from pytube import YouTube
+    from pytubefix import YouTube
 
     if media_file is None:
         print(f"ERROR - Unable to find a db record for null media file")

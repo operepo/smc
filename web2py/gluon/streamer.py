@@ -21,8 +21,8 @@ from gluon.contenttype import contenttype
 from gluon.http import HTTP
 from gluon.utils import unlocalised_http_header_date
 
-regex_start_range = re.compile("\d+(?=\-)")
-regex_stop_range = re.compile("(?<=\-)\d+")
+regex_start_range = re.compile(r"\d+(?=\-)")
+regex_stop_range = re.compile(r"(?<=\-)\d+")
 
 DEFAULT_CHUNK_SIZE = 64 * 1024
 
