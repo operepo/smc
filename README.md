@@ -19,3 +19,8 @@ urllib3
 # Test Cert Files
 test.crt and test.key are for development purposes only. Do not use in production.
 When bundled with OPE services, these files are ignored
+
+
+# Prerequisites
+To build psycopg2 from source in Ubuntu, run the following command
+sudo apt install postgresql-server-dev-all
