@@ -6,7 +6,6 @@ import subprocess
 from gluon.contrib.simplejson import loads, dumps
 import sys
 import shutil
-import requests
 import webvtt
 import traceback
 #import pytube, pytube.exceptions
@@ -408,7 +407,7 @@ def find_best_yt_stream(yt_url, media_file=None):
         proxy_item = db(db.youtube_proxy_list.proxy_url==proxy).select().first()
         if proxy_item:
             db(db.youtube_proxy_list.id==proxy_item.id).update(
-                last_request_on = datetime.datetime.utcnow()
+                last_request_on = datetime.datetime.now()
             )
             db.commit()
         try:
@@ -423,8 +422,14 @@ def find_best_yt_stream(yt_url, media_file=None):
                     'http': proxy,
                 }
 
-            # Try w the current proxy
-            yt = YouTube(yt_url_tmp, proxies=p)
+            # Try with the current proxy
+            # and use the WEB client so pytubefix auto-generates a Proof of Origin Token
+            # See https://github.com/JuanBindez/pytubefix/pull/209 and https://pytubefix.readthedocs.io/en/latest/user/po_token.html
+            yt = YouTube(
+                yt_url_tmp,
+                client='WEB',
+                proxies=p,
+            )
 
             s = None
     
@@ -447,6 +452,23 @@ def find_best_yt_stream(yt_url, media_file=None):
             # Got one - break the loop and return it.
             return_code = "OK"
             return yt, stream, res, return_code
+
+        except pytube.exceptions.BotDetection as ex:
+            if proxy_item:
+                db(db.youtube_proxy_list.id==proxy_item.id).update(
+                    last_error_on = datetime.datetime.now()
+                )
+                db.commit()
+            msg = (
+                f"YouTube bot detection on {yt_url} (proxy={proxy}) -- {ex}. "
+            )
+            session.yt_urls_error_msg += msg
+            print(msg)
+            traceback.print_exc()
+            log_to_video(media_file, msg)
+            return_code = "Bot Detection"
+            return yt, stream, res, return_code
+
         ## These exceptions mean we can't get it - don't keep trying other proxies
         except (
             pytube.exceptions.AgeRestrictedError,
@@ -460,7 +482,7 @@ def find_best_yt_stream(yt_url, media_file=None):
         ) as ex:
             if proxy_item:
                 db(db.youtube_proxy_list.id==proxy_item.id).update(
-                    last_error_on = datetime.datetime.utcnow()
+                    last_error_on = datetime.datetime.now()
                 )
                 db.commit()
             msg = f"Error grabbing YT video - Video not availalble or blocked - check to see if the url is correct, that it isn't private, that it is available in your region, etc... {yt_url} -- {ex}"
@@ -482,7 +504,7 @@ def find_best_yt_stream(yt_url, media_file=None):
         ) as ex:
             if proxy_item:
                 db(db.youtube_proxy_list.id==proxy_item.id).update(
-                    last_error_on = datetime.datetime.utcnow()
+                    last_error_on = datetime.datetime.now()
                 )
                 db.commit()
             msg = f"Error grabbing YT video - PyTube error - Youtube might have changed something, update PyTube and try again: {yt_url} -- {ex}"
@@ -505,8 +527,8 @@ def find_best_yt_stream(yt_url, media_file=None):
                 #     sleep_time = int(ex.headers["Retry-After"])
                 if proxy_item:
                     db(db.youtube_proxy_list.id==proxy_item.id).update(
-                        last_error_on = datetime.datetime.utcnow(),
-                        last_429_error_on = datetime.datetime.utcnow()
+                        last_error_on = datetime.datetime.now(),
+                        last_429_error_on = datetime.datetime.now()
                     )
                     db.commit()
                 msg = f"429 error on this proxy: {proxy}"
