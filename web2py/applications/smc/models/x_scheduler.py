@@ -6,7 +6,6 @@ import subprocess
 from gluon.contrib.simplejson import loads, dumps
 import sys
 import shutil
-import requests
 import webvtt
 import traceback
 #import pytube, pytube.exceptions
@@ -103,6 +102,9 @@ elif PY3:
     from urllib.error import HTTPError
     from urllib.request import Request
     from urllib.request import urlretrieve
+    from urllib.request import ProxyHandler
+    from urllib.request import build_opener
+    from urllib.request import install_opener
     # NOTE - Leave off!! - will override web2py request object
     #from urllib import request
 
@@ -380,6 +382,7 @@ def log_to_video(media_item, msg):
     
     return True
 
+
 def find_best_yt_stream(yt_url, media_file=None):
     yt = None
     res = '480p'
@@ -399,32 +402,53 @@ def find_best_yt_stream(yt_url, media_file=None):
     # Change out embed for watch so the link works properly
     yt_url_tmp = yt_url.replace("/embed/", "/watch?v=")
     proxies = get_youtube_proxies()
-    # Proxies comes in as a list, add None on the list so we try a None proxy too
-    #proxies.insert(0, None)
-    proxies.append(None)
+    if not proxies:
+        msg = (
+            "WARNING: No valid/reachable YouTube proxy found (TCP check failed for all "
+            "enabled rows, or none are configured). Continuing without proxy for this attempt."
+        )
+        session.yt_urls_error_msg += msg
+        print(msg)
+        log_to_video(media_file, msg)
+        proxies = [None]
 
     for proxy in proxies[0:5]:  # Only try the first 5 proxies - don't try forever
         # Try each proxy in order trying to get this video.
         proxy_item = db(db.youtube_proxy_list.proxy_url==proxy).select().first()
         if proxy_item:
             db(db.youtube_proxy_list.id==proxy_item.id).update(
-                last_request_on = datetime.datetime.utcnow()
+                last_request_on = datetime.datetime.now()
             )
             db.commit()
         try:
-            msg = f"Trying to get {yt_url} from proxy {proxy}"
+            if proxy is not None:
+                msg = f"Trying to get {yt_url} from proxy {proxy}"
+            else:
+                msg = f"Trying to get {yt_url} without proxy (no reachable proxy in pool)"
             print(msg)
             log_to_video(media_file, msg)
-            p = None
-            if not proxy is None:
+            if proxy is not None:
                 # Youtube proxy wants it in p['https']='https://123.123.321.321:35000' form
                 p = {
                     'https': proxy,
                     'http': proxy,
                 }
+            else:
+                p = None
 
-            # Try w the current proxy
-            yt = YouTube(yt_url_tmp, proxies=p)
+            # Align process-global urllib opener (pytubefix uses install_opener); direct = empty handler.
+            try:
+                if p is not None:
+                    install_opener(build_opener(ProxyHandler(p)))
+                else:
+                    install_opener(build_opener(ProxyHandler({})))
+            except Exception as ex:
+                print("Warning: could not reset urllib opener: %s" % (ex,))
+
+            yt = YouTube(
+                yt_url_tmp,
+                proxies=p,
+            )
 
             s = None
     
@@ -447,6 +471,23 @@ def find_best_yt_stream(yt_url, media_file=None):
             # Got one - break the loop and return it.
             return_code = "OK"
             return yt, stream, res, return_code
+
+        except pytube.exceptions.BotDetection as ex:
+            if proxy_item:
+                db(db.youtube_proxy_list.id==proxy_item.id).update(
+                    last_error_on = datetime.datetime.now()
+                )
+                db.commit()
+            msg = (
+                f"YouTube bot detection on {yt_url} (proxy={proxy}) -- {ex}. "
+            )
+            session.yt_urls_error_msg += msg
+            print(msg)
+            traceback.print_exc()
+            log_to_video(media_file, msg)
+            return_code = "Bot Detection"
+            return yt, stream, res, return_code
+
         ## These exceptions mean we can't get it - don't keep trying other proxies
         except (
             pytube.exceptions.AgeRestrictedError,
@@ -460,7 +501,7 @@ def find_best_yt_stream(yt_url, media_file=None):
         ) as ex:
             if proxy_item:
                 db(db.youtube_proxy_list.id==proxy_item.id).update(
-                    last_error_on = datetime.datetime.utcnow()
+                    last_error_on = datetime.datetime.now()
                 )
                 db.commit()
             msg = f"Error grabbing YT video - Video not availalble or blocked - check to see if the url is correct, that it isn't private, that it is available in your region, etc... {yt_url} -- {ex}"
@@ -482,7 +523,7 @@ def find_best_yt_stream(yt_url, media_file=None):
         ) as ex:
             if proxy_item:
                 db(db.youtube_proxy_list.id==proxy_item.id).update(
-                    last_error_on = datetime.datetime.utcnow()
+                    last_error_on = datetime.datetime.now()
                 )
                 db.commit()
             msg = f"Error grabbing YT video - PyTube error - Youtube might have changed something, update PyTube and try again: {yt_url} -- {ex}"
@@ -505,8 +546,8 @@ def find_best_yt_stream(yt_url, media_file=None):
                 #     sleep_time = int(ex.headers["Retry-After"])
                 if proxy_item:
                     db(db.youtube_proxy_list.id==proxy_item.id).update(
-                        last_error_on = datetime.datetime.utcnow(),
-                        last_429_error_on = datetime.datetime.utcnow()
+                        last_error_on = datetime.datetime.now(),
+                        last_429_error_on = datetime.datetime.now()
                     )
                     db.commit()
                 msg = f"429 error on this proxy: {proxy}"
@@ -1324,9 +1365,6 @@ def pull_youtube_caption(yt_url, media_guid):
 def pull_youtube_video(media_file, force_video=False, force_captions=False):
     # Force makes it re-download the video/captions even if they are present
     # Download the specified movie.
-
-    #from pytube import YouTube
-    from pytubefix import YouTube
 
     if media_file is None:
         print(f"ERROR - Unable to find a db record for null media file")
