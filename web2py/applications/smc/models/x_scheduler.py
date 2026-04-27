@@ -102,6 +102,9 @@ elif PY3:
     from urllib.error import HTTPError
     from urllib.request import Request
     from urllib.request import urlretrieve
+    from urllib.request import ProxyHandler
+    from urllib.request import build_opener
+    from urllib.request import install_opener
     # NOTE - Leave off!! - will override web2py request object
     #from urllib import request
 
@@ -379,6 +382,7 @@ def log_to_video(media_item, msg):
     
     return True
 
+
 def find_best_yt_stream(yt_url, media_file=None):
     yt = None
     res = '480p'
@@ -398,9 +402,15 @@ def find_best_yt_stream(yt_url, media_file=None):
     # Change out embed for watch so the link works properly
     yt_url_tmp = yt_url.replace("/embed/", "/watch?v=")
     proxies = get_youtube_proxies()
-    # Proxies comes in as a list, add None on the list so we try a None proxy too
-    #proxies.insert(0, None)
-    proxies.append(None)
+    if not proxies:
+        msg = (
+            "WARNING: No valid/reachable YouTube proxy found (TCP check failed for all "
+            "enabled rows, or none are configured). Continuing without proxy for this attempt."
+        )
+        session.yt_urls_error_msg += msg
+        print(msg)
+        log_to_video(media_file, msg)
+        proxies = [None]
 
     for proxy in proxies[0:5]:  # Only try the first 5 proxies - don't try forever
         # Try each proxy in order trying to get this video.
@@ -411,23 +421,32 @@ def find_best_yt_stream(yt_url, media_file=None):
             )
             db.commit()
         try:
-            msg = f"Trying to get {yt_url} from proxy {proxy}"
+            if proxy is not None:
+                msg = f"Trying to get {yt_url} from proxy {proxy}"
+            else:
+                msg = f"Trying to get {yt_url} without proxy (no reachable proxy in pool)"
             print(msg)
             log_to_video(media_file, msg)
-            p = None
-            if not proxy is None:
+            if proxy is not None:
                 # Youtube proxy wants it in p['https']='https://123.123.321.321:35000' form
                 p = {
                     'https': proxy,
                     'http': proxy,
                 }
+            else:
+                p = None
 
-            # Try with the current proxy
-            # and use the WEB client so pytubefix auto-generates a Proof of Origin Token
-            # See https://github.com/JuanBindez/pytubefix/pull/209 and https://pytubefix.readthedocs.io/en/latest/user/po_token.html
+            # Align process-global urllib opener (pytubefix uses install_opener); direct = empty handler.
+            try:
+                if p is not None:
+                    install_opener(build_opener(ProxyHandler(p)))
+                else:
+                    install_opener(build_opener(ProxyHandler({})))
+            except Exception as ex:
+                print("Warning: could not reset urllib opener: %s" % (ex,))
+
             yt = YouTube(
                 yt_url_tmp,
-                client='WEB',
                 proxies=p,
             )
 
@@ -1346,9 +1365,6 @@ def pull_youtube_caption(yt_url, media_guid):
 def pull_youtube_video(media_file, force_video=False, force_captions=False):
     # Force makes it re-download the video/captions even if they are present
     # Download the specified movie.
-
-    #from pytube import YouTube
-    from pytubefix import YouTube
 
     if media_file is None:
         print(f"ERROR - Unable to find a db record for null media file")
