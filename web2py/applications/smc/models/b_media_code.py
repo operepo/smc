@@ -126,7 +126,7 @@ def check_proxy(proxy_url, timeout=5):
         if not host or not port:
             return False, "could not parse host/port from proxy url: %s" % (proxy_url,)
     except Exception as ex:
-        return False, "could not parse proxy url %s: %s" % (proxy_url, ex)
+        return False, f"could not parse proxy url {proxy_url}: {ex}"
 
     sock = None
     try:
