@@ -124,7 +124,7 @@ def check_proxy(proxy_url, timeout=5):
                 port = None
         print(f"host: {host}, port: {port}")
         if not host or not port:
-            return False, "could not parse host/port from proxy url: %s" % (proxy_url,)
+            return False, f"could not parse host/port from proxy url: {proxy_url}"
     except Exception as ex:
         return False, f"could not parse proxy url {proxy_url}: {ex}"
 
