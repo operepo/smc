@@ -200,20 +200,15 @@ def update_document_database_from_json_files():
 
 
 def process_media_file(media_id):
-    ret = ""
-
     # Find ffmpeg binary
     (ffmpeg, acodec) = find_ffmpeg()
 
     # Find number of CPUs
     cpus = int(multiprocessing.cpu_count())
     # Drop the number of threads so we don't use up all CPU power
-    cpus -= 3 # W 4 cpus, use only one, always leave 3 for processing if available.
-    if cpus < 1:
-        cpus = 1
+    cpus = max(cpus - 2, 1)
     
     # Grab the media file
-    # media_file = None
     media_file = db(db.media_file_import_queue.id==media_id).select().first()
     if media_file is None:
         return dict(error="Invalid Media File")
@@ -231,24 +226,19 @@ def process_media_file(media_id):
     tmp_path = db.media_file_import_queue.media_file.retrieve_file_properties(db.media_file_import_queue(media_file.id).media_file)['path']
     # NOTE Has stupid databases/../uploads in the path, replace databases/../ with nothing
     tmp_path = tmp_path.replace("\\", "/").replace('databases/../', '')
-    # print("TmpPath: " + tmp_path)
     
     uploads_folder = os.path.join(w2py_folder, tmp_path)
-    # print("Upload Path: " + uploads_folder)
+    print("Upload Path: " + uploads_folder)
     input_file = os.path.join(uploads_folder, media_file.media_file).replace("\\", "/")
 
     # Get the output file paths
-    output_webm = get_media_file_path(media_guid, ".webm")  # target_file + ".webm"
-    output_ogv = get_media_file_path(media_guid, ".ogv")  # target_file + ".ogv"
     output_mp4 = get_media_file_path(media_guid, ".mp4")  # target_file + ".mp4"
     output_mobile_mp4 = get_media_file_path(media_guid, ".mobile.mp4")  # target_file + ".mobile.mp4"
-    output_meta = get_media_file_path(media_guid, ".json")  # target_file + ".json"
     output_poster = get_media_file_path(media_guid, ".poster.png")  # target_file + ".poster.png"
     output_thumb = get_media_file_path(media_guid, ".thumb.png")  # target_file + ".thumb.png"
     
     print("Output files: ")
-    # print(output_webm)
-    # print(output_ogv)
+
     print(output_mp4)
     
     webm_ret = ""
@@ -258,28 +248,11 @@ def process_media_file(media_id):
     thumb_ret = ""
     
     # Run ffmpeg to process file
-    
-    # Do webm - NOTE No webm support in ffmpeg right now - # TODO unknown encoder libvpx
-    # cmd = ffmpeg + " -i '" + input_file + "' -vcodec libvpx -qscale 6 -acodec libvorbis
-    # -ab 128k -vf scale='480:-1' '" + output_webm + "'"
-    # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    # webm_ret = p.communicate()[0].decode()
-    
-    # Do OGV
-    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale 6
-    # -acodec libvorbis -ab 192k -vf scale='640:-1' '" + output_ogv + "'"
-    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale:v 5
-    # -acodec libvorbis -ab 128k '" + output_ogv + "'"
-    # print("Creating OGV..."  + " [" + str(time.time()) + "]")
     print("!clear!10%")
-    # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    # ogv_ret = p.communicate()[0].decode()
 
     # Do MP4
-    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -profile main
-    # -crf 20 -acodec libfaac -ab 192k -vf scale='720:-1' '" + output_mp4 + "'"
     cmd = ffmpeg + " -y -i \"" + input_file + \
-          "\" -vcodec libx264 -preset slow -movflags faststart -profile:v main -crf 20 -acodec " + \
+          "\" -vcodec libx264 -preset fast -movflags faststart -profile:v main -crf 20 -acodec " + \
           acodec + " -ab 128k -threads " + str(cpus) + " \"" + output_mp4 + "\""
     # print("Creating MP4..."  + " [" + str(time.time()) + "]")
     print("MP4: " + cmd)
@@ -289,7 +262,7 @@ def process_media_file(media_id):
     
     # Do MP4 with mobile quality
     cmd = ffmpeg + " -y -i \"" + input_file + \
-          "\" -vcodec libx264 -preset slow -movflags faststart -profile main -crf 20 -acodec " +\
+          "\" -vcodec libx264 -preset fast -movflags faststart -profile main -crf 20 -acodec " +\
           acodec + " -ab 128k -vf scale='2*trunc(oh*a/2):480' -threads " + str(cpus) + " \"" +\
           output_mobile_mp4 + "\""
     # print("Creating mobile MP4..."  + " [" + str(time.time()) + "]")
@@ -311,26 +284,6 @@ def process_media_file(media_id):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     thumb_ret = p.communicate()[0].decode()
 
-    # -vf scale="480:2*trunc(ow*a/2)"
-    # ffmpeg -i [your video] [encoding options as specified above]
-    # [your output video with appropriate extension - eg output.mp4, output.ogv or output.webm]
-    
-    # Make webm file - 480p
-    # cmd = ffmpeg + " -i 'input_file.avi' -codec:v libvpx -quality good -cpu-used
-    # 0 -movflags faststart -b:v 600k -maxrate 600k -bufsize 1200k -qmin 10 -qmax 42 -vf
-    # scale=-1:480 -threads 4 -codec:a vorbis -b:a 128k output_file.webm"
-    # -vcodec libvpx -qscale 6 -acodec libvorbis -ab 128k
-
-    # Make ogv file
-    # cmd = ""
-    # -vcodec libtheora -qscale 6 -acodec libvorbis -ab 128k
-    
-    # Make mp4 file - 480p
-    # cmd = ffmpeg + " -i inputfile.avi -codec:v libx264 -profile:v main -preset slow
-    # -movflags faststart -b:v 400k -maxrate 400k -bufsize 800k -vf scale=-1:480 -threads 0
-    # -codec:a libfdk_aac -b:a 128k output.mp4"  #codec:a libfdk_aac  codec:a mp3
-    # -vcodec libx264 -preset slow -profile main -crf 20 -acodec libfaac -ab 128k
-    
     # Update file info
     
     db.media_files.insert(title=media_file.title,
@@ -346,21 +299,9 @@ def process_media_file(media_id):
                           youtube_url=media_file.youtube_url
                           )
     
-    # media_file.update(status='done')
     db(db.media_file_import_queue.id==media_id).delete()
     
-    # Dump meta data to the folder along side the video files
-    # This can be used for export/import
-    # meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),
-    #         'description': media_file.description, 'original_file_name': media_file.original_file_name,
-    #         'media_type': media_file.media_type, 'category': media_file.category,
-    #         'tags': dumps(media_file.tags), 'width': media_file.width,
-    #         'height': media_file.height, 'quality': media_file.quality}
-    #
-    # meta_json = dumps(meta)
-    # f = os_open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-    # os.write(f, meta_json)
-    # os.close(f)
+
     save_media_file_json(media_guid)
     
     print("!clear!100%")
