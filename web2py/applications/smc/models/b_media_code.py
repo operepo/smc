@@ -139,14 +139,14 @@ def check_proxy(proxy_url, timeout=5):
 
 
 
-def get_youtube_proxies(randomize=False, verify_tcp=True, tcp_timeout=5):
+def get_youtube_proxies(randomize=False, verify_tcp=True, tcp_timeout=5, max_proxies=5):
     """Return enabled proxy_url strings from youtube_proxy_list.
 
     When verify_tcp is True (default), each candidate must accept a TCP connection
     to its host:port; unreachable rows are skipped and last_error_on is updated.
     Set verify_tcp=False only if you need the raw DB list (e.g. admin tooling).
     """
-    # Skip proxies if they have had a 429 error less than this
+    # Skip proxies if they have had an error less than this
     not_before = datetime.datetime.now() - datetime.timedelta(minutes=10)
 
     query = (db.youtube_proxy_list.enabled==True)
@@ -157,7 +157,7 @@ def get_youtube_proxies(randomize=False, verify_tcp=True, tcp_timeout=5):
         rows = db(query).select(orderby=db.youtube_proxy_list.last_request_on)
     ret = list()
     for row in rows:
-        if row.last_429_error_on is None or row.last_429_error_on < not_before:
+        if row.last_error_on is None or row.last_error_on < not_before:
             url = row["proxy_url"]
             if verify_tcp:
                 ok, check_msg = check_proxy(url, timeout=tcp_timeout)
@@ -172,8 +172,10 @@ def get_youtube_proxies(randomize=False, verify_tcp=True, tcp_timeout=5):
                         pass
                     continue
             ret.append(url)
+            if len(ret) >= max_proxies:
+                break
         else:
-            print(f"Skipping proxy - too soon since since last 429 error: {row.proxy_url}")
+            print(f"Skipping proxy - too soon since since last error: {row.proxy_url}")
 
     return ret
 

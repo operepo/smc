@@ -12,6 +12,7 @@ import traceback
 import pytubefix, pytubefix.exceptions
 pytube = pytubefix
 import datetime
+from urllib.parse import urlparse
 
 # Help shut up pylance warnings
 if 1==2: from ..common import *
@@ -342,7 +343,8 @@ def find_best_yt_stream(yt_url, media_file=None):
 
     # Change out embed for watch so the link works properly
     yt_url_tmp = yt_url.replace("/embed/", "/watch?v=")
-    proxies = get_youtube_proxies()
+    proxies = get_youtube_proxies(randomize=True, max_proxies=5)
+    print(f"Proxies: {proxies}")
     if not proxies:
         msg = (
             "WARNING: No valid/reachable YouTube proxy found (TCP check failed for all "
@@ -353,8 +355,10 @@ def find_best_yt_stream(yt_url, media_file=None):
         log_to_video(media_file, msg)
         proxies = [None]
 
-    for proxy in proxies[0:5]:  # Only try the first 5 proxies - don't try forever
+    for proxy in proxies:
         # Try each proxy in order trying to get this video.
+        hostname = urlparse(proxy).hostname
+        port = urlparse(proxy).port
         proxy_item = db(db.youtube_proxy_list.proxy_url==proxy).select().first()
         if proxy_item:
             db(db.youtube_proxy_list.id==proxy_item.id).update(
@@ -363,19 +367,17 @@ def find_best_yt_stream(yt_url, media_file=None):
             db.commit()
         try:
             if proxy is not None:
-                msg = f"Trying to get {yt_url} from proxy {proxy}"
-            else:
-                msg = f"Trying to get {yt_url} without proxy (no reachable proxy in pool)"
-            print(msg)
-            log_to_video(media_file, msg)
-            if proxy is not None:
+                msg = f"Trying to get {yt_url} from proxy {hostname}:{port}"
                 # Youtube proxy wants it in p['https']='https://123.123.321.321:35000' form
                 p = {
                     'https': proxy,
                     'http': proxy,
                 }
             else:
+                msg = f"Trying to get {yt_url} without proxy (no reachable proxy in pool)"
                 p = None
+            print(msg)
+            log_to_video(media_file, msg)
 
             # Align process-global urllib opener (pytubefix uses install_opener); direct = empty handler.
             try:
@@ -395,17 +397,14 @@ def find_best_yt_stream(yt_url, media_file=None):
     
             s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
             if s is None:
-                # Try 360p
                 res = '360p'
                 s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
             if s is None:
-                # Try 720p
                 res = '720p'
                 s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
             if s is None:
                 # If that doesn't exist, then get the first one in the list
                 s = yt.streams.filter(file_extension='mp4', progressive=True).first()
-            # s.download()  # put in folder name
     
             stream = s
 
@@ -413,7 +412,10 @@ def find_best_yt_stream(yt_url, media_file=None):
             return_code = "OK"
             return yt, stream, res, return_code
 
-        except pytube.exceptions.BotDetection as ex:
+        except (
+            pytube.exceptions.BotDetection,
+            pytube.exceptions.VideoRegionBlocked,
+        ) as ex:
             if proxy_item:
                 db(db.youtube_proxy_list.id==proxy_item.id).update(
                     last_error_on = datetime.datetime.now()
@@ -426,8 +428,7 @@ def find_best_yt_stream(yt_url, media_file=None):
             print(msg)
             traceback.print_exc()
             log_to_video(media_file, msg)
-            return_code = "Bot Detection"
-            return yt, stream, res, return_code
+            # Try next proxy in list - don't return yet
 
         ## These exceptions mean we can't get it - don't keep trying other proxies
         except (
@@ -436,7 +437,6 @@ def find_best_yt_stream(yt_url, media_file=None):
             pytube.exceptions.MembersOnly,
             pytube.exceptions.RecordingUnavailable,
             pytube.exceptions.VideoPrivate,
-            pytube.exceptions.VideoRegionBlocked,
             pytube.exceptions.VideoUnavailable,
             pytube.exceptions.MaxRetriesExceeded,
         ) as ex:
@@ -453,7 +453,6 @@ def find_best_yt_stream(yt_url, media_file=None):
             return_code = "Permanent Error"
 
             return yt, stream, res, return_code
-            #raise Exception(msg)
 
 
         ## These exceptions mean there as a parsing/temp error - don't keep trying other proxies
@@ -474,11 +473,6 @@ def find_best_yt_stream(yt_url, media_file=None):
             log_to_video(media_file, msg)
             return_code = "Termporary Error"
             return yt, stream, res, return_code
-        
-        
-        # Other exceptions inherit from this - just catch a general exception
-        #except pytube.exceptions.PytubeError as ex:
-        #    pass        
                 
         except HTTPError as ex:
             if ex.code == 429:  # Do we need this w max retries?
