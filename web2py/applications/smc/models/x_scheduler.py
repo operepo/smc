@@ -344,7 +344,6 @@ def find_best_yt_stream(yt_url, media_file=None):
     # Change out embed for watch so the link works properly
     yt_url_tmp = yt_url.replace("/embed/", "/watch?v=")
     proxies = get_youtube_proxies(randomize=True, max_proxies=5)
-    print(f"Proxies: {proxies}")
     if not proxies:
         msg = (
             "WARNING: No valid/reachable YouTube proxy found (TCP check failed for all "
@@ -422,7 +421,7 @@ def find_best_yt_stream(yt_url, media_file=None):
                 )
                 db.commit()
             msg = (
-                f"YouTube bot detection on {yt_url} (proxy={proxy}) -- {ex}. "
+                f"YouTube bot detection on {yt_url} (proxy={hostname}:{port}) -- {ex}. "
             )
             session.yt_urls_error_msg += msg
             print(msg)
@@ -1376,7 +1375,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
             print(f"Unknown HTTP error pulling yt video? {yt_url}\n{ex}")
             log_to_video(media_file, f"Unknown Error - Failed to download video from {yt_url}, will keep trying.\n{ex}")
             media_file.needs_downloading = True
-            media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+            media_file.download_failures = media_file.get("download_failures", 0) + 1
             media_file.update_record()
             db.commit()
             return False
@@ -1483,7 +1482,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                     media_file.update_record()
                     db.commit()                
                     return True
-                elif return_code == "Termporary Error":
+                elif return_code == "Temporary Error":
                     print(f"Temporary Error - Unable to get captions {yt_url}.")
                     log_to_video(media_file, f"Failed to download captions from {yt_url}, will keep trying.")
                     media_file.needs_caption_downloading = True
