@@ -20,6 +20,7 @@ import mimetypes
 import tempfile
 from ednet.canvas import Canvas
 from pytubefix import YouTube
+from urllib.parse import urlparse
 
 
 # Help shut up pylance warnings
@@ -110,19 +111,16 @@ def set_session_value(namespace="ui", control=None, key=None, value=None):
 
 
 def check_proxy(proxy_url, timeout=5):
-    """ Quick TCP reachability for an http(s) proxy URL like "http://1.2.3.4:35000".
-    Returns (ok: bool, msg: str).
+    """ Quick TCP reachability for an http(s) proxy URL like "http://1.2.3.4:35000"
+    or "http://user:pass@host:port". Returns (ok: bool, msg: str).
     """
     if not proxy_url:
         return False, "empty proxy url"
 
     try:
-        host, port_s = proxy_url.split("//", 1)[-1].split(":")
-        try:
-            port = int(port_s)
-        except ValueError:
-                port = None
-        print(f"host: {host}, port: {port}")
+        parsed = urlparse(proxy_url)
+        host = parsed.hostname
+        port = parsed.port
         if not host or not port:
             return False, f"could not parse host/port from proxy url: {proxy_url}"
     except Exception as ex:
