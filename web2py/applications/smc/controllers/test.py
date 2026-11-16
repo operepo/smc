@@ -9,7 +9,7 @@ from ednet.ad import AD
 from ednet.faculty import Faculty
 from ednet.util import Util
 from ednet.canvas import Canvas
-from pytube import YouTube
+from pytubefix import YouTube
 import os
 import ssl
 
@@ -105,17 +105,19 @@ def test_youtube():
 
     yt_url = "https://www.youtube.com/watch?v=jAMGMKlBSV0"
 
-    yt, stream, res = find_best_yt_stream(yt_url)
+    yt, stream, res, return_code = find_best_yt_stream(yt_url)
     ret['yt'] = str(yt)
     ret['stream'] = str(stream)
     ret['res'] = str(res)
+    ret['return_code'] = str(return_code)
+    if return_code != "OK" or stream is None:
+        return ret
 
     (w2py_folder, applications_folder, app_folder) = get_app_folders()
     target_folder = os.path.join(app_folder, 'static', 'media')
-    output_mp4_filename = "test.mp4"
 
     print("Downloading " + str(yt_url)+"\n\n")
-    stream.download(output_path=target_folder, filename=output_mp4_filename)  # put in folder name
+    ret['output_file'] = download_yt_stream(stream, target_folder, "test")
     print("\nDownload Complete!")
 
     return ret
@@ -373,22 +375,18 @@ def test():
 @auth.requires_membership("Administrators")
 def index():
     
-    yt = YouTube()
-    
     # Set the video URL.
     ret = ""
     tmpurl = "http://youtu.be/BthR2vlqrLo!!1"
-    tmpurl = tmpurl.replace("/embed/", "/watch?v=")
-    yt.url = tmpurl
-    
-    ret += str(yt.videos)
-    yt.filename = "tempvid"
-    # Get the highest res mp4
-    ret += str(type(yt.filter('mp4')))
-    f = yt.filter('mp4')[-1]
-    
+    tmpurl = tmpurl.replace("!!1", "").replace("!!0", "").replace("/embed/", "/watch?v=")
+
     try:
-        f.download()
+        yt = YouTube(tmpurl, client="WEB")
+        ret += str(yt.streams)
+        # Get the highest res progressive mp4
+        f = yt.streams.filter(file_extension='mp4', progressive=True).order_by('resolution').desc().first()
+        ret += str(f)
+        f.download(filename="tempvid.mp4")
     except Exception as e:
         ret += str(e)
     

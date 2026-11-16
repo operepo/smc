@@ -380,6 +380,56 @@ def log_to_video(media_item, msg):
     
     return True
 
+def download_yt_stream(stream, target_folder, file_name, media_file=None):
+    # Download the stream from find_best_yt_stream to target_folder/file_name.mp4
+    # If stream is a (video, audio) tuple, download both and mux them into the mp4
+    # Raises an exception if the download or mux fails
+    output_mp4 = os.path.join(target_folder, file_name + ".mp4").replace("\\", "/")
+
+    if not isinstance(stream, tuple):
+        stream.download(output_path=target_folder, filename=file_name + ".mp4", max_retries=3, timeout=300)
+        return output_mp4
+
+    (ffmpeg, acodec) = find_ffmpeg()
+    if ffmpeg is None:
+        msg = f"FFMPEG NOT FOUND! Can't combine video and audio streams for {file_name}"
+        print(msg)
+        log_to_video(media_file, msg)
+        raise Exception(msg)
+
+    (video_stream, audio_stream) = stream
+    video_part = file_name + ".video.mp4"
+    audio_part = file_name + ".audio.m4a"
+    log_to_video(media_file, f"No progressive stream - downloading separate video ({video_stream.resolution}) and audio streams")
+    video_stream.download(output_path=target_folder, filename=video_part, max_retries=3, timeout=300)
+    audio_stream.download(output_path=target_folder, filename=audio_part, max_retries=3, timeout=300)
+    video_part = os.path.join(target_folder, video_part).replace("\\", "/")
+    audio_part = os.path.join(target_folder, audio_part).replace("\\", "/")
+
+    # Copy the streams into one file - no re-encode needed
+    cmd = ffmpeg + " -y -i \"" + video_part + "\" -i \"" + audio_part + \
+          "\" -map 0:v:0 -map 1:a:0 -c copy -movflags faststart \"" + output_mp4 + "\""
+    log_to_video(media_file, f"Combining video and audio streams...")
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    (out, err) = p.communicate()
+    for f in [video_part, audio_part]:
+        try:
+            os.remove(f)
+        except OSError:
+            pass
+    if p.returncode != 0:
+        try:
+            os.remove(output_mp4)
+        except OSError:
+            pass
+        msg = f"Error combining video and audio streams for {file_name}\n{err.decode(errors='ignore')[-2000:]}"
+        print(msg)
+        log_to_video(media_file, msg)
+        raise Exception(msg)
+
+    return output_mp4
+
+
 def find_best_yt_stream(yt_url, media_file=None):
     yt = None
     res = '480p'
@@ -408,7 +458,7 @@ def find_best_yt_stream(yt_url, media_file=None):
         proxy_item = db(db.youtube_proxy_list.proxy_url==proxy).select().first()
         if proxy_item:
             db(db.youtube_proxy_list.id==proxy_item.id).update(
-                last_request_on = datetime.datetime.utcnow()
+                last_request_on = datetime.datetime.now(datetime.UTC)
             )
             db.commit()
         try:
@@ -424,7 +474,7 @@ def find_best_yt_stream(yt_url, media_file=None):
                 }
 
             # Try w the current proxy
-            yt = YouTube(yt_url_tmp, proxies=p)
+            yt = YouTube(yt_url_tmp, client="WEB", proxies=p)
 
             s = None
     
@@ -440,6 +490,30 @@ def find_best_yt_stream(yt_url, media_file=None):
             if s is None:
                 # If that doesn't exist, then get the first one in the list
                 s = yt.streams.filter(file_extension='mp4', progressive=True).first()
+            if s is None:
+                # No progressive streams (newer videos only come w separate video and audio)
+                # Grab an h264 video stream and the original language audio stream - these
+                # get muxed together after download
+                is_h264 = lambda st: str(st.video_codec).startswith('avc1')
+                v = None
+                for res in ['480p', '360p', '720p']:
+                    v = yt.streams.filter(file_extension='mp4', adaptive=True, only_video=True, res=res,
+                                          custom_filter_functions=[is_h264]).first()
+                    if v is not None:
+                        break
+                if v is None:
+                    # Take whatever resolution is closest to 480p
+                    v = min(yt.streams.filter(file_extension='mp4', adaptive=True, only_video=True,
+                                              custom_filter_functions=[is_h264]).order_by('resolution'),
+                            key=lambda st: abs(int(st.resolution.rstrip('p')) - 480), default=None)
+                    res = v.resolution if v is not None else res
+                a = yt.streams.filter(file_extension='mp4', only_audio=True,
+                                      custom_filter_functions=[lambda st: st.is_default_audio_track]).order_by('abr').desc().first()
+                if a is None:
+                    a = yt.streams.filter(file_extension='mp4', only_audio=True).order_by('abr').desc().first()
+                if v is not None and a is not None:
+                    # NOTE - stream is a (video, audio) tuple in this case
+                    s = (v, a)
             # s.download()  # put in folder name
     
             stream = s
@@ -648,17 +722,16 @@ def process_wamap_video_links():
                     f.close()
 
                     # Download the video from the internet
-                    yt = YouTube(proxies=get_youtube_proxies())
                     yt_url = yt_url.replace("!!1", "").replace("!!0", "")  # because some urls end up with the
                     # field separator still in it
                     if "/embed/" in yt_url:
                         # Embedded link doesn't return correctly, change it back
                         # to normal link
                         yt_url = yt_url.replace("/embed/", "/watch?v=")
-                    yt.url = yt_url
-                    yt.filename = "wamap_" + str(item.media_guid)
-                    f = yt.filter('mp4')[-1]
-                    f.download()                    
+                    yt, stream, res, return_code = find_best_yt_stream(yt_url)
+                    if return_code != "OK" or stream is None:
+                        raise Exception(f"Unable to find YouTube stream ({return_code})")
+                    download_yt_stream(stream, wamap_folder, "wamap_" + str(item.media_guid))
                 except Exception as e:
                     print(" ****** Error fetching movie ****** " + str(e))
                     had_errors = True
@@ -1413,7 +1486,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
             print(msg)
             log_to_video(media_file, msg)
             
-            stream.download(output_path=target_folder, filename=output_mp4_filename, max_retries=3, timeout=300)  # put in folder name
+            download_yt_stream(stream, target_folder, file_guid, media_file)
 
             msg = f"Download Complete!"
             print(msg)

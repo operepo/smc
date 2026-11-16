@@ -655,6 +655,31 @@ class Canvas:
         # TODO check for errors
         
         return current_enrollment
+
+    @staticmethod
+    def GetSubAccountList():
+        if Canvas.Connect() is not True:
+            return None
+        # Get list of sub accounts for this account
+        sub_accounts = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                                      "/api/v1/accounts/self/sub_accounts")
+        # TODO check for errors
+        
+        return sub_accounts
+    
+    @staticmethod
+    def MoveCourseToCanvasAccount(course_id, account_id):
+        if Canvas.Connect() is not True:
+            return None
+        # Add a course to an account or sub account
+        q = dict()
+        q["course[account_id]"] = account_id
+        r = Canvas.APICall(Canvas._canvas_server_url, Canvas._canvas_access_token,
+                           "/api/v1/courses/" + str(course_id) +
+                           "", method="PUT", params=q)
+        
+        return r
+
     
     @staticmethod
     def CompleteAllClasses(user_name, faculty_delete=False, enrollment_days_timedelta=None):

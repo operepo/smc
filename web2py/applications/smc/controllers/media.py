@@ -22,8 +22,6 @@ from ednet.appsettings import AppSettings
 # Help shut up pylance warnings
 if 1==2: from ..common import *
 
-#from pytube import YouTube
-from pytubefix import YouTube
 from bs4 import BeautifulSoup as bs
 
 
@@ -1948,6 +1946,15 @@ def pull_from_youtube_step_2():
                               "<span style='font-size: 10px; font-weight: bold;'>" +
                               "Error: yt is none! Unable to get yt info for link " +
                               str(yt) + "/" + str(stream) + "/" + str(res) + "</span>"))
+
+    if stream is None:
+        msg = f"Error getting YouTube Video - No downloadable mp4 stream found for this video."
+        response.flash = msg
+        return dict(form2=XML(f"<span style='color: red; font-weight:bold;'>" +
+                              f"Error Downloading video</span> ({yt_url}" +
+                              f") - reload page and try again.<br /> " +
+                              f"<span style='font-size: 10px; font-weight: bold;'>" +
+                              f"Error: No usable stream</span><br />{msg}<br /><br /><a href='{URL('media', 'pull_from_youtube.html')}'>[ Try Again ]</a>"))
 
     # NOTE - Need form name separate from other steps for form to work properly
     form = FORM(TABLE(TR("YouTube Link:", INPUT(_type="text", _name="yt_url", _value=yt_url, _readonly=True)),
