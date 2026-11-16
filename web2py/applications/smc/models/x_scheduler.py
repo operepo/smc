@@ -6,13 +6,13 @@ import subprocess
 from gluon.contrib.simplejson import loads, dumps
 import sys
 import shutil
-import requests
 import webvtt
 import traceback
 #import pytube, pytube.exceptions
 import pytubefix, pytubefix.exceptions
 pytube = pytubefix
 import datetime
+from urllib.parse import urlparse
 
 # Help shut up pylance warnings
 if 1==2: from ..common import *
@@ -103,6 +103,9 @@ elif PY3:
     from urllib.error import HTTPError
     from urllib.request import Request
     from urllib.request import urlretrieve
+    from urllib.request import ProxyHandler
+    from urllib.request import build_opener
+    from urllib.request import install_opener
     # NOTE - Leave off!! - will override web2py request object
     #from urllib import request
 
@@ -198,20 +201,15 @@ def update_document_database_from_json_files():
 
 
 def process_media_file(media_id):
-    ret = ""
-
     # Find ffmpeg binary
     (ffmpeg, acodec) = find_ffmpeg()
 
     # Find number of CPUs
     cpus = int(multiprocessing.cpu_count())
     # Drop the number of threads so we don't use up all CPU power
-    cpus -= 3 # W 4 cpus, use only one, always leave 3 for processing if available.
-    if cpus < 1:
-        cpus = 1
+    cpus = max(cpus - 2, 1)
     
     # Grab the media file
-    # media_file = None
     media_file = db(db.media_file_import_queue.id==media_id).select().first()
     if media_file is None:
         return dict(error="Invalid Media File")
@@ -229,24 +227,19 @@ def process_media_file(media_id):
     tmp_path = db.media_file_import_queue.media_file.retrieve_file_properties(db.media_file_import_queue(media_file.id).media_file)['path']
     # NOTE Has stupid databases/../uploads in the path, replace databases/../ with nothing
     tmp_path = tmp_path.replace("\\", "/").replace('databases/../', '')
-    # print("TmpPath: " + tmp_path)
     
     uploads_folder = os.path.join(w2py_folder, tmp_path)
-    # print("Upload Path: " + uploads_folder)
+    print("Upload Path: " + uploads_folder)
     input_file = os.path.join(uploads_folder, media_file.media_file).replace("\\", "/")
 
     # Get the output file paths
-    output_webm = get_media_file_path(media_guid, ".webm")  # target_file + ".webm"
-    output_ogv = get_media_file_path(media_guid, ".ogv")  # target_file + ".ogv"
     output_mp4 = get_media_file_path(media_guid, ".mp4")  # target_file + ".mp4"
     output_mobile_mp4 = get_media_file_path(media_guid, ".mobile.mp4")  # target_file + ".mobile.mp4"
-    output_meta = get_media_file_path(media_guid, ".json")  # target_file + ".json"
     output_poster = get_media_file_path(media_guid, ".poster.png")  # target_file + ".poster.png"
     output_thumb = get_media_file_path(media_guid, ".thumb.png")  # target_file + ".thumb.png"
     
     print("Output files: ")
-    # print(output_webm)
-    # print(output_ogv)
+
     print(output_mp4)
     
     webm_ret = ""
@@ -256,28 +249,11 @@ def process_media_file(media_id):
     thumb_ret = ""
     
     # Run ffmpeg to process file
-    
-    # Do webm - NOTE No webm support in ffmpeg right now - # TODO unknown encoder libvpx
-    # cmd = ffmpeg + " -i '" + input_file + "' -vcodec libvpx -qscale 6 -acodec libvorbis
-    # -ab 128k -vf scale='480:-1' '" + output_webm + "'"
-    # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    # webm_ret = p.communicate()[0].decode()
-    
-    # Do OGV
-    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale 6
-    # -acodec libvorbis -ab 192k -vf scale='640:-1' '" + output_ogv + "'"
-    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libtheora -qscale:v 5
-    # -acodec libvorbis -ab 128k '" + output_ogv + "'"
-    # print("Creating OGV..."  + " [" + str(time.time()) + "]")
     print("!clear!10%")
-    # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    # ogv_ret = p.communicate()[0].decode()
 
     # Do MP4
-    # cmd = ffmpeg + " -y -i '" + input_file + "' -vcodec libx264 -preset slow -profile main
-    # -crf 20 -acodec libfaac -ab 192k -vf scale='720:-1' '" + output_mp4 + "'"
     cmd = ffmpeg + " -y -i \"" + input_file + \
-          "\" -vcodec libx264 -preset slow -movflags faststart -profile:v main -crf 20 -acodec " + \
+          "\" -vcodec libx264 -preset fast -movflags faststart -profile:v main -crf 20 -acodec " + \
           acodec + " -ab 128k -threads " + str(cpus) + " \"" + output_mp4 + "\""
     # print("Creating MP4..."  + " [" + str(time.time()) + "]")
     print("MP4: " + cmd)
@@ -287,7 +263,7 @@ def process_media_file(media_id):
     
     # Do MP4 with mobile quality
     cmd = ffmpeg + " -y -i \"" + input_file + \
-          "\" -vcodec libx264 -preset slow -movflags faststart -profile main -crf 20 -acodec " +\
+          "\" -vcodec libx264 -preset fast -movflags faststart -profile main -crf 20 -acodec " +\
           acodec + " -ab 128k -vf scale='2*trunc(oh*a/2):480' -threads " + str(cpus) + " \"" +\
           output_mobile_mp4 + "\""
     # print("Creating mobile MP4..."  + " [" + str(time.time()) + "]")
@@ -309,26 +285,6 @@ def process_media_file(media_id):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     thumb_ret = p.communicate()[0].decode()
 
-    # -vf scale="480:2*trunc(ow*a/2)"
-    # ffmpeg -i [your video] [encoding options as specified above]
-    # [your output video with appropriate extension - eg output.mp4, output.ogv or output.webm]
-    
-    # Make webm file - 480p
-    # cmd = ffmpeg + " -i 'input_file.avi' -codec:v libvpx -quality good -cpu-used
-    # 0 -movflags faststart -b:v 600k -maxrate 600k -bufsize 1200k -qmin 10 -qmax 42 -vf
-    # scale=-1:480 -threads 4 -codec:a vorbis -b:a 128k output_file.webm"
-    # -vcodec libvpx -qscale 6 -acodec libvorbis -ab 128k
-
-    # Make ogv file
-    # cmd = ""
-    # -vcodec libtheora -qscale 6 -acodec libvorbis -ab 128k
-    
-    # Make mp4 file - 480p
-    # cmd = ffmpeg + " -i inputfile.avi -codec:v libx264 -profile:v main -preset slow
-    # -movflags faststart -b:v 400k -maxrate 400k -bufsize 800k -vf scale=-1:480 -threads 0
-    # -codec:a libfdk_aac -b:a 128k output.mp4"  #codec:a libfdk_aac  codec:a mp3
-    # -vcodec libx264 -preset slow -profile main -crf 20 -acodec libfaac -ab 128k
-    
     # Update file info
     
     db.media_files.insert(title=media_file.title,
@@ -344,21 +300,9 @@ def process_media_file(media_id):
                           youtube_url=media_file.youtube_url
                           )
     
-    # media_file.update(status='done')
     db(db.media_file_import_queue.id==media_id).delete()
     
-    # Dump meta data to the folder along side the video files
-    # This can be used for export/import
-    # meta = {'title': media_file.title, 'media_guid': media_file.media_guid.replace('-', ''),
-    #         'description': media_file.description, 'original_file_name': media_file.original_file_name,
-    #         'media_type': media_file.media_type, 'category': media_file.category,
-    #         'tags': dumps(media_file.tags), 'width': media_file.width,
-    #         'height': media_file.height, 'quality': media_file.quality}
-    #
-    # meta_json = dumps(meta)
-    # f = os_open(output_meta, os.O_TRUNC | os.O_WRONLY | os.O_CREAT)
-    # os.write(f, meta_json)
-    # os.close(f)
+
     save_media_file_json(media_guid)
     
     print("!clear!100%")
@@ -379,6 +323,7 @@ def log_to_video(media_item, msg):
         db.commit()
     
     return True
+
 
 def download_yt_stream(stream, target_folder, file_name, media_file=None):
     # Download the stream from find_best_yt_stream to target_folder/file_name.mp4
@@ -448,43 +393,64 @@ def find_best_yt_stream(yt_url, media_file=None):
 
     # Change out embed for watch so the link works properly
     yt_url_tmp = yt_url.replace("/embed/", "/watch?v=")
-    proxies = get_youtube_proxies()
-    # Proxies comes in as a list, add None on the list so we try a None proxy too
-    #proxies.insert(0, None)
-    proxies.append(None)
+    proxies = get_youtube_proxies(randomize=True, max_proxies=5)
+    if not proxies:
+        msg = (
+            "WARNING: No valid/reachable YouTube proxy found (TCP check failed for all "
+            "enabled rows, or none are configured). Continuing without proxy for this attempt."
+        )
+        session.yt_urls_error_msg += msg
+        print(msg)
+        log_to_video(media_file, msg)
+        proxies = [None]
 
-    for proxy in proxies[0:5]:  # Only try the first 5 proxies - don't try forever
+    for proxy in proxies:
         # Try each proxy in order trying to get this video.
+        hostname = urlparse(proxy).hostname
+        port = urlparse(proxy).port
         proxy_item = db(db.youtube_proxy_list.proxy_url==proxy).select().first()
         if proxy_item:
             db(db.youtube_proxy_list.id==proxy_item.id).update(
-                last_request_on = datetime.datetime.now(datetime.UTC)
+                last_request_on = utc_now()
             )
             db.commit()
         try:
-            msg = f"Trying to get {yt_url} from proxy {proxy}"
-            print(msg)
-            log_to_video(media_file, msg)
-            p = None
-            if not proxy is None:
+            if proxy is not None:
+                msg = f"Trying to get {yt_url} from proxy {hostname}:{port}"
                 # Youtube proxy wants it in p['https']='https://123.123.321.321:35000' form
                 p = {
                     'https': proxy,
                     'http': proxy,
                 }
+            else:
+                msg = f"Trying to get {yt_url} without proxy (no reachable proxy in pool)"
+                p = None
+            print(msg)
+            log_to_video(media_file, msg)
+
+            # Align process-global urllib opener (pytubefix uses install_opener); direct = empty handler.
+            try:
+                if p is not None:
+                    install_opener(build_opener(ProxyHandler(p)))
+                else:
+                    install_opener(build_opener(ProxyHandler({})))
+            except Exception as ex:
+                print("Warning: could not reset urllib opener: %s" % (ex,))
 
             # Try w the current proxy
-            yt = YouTube(yt_url_tmp, client="WEB", proxies=p)
+            yt = YouTube(
+                yt_url_tmp,
+                client="WEB",
+                proxies=p,
+            )
 
             s = None
     
             s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
             if s is None:
-                # Try 360p
                 res = '360p'
                 s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
             if s is None:
-                # Try 720p
                 res = '720p'
                 s = yt.streams.filter(file_extension='mp4', progressive=True, res=res).first()
             if s is None:
@@ -514,13 +480,31 @@ def find_best_yt_stream(yt_url, media_file=None):
                 if v is not None and a is not None:
                     # NOTE - stream is a (video, audio) tuple in this case
                     s = (v, a)
-            # s.download()  # put in folder name
     
             stream = s
 
             # Got one - break the loop and return it.
             return_code = "OK"
             return yt, stream, res, return_code
+
+        except (
+            pytube.exceptions.BotDetection,
+            pytube.exceptions.VideoRegionBlocked,
+        ) as ex:
+            if proxy_item:
+                db(db.youtube_proxy_list.id==proxy_item.id).update(
+                    last_error_on = utc_now()
+                )
+                db.commit()
+            msg = (
+                f"YouTube bot detection on {yt_url} (proxy={hostname}:{port}) -- {ex}. "
+            )
+            session.yt_urls_error_msg += msg
+            print(msg)
+            traceback.print_exc()
+            log_to_video(media_file, msg)
+            # Try next proxy in list - don't return yet
+
         ## These exceptions mean we can't get it - don't keep trying other proxies
         except (
             pytube.exceptions.AgeRestrictedError,
@@ -528,13 +512,12 @@ def find_best_yt_stream(yt_url, media_file=None):
             pytube.exceptions.MembersOnly,
             pytube.exceptions.RecordingUnavailable,
             pytube.exceptions.VideoPrivate,
-            pytube.exceptions.VideoRegionBlocked,
             pytube.exceptions.VideoUnavailable,
             pytube.exceptions.MaxRetriesExceeded,
         ) as ex:
             if proxy_item:
                 db(db.youtube_proxy_list.id==proxy_item.id).update(
-                    last_error_on = datetime.datetime.utcnow()
+                    last_error_on = utc_now()
                 )
                 db.commit()
             msg = f"Error grabbing YT video - Video not availalble or blocked - check to see if the url is correct, that it isn't private, that it is available in your region, etc... {yt_url} -- {ex}"
@@ -545,7 +528,6 @@ def find_best_yt_stream(yt_url, media_file=None):
             return_code = "Permanent Error"
 
             return yt, stream, res, return_code
-            #raise Exception(msg)
 
 
         ## These exceptions mean there as a parsing/temp error - don't keep trying other proxies
@@ -556,7 +538,7 @@ def find_best_yt_stream(yt_url, media_file=None):
         ) as ex:
             if proxy_item:
                 db(db.youtube_proxy_list.id==proxy_item.id).update(
-                    last_error_on = datetime.datetime.utcnow()
+                    last_error_on = utc_now()
                 )
                 db.commit()
             msg = f"Error grabbing YT video - PyTube error - Youtube might have changed something, update PyTube and try again: {yt_url} -- {ex}"
@@ -564,13 +546,8 @@ def find_best_yt_stream(yt_url, media_file=None):
             print(msg)
             traceback.print_exc()
             log_to_video(media_file, msg)
-            return_code = "Termporary Error"
+            return_code = "Temporary Error"
             return yt, stream, res, return_code
-        
-        
-        # Other exceptions inherit from this - just catch a general exception
-        #except pytube.exceptions.PytubeError as ex:
-        #    pass        
                 
         except HTTPError as ex:
             if ex.code == 429:  # Do we need this w max retries?
@@ -579,8 +556,8 @@ def find_best_yt_stream(yt_url, media_file=None):
                 #     sleep_time = int(ex.headers["Retry-After"])
                 if proxy_item:
                     db(db.youtube_proxy_list.id==proxy_item.id).update(
-                        last_error_on = datetime.datetime.utcnow(),
-                        last_429_error_on = datetime.datetime.utcnow()
+                        last_error_on = utc_now(),
+                        last_429_error_on = utc_now()
                     )
                     db.commit()
                 msg = f"429 error on this proxy: {proxy}"
@@ -1285,7 +1262,7 @@ def process_youtube_queue(run_from=""):
                     db.commit()
                 except Exception as ex:
                     # Had issues downloading from youtube.
-                    next_row.download_failures = next_row.get("download_failures", 0) or 0 + 1
+                    next_row.download_failures = (next_row.get("download_failures") or 0) + 1
                     # if next_row.download_failures > 5:
                     #     next_row.needs_downloading = False
                     db.commit()
@@ -1398,9 +1375,6 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
     # Force makes it re-download the video/captions even if they are present
     # Download the specified movie.
 
-    #from pytube import YouTube
-    from pytubefix import YouTube
-
     if media_file is None:
         print(f"ERROR - Unable to find a db record for null media file")
         # Slight pause - let scheduler grab output
@@ -1410,7 +1384,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
     # Mark this as the currently downloading item.
     db(db.media_files.media_guid==media_file.media_guid).update(
         current_download=True,
-        last_download_attempt=datetime.datetime.now()
+        last_download_attempt=utc_now()
     )
     db.commit()
 
@@ -1458,15 +1432,15 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                 log_to_video(media_file, f"Failed to download video from {yt_url}, will stop trying.")
                 media_file.needs_downloading = False
                 media_file.needs_caption_downloading = False
-                media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+                media_file.download_failures = (media_file.get("download_failures") or 0) + 1
                 media_file.update_record()
                 db.commit()                
                 return True
-            elif return_code == "Termporary Error":
+            elif return_code == "Temporary Error":
                 print(f"Temporary Error - Unable to get video {yt_url}.")
                 log_to_video(media_file, f"Failed to download video from {yt_url}, will keep trying.")
                 media_file.needs_downloading = True
-                media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+                media_file.download_failures = (media_file.get("download_failures") or 0) + 1
                 media_file.update_record()
                 db.commit()
                 return True
@@ -1476,7 +1450,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
             print(f"Unknown HTTP error pulling yt video? {yt_url}\n{ex}")
             log_to_video(media_file, f"Unknown Error - Failed to download video from {yt_url}, will keep trying.\n{ex}")
             media_file.needs_downloading = True
-            media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+            media_file.download_failures = (media_file.get("download_failures") or 0) + 1
             media_file.update_record()
             db.commit()
             return False
@@ -1579,15 +1553,15 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
                     print(f"Permanent Error - Unable to get captions {yt_url}.")
                     log_to_video(media_file, f"Failed to download captions from {yt_url}, will stop trying.")
                     media_file.needs_caption_downloading = False
-                    media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+                    media_file.download_failures = (media_file.get("download_failures") or 0) + 1
                     media_file.update_record()
                     db.commit()                
                     return True
-                elif return_code == "Termporary Error":
+                elif return_code == "Temporary Error":
                     print(f"Temporary Error - Unable to get captions {yt_url}.")
                     log_to_video(media_file, f"Failed to download captions from {yt_url}, will keep trying.")
                     media_file.needs_caption_downloading = True
-                    media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+                    media_file.download_failures = (media_file.get("download_failures") or 0) + 1
                     media_file.update_record()
                     db.commit()
                     return True
@@ -1597,7 +1571,7 @@ def pull_youtube_video(media_file, force_video=False, force_captions=False):
             print(f"Unknown HTTP error pulling yt captions? {yt_url}\n{ex}")
             log_to_video(media_file, f"Unknown Error - Failed to download captions from {yt_url}, will keep trying.\n{ex}")
             media_file.needs_caption_downloading = True
-            media_file.download_failures = media_file.get("download_failures", 0) or 0 + 1
+            media_file.download_failures = (media_file.get("download_failures") or 0) + 1
             media_file.update_record()
             db.commit()
             return False

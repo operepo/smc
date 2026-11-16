@@ -1,4 +1,4 @@
-requests=2.25.1  # Needed by streamlink
+requests == 2.25.1  # Needed by streamlink
 ldap3 # python-ldap
 paramiko
 ecdsa

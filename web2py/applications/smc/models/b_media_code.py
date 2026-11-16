@@ -5,31 +5,32 @@
 """
 
 import os
-import tempfile
-import time
+import socket
 import uuid
 import re
-import glob
-import mimetypes
 from gluon.contrib.simplejson import loads, dumps
-# Import this prior to requests so it doesn't fail
-#import importlib_resources
-import requests
 from langcodes import *
 import webvtt
 import traceback
 import datetime
 from gluon.storage import Storage
-
+import time
+import glob
+import mimetypes
+import tempfile
 from ednet.canvas import Canvas
+from pytubefix import YouTube
+from urllib.parse import urlparse
+
 
 # Help shut up pylance warnings
 if 1==2: from ..common import *
 
-#from pytube import YouTube
-from pytubefix import YouTube
-#import pytube
-#from yt_dlp import YoutubeDL
+
+def utc_now():
+    # Current time in UTC for storing in the db. tzinfo is stripped because db datetime
+    # fields come back naive - comparing aware and naive datetimes raises a TypeError.
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
 def get_session_values(namespace="ui", control=None):
@@ -115,9 +116,44 @@ def set_session_value(namespace="ui", control=None, key=None, value=None):
     return True
 
 
-def get_youtube_proxies(randomize=False):
-    # Skip proxies if they have had a 429 error less than this
-    not_before = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=10)
+def check_proxy(proxy_url, timeout=5):
+    """ Quick TCP reachability for an http(s) proxy URL like "http://1.2.3.4:35000"
+    or "http://user:pass@host:port". Returns (ok: bool, msg: str).
+    """
+    if not proxy_url:
+        return False, "empty proxy url"
+
+    try:
+        parsed = urlparse(proxy_url)
+        host = parsed.hostname
+        port = parsed.port
+        if not host or not port:
+            return False, f"could not parse host/port from proxy url: {proxy_url}"
+    except Exception as ex:
+        return False, f"could not parse proxy url {proxy_url}: {ex}"
+
+    sock = None
+    try:
+        sock = socket.create_connection((host, port), timeout=timeout)
+        return True, "ok"
+    except (socket.timeout, ConnectionRefusedError, OSError) as ex:
+        return False, f"{type(ex).__name__}: {ex}"
+   
+    finally:
+        if sock is not None:
+            sock.close()
+
+
+
+def get_youtube_proxies(randomize=False, verify_tcp=True, tcp_timeout=5, max_proxies=5):
+    """Return enabled proxy_url strings from youtube_proxy_list.
+
+    When verify_tcp is True (default), each candidate must accept a TCP connection
+    to its host:port; unreachable rows are skipped and last_error_on is updated.
+    Set verify_tcp=False only if you need the raw DB list (e.g. admin tooling).
+    """
+    # Skip proxies if they have had an error less than this
+    not_before = utc_now() - datetime.timedelta(minutes=10)
 
     query = (db.youtube_proxy_list.enabled==True)
     # Random order so you get a possible different item from the list each time
@@ -127,12 +163,25 @@ def get_youtube_proxies(randomize=False):
         rows = db(query).select(orderby=db.youtube_proxy_list.last_request_on)
     ret = list()
     for row in rows:
-        if row.last_429_error_on is None or row.last_429_error_on < not_before:
-            #print(f"Adding Proxy URL {row.proxy_url}")
-            ret.append(row["proxy_url"])
+        if row.last_error_on is None or row.last_error_on < not_before:
+            url = row["proxy_url"]
+            if verify_tcp:
+                ok, check_msg = check_proxy(url, timeout=tcp_timeout)
+                if not ok:
+                    print(f"YouTube proxy TCP check failed: {url} {check_msg}")
+                    try:
+                        db(db.youtube_proxy_list.id == row.id).update(
+                            last_error_on=utc_now()
+                        )
+                        db.commit()
+                    except Exception:
+                        pass
+                    continue
+            ret.append(url)
+            if len(ret) >= max_proxies:
+                break
         else:
-            #print(f"Skipping proxy - too soon since since last 429 error: {row.proxy_url}")
-            pass
+            print(f"Skipping proxy - too soon since since last error: {row.proxy_url}")
 
     return ret
 

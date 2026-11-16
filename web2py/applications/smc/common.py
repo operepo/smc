@@ -89,6 +89,7 @@ if 1 == 2:
       getPDFURLS = getPDFURLS
       getURLS = getURLS
       find_best_yt_stream = find_best_yt_stream
+      utc_now = utc_now
       download_yt_stream = download_yt_stream
       cleanup_youtube_urls = cleanup_youtube_urls
       pull_youtube_caption = pull_youtube_caption
